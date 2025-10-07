@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, numeric, timestamp, jsonb, check, unique } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // Profiles table (mirror of Supabase auth.users)
