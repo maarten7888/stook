@@ -8,7 +8,7 @@ import { ChefHat, Search } from "lucide-react";
 
 async function fetchRecipes(query?: string) {
   const params = query ? `?query=${encodeURIComponent(query)}` : "";
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/recipes${params}`, {
+  const res = await fetch(`/api/recipes${params}`, {
     cache: "no-store",
   });
   if (!res.ok) return { items: [] };

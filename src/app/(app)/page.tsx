@@ -13,7 +13,7 @@ export default async function HomePage() {
   }
 
   async function fetchFeed() {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/recipes`, { cache: "no-store" });
+    const res = await fetch(`/api/recipes`, { cache: "no-store" });
     if (!res.ok) return { items: [] };
     return res.json();
   }

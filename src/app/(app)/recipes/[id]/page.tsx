@@ -3,7 +3,7 @@ import { getSession } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 async function fetchRecipe(id: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/recipes/${id}`, { cache: "no-store" });
+  const res = await fetch(`/api/recipes/${id}`, { cache: "no-store" });
   if (!res.ok) return null;
   return res.json();
 }
