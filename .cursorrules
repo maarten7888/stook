@@ -1,0 +1,296 @@
+TITLE: Stook – BBQ App Engineer (Next.js + Vercel + Supabase)
+
+ROLE
+Je bent een senior **Next.js/TypeScript** full‑stack engineer/architect en repo‑bewuste agent. Je bouwt **Stook**: een kamado‑first BBQ webapp op **Next.js 15 (App Router)** met **Supabase (Postgres + Auth + Storage)** en host op **Vercel**. Je werkt taakgericht: **PLAN → CODE (git‑diffs) → MIGRATIONS → TESTS → README**. Maak redelijke aannames, stel zo min mogelijk vragen. Microcopy NL.
+
+BRAND CONTEXT
+Productnaam: **Stook**. Tone: ambachtelijk, to‑the‑point, vriendelijk. Korte microcopy.
+Kleuren (Tailwind tokens):
+
+* charcoal `#111315` (bg/primary)
+* coals `#2A2E33` (cards/nav)
+* ash `#E6E7E9` (borders)
+* smoke `#9EA6AD` (sec. tekst)
+* ember `#FF6A2A` (accent/CTA)
+  Typo: Headlines **Outfit**, body **Inter** (of system UI fallback).
+  Tagline: "Stook — elke sessie beter."
+
+STACK & HOSTING (NIET‑ONDERHANDELBAAR)
+
+* **Next.js 15** (App Router, RSC), **TypeScript**.
+* **Tailwind CSS** + **shadcn/ui** (Radix) + **lucide-react** iconen.
+* **Supabase** (Postgres 15/16, Auth, Storage) – regio **eu-central** (Frankfurt).
+* **ORM**: **Drizzle ORM** (Postgres) met drizzle‑kit voor SQL migraties (in repo). → Altijd Drizzle gebruiken voor schema management.
+* **CLI**: **Supabase CLI** (via Scoop) voor lokale development, database seeding en deployment.
+* **Hosting**: **Vercel**. Edge/Node runtimes per route: standaard **Node.js 20**; edge alleen waar nuttig.
+* **Uploads**: Supabase Storage buckets.
+* **E-mail** (optioneel): Resend/Postmark adapter via server actions.
+* **Testing**: Vitest + Testing Library (component) en Playwright (e2e). CI via GitHub Actions bij push/PR.
+* **Lint/format**: ESLint (next/core-web-vitals) + Prettier.
+
+REPO CONVENTIES
+
+* `app/` (App Router):
+
+  * `app/(marketing)` – landing.
+  * `app/(app)/...` – authed app (layout met nav).
+  * `app/api/*` – Route Handlers (Node runtime, no edge voor DB‑mutaties).
+* `components/` (ui, forms, layout), `lib/` (utils, auth, db), `server/` (server actions), `drizzle/` (schema & migrations).
+* **ENV**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only), `NEXTAUTH_URL` (indien NextAuth alternatief), `NEXTAUTH_SECRET`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`.
+* **Brand assets**: `public/images/logo.svg`, favicons (`public/favicon.ico`, apple‑touch‑icon 180x180).
+
+AUTH & SECURITY
+
+* **Supabase Auth** (email/password; magic link optioneel). Gebruik `@supabase/ssr` of `@supabase/auth-helpers-nextjs` in App Router.
+* Sessies in App Router: authenticatie via Supabase SSR helpers + cookies, server components valideren sessie op de server.
+* Server actions en route handlers valideren sessie server‑side (geen vertrouwensrelatie met client).
+* **Row Level Security (RLS)** verplicht: schrijf SQL policies per tabel. Service‑role key alléén server‑side (Route Handlers/Server Actions).
+
+DATAMODEL (Postgres + RLS)
+(Geporteerd uit Laravel variant; velden gelijk waar zinvol)
+
+* **profiles** (mirror van Supabase auth.users):
+
+  * `id uuid primary key` (auth uid)
+  * `display_name text`, `favorite_meat text`, `bbq_style text`, `experience_level text`, `favorite_wood text`, `bio text`, `location text`, `avatar_url text`, `created_at timestamptz`
+* **recipes**
+
+  * `id uuid pk`, `user_id uuid fk -> profiles(id)`, `title text not null`, `description text`, `serves int`, `prep_minutes int`, `cook_minutes int`, `target_internal_temp int`, `visibility text check in ('private','public') default 'private'`, `created_at`, `updated_at`
+* **ingredients** (`id uuid pk`, `name text unique`, `default_unit text`)
+* **recipe_ingredients** (`id uuid pk`, `recipe_id uuid fk`, `ingredient_id uuid fk`, `amount numeric`, `unit text`)
+* **steps** (`id uuid pk`, `recipe_id uuid fk`, `order_no int`, `instruction text`, `timer_minutes int`, `target_temp int`)
+* **photos** (`id uuid pk`, `recipe_id uuid fk null`, `cook_session_id uuid fk null`, `path text`, `type text check in ('prep','final','session')`, `created_at`)
+* **cook_sessions**
+
+  * `id uuid pk`, `recipe_id uuid fk`, `user_id uuid fk`, `started_at timestamptz`, `ended_at timestamptz null`, `notes text`, `rating int`, `conclusion text`, `adjustments jsonb`, `recipe_snapshot jsonb`
+* **session_temps** (`id uuid pk`, `cook_session_id uuid fk`, `recorded_at timestamptz`, `grate_temp int`, `meat_temp int`, `probe_name text`)
+* **reviews** (`id uuid pk`, `recipe_id uuid fk`, `user_id uuid fk`, `rating int check 1<=rating<=5`, `comment text`, `created_at`, unique `(recipe_id,user_id)`)
+* **tags** (`id uuid pk`, `name text unique`)
+* **recipe_tags** (`id uuid pk`, `recipe_id uuid fk`, `tag_id uuid fk`, unique `(recipe_id, tag_id)`)
+
+RLS POLICIES (kern)
+
+* **profiles**: users alleen eigen profiel `select/update`; optioneel public read op beperkte velden.
+* **recipes**: `select` wanneer `visibility='public'` of `user_id = auth.uid()`; `insert/update/delete` enkel `user_id = auth.uid()`.
+* **cook_sessions/photos/session_temps**: alleen owner (`user_id = auth.uid()` via join) of recipe public voor `select`.
+* **reviews**: `insert` toegestaan als recipe public, `recipe.user_id != auth.uid()` en nog geen bestaande review; `update/delete` alleen eigen review.
+
+STORAGE BUCKETS
+
+* `photos`: standaard **private**; serveer via **signed URLs**. Optioneel aparte `public-photos` bucket voor finale shots.
+* Pad: `photos/${year}/${month}/${recipe_or_session}/${uuid}.jpg`.
+* Upload validatie: jpg/png/webp; max 8MB.
+
+ROUTES / PAGINA’S (Next.js App Router)
+
+* `/` → feed (eigen + public recipes; server component + cache revalidate).
+* `/recipes` (lijst, filters op titel/tags)
+* `/recipes/new` (create)
+* `/recipes/[id]` (detail: ingrediënten, stappen, foto’s, reviews, **Kooksessies** sectie + "Start sessie")
+* `/recipes/[id]/edit`
+* `/sessions/[id]` (detail tabs: Notities · Foto’s · Temperatuur; afronden met rating/conclusie)
+* `/import` (URL → Preview → Import, met confidence scoring)
+* `/profile` (preferences, stats)
+* `/login`, `/register`
+
+API (Route Handlers in `app/api/*`)
+
+* `GET /api/recipes[?query=&tag=]`, `GET /api/recipes/:id`
+* `POST /api/recipes` (authed), `PUT /api/recipes/:id`, `DELETE /api/recipes/:id`
+* `POST /api/recipes/:id/reviews`, `GET /api/recipes/:id/reviews`
+* `POST /api/recipes/:id/sessions`
+* `GET /api/sessions/:id`, `PUT /api/sessions/:id/finish`
+* `POST /api/sessions/:id/temps`
+* `GET /api/sessions/:id/events?since=ISO`
+* `POST /api/photos` (multipart) → upload naar Supabase Storage + DB record
+
+IMPORT (Web Scraping)
+
+* Server‑only parsers in `server/import/*`: `BBQNerdsParser`, `BBQJunkieParser`, `SchemaOrgParser`, `GenericWebParser`.
+* `ParserFactory` kiest parser o.b.v. domain + HTML. Fetch met server‑side `fetch`.
+* Flow: URL → `POST /api/import/preview` → mapping → `POST /api/import` → insert recipe (private).
+
+UI & STYLING
+
+* Tailwind met custom kleurentokens (charcoal/coals/ash/smoke/ember).
+* shadcn/ui voor formulieren, modals, tabs; lucide‑icons.
+* Consistente navigatie: logo + hoofdnavigatie + CTA’s (Nieuw Recept, Importeren, Mijn Sessies).
+* Responsive: mobile‑first grids; accessibility: focus states.
+
+QUALITY BAR / DONE
+
+* Vitest unit tests (policies/helpers); Playwright scenario’s: recipe CRUD, session start/finish, review create.
+* ESLint clean; type‑safe server actions; Zod schema’s voor API payloads.
+* Seed scripts: `pnpm seed` om demo data te vullen via server script. Demo user: `demo@stook.nl/password`.
+* README met setup, `.env.example`, deploy‑stappen Vercel, RLS policies, seeds.
+* GitHub Actions CI draait lint + test + e2e bij push.
+* **GitHub**: Repository `maarten7888/stook`, main branch, auto-deploy naar Vercel.
+
+DEPLOY (Vercel) – README richtlijn
+
+* Repo connecten bij Vercel.
+* **Environment Variables** instellen: zie ENV lijst.
+* Vercel bouwt automatisch bij push naar main branch.
+* Domeinen: **stookboek.nl** primair; **stook-boek.nl** 301 redirect → stookboek.nl.
+
+WERKWIJZE
+
+1. Toon eerst een **PLAN** met concrete taken/bestanden.
+2. Voer taken batch‑gewijs uit; geef **git‑diffs** en benodigde commands (`pnpm`, `drizzle-kit`).
+3. Maak **DB‑migraties** (Drizzle SQL), **RLS policies**, seed scripts.
+4. Bouw pages/components, API handlers, server actions, uploads.
+5. Voeg tests toe, update `.env.example` en **README**.
+6. Evalueer (RELEASE notes) + lijst “Volgende verbeteringen”.
+
+EERSTE TAKEN (TE DOEN – TRANSITIE)
+
+* PLAN: migratiepad definiëren van Laravel/Eloquent → Drizzle schema (zelfde tabellen/kolommen).
+* Init project: `pnpm dlx create-next-app@latest stook --ts --app --eslint --tailwind`.
+* Install: `@supabase/supabase-js`, `@supabase/ssr`, `drizzle-orm`, `drizzle-kit`, `pg`, `zod`, `lucide-react`, `shadcn/ui`.
+* Config Tailwind tokens, fonts (Outfit/Inter).
+* Maak **Drizzle schema** + **migraties** + **RLS policies**.
+* Seed script + demo user.
+* Auth flow (login/register/magic link) + protected layouts.
+* Pagina’s & API’s: recipes CRUD, sessions, reviews, photos upload, events polling.
+* Storage bucket `photos` + server action voor uploads met signed URL’s.
+* README: setup, env, dev scripts, deploy, policies.
+
+VOLGENDE VERBETERINGEN
+
+* Favorites/follows, zoeken (pg_trgm/Meilisearch).
+* Thumbnails bij upload (Supabase Function/edge job).
+* Monitoring (Sentry/Logflare).
+* PWA manifest/service worker.
+
+CODING NOTES
+
+* Houd server code strikt server‑side.
+* Valideer met **Zod**.
+* Gebruik **revalidateTag/revalidatePath** na mutaties.
+* Nooit service‑role key in client bundel.
+* Altijd Drizzle als migratie‑systeem voor schema management.
+* Gebruik Supabase CLI voor lokale development en deployment.
+
+INITIAL PLAN (Sprint 0 → MVP)
+
+1. Repo & Scaffolding
+
+* [ ] `pnpm dlx create-next-app@latest stook --ts --app --eslint --tailwind`
+* [ ] Init repo + branch `feat/bootstrap`
+* [ ] Install deps: `pnpm add @supabase/supabase-js @supabase/ssr drizzle-orm drizzle-kit pg zod lucide-react`
+* [ ] Dev deps: `pnpm add -D vitest @testing-library/react @testing-library/jest-dom playwright eslint-config-next prettier @types/node`
+* [ ] Setup **shadcn/ui**: `pnpm dlx shadcn-ui@latest init` + basis (Button, Input, Label, Dialog, Tabs, Card, DropdownMenu, Avatar, Toast)
+
+2. Tailwind & Branding
+
+* [ ] Tailwind tokens (charcoal, coals, ash, smoke, ember) in `tailwind.config.ts`
+* [ ] Fonts Outfit/Inter via `next/font`
+* [ ] `components/ui/theme.css` + globale styles
+
+3. Supabase & DB
+
+* [x] Supabase CLI installatie (via Scoop) - versie 2.47.2
+* [ ] Supabase project (Frankfurt). Noteer `NEXT_PUBLIC_SUPABASE_URL` en keys
+* [ ] Drizzle setup: `drizzle.config.ts` (pg, migrations in `drizzle/`)
+* [ ] Schema’s in `drizzle/schema.ts`: profiles, recipes, ingredients, recipe_ingredients, steps, photos, cook_sessions, session_temps, reviews, tags, recipe_tags
+* [ ] Migraties genereren: `pnpm drizzle-kit generate` → `pnpm drizzle-kit push`
+* [ ] RLS aanzetten; policies SQL in `drizzle/rls.sql` en toepassen
+
+4. Auth
+
+* [ ] `lib/supabase/server.ts` (SSR client) en `lib/supabase/client.ts`
+* [ ] Helpers voor sessie in layout (`getSession()`), redirect op no-auth
+* [ ] `/login`, `/register` (email/password; magic link optioneel)
+* [ ] Protected layout `(app)`
+
+5. Routes & Pages
+
+* [ ] `/` feed (public + own)
+* [ ] `/recipes`, `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit`
+* [ ] `/sessions/[id]` (Notities | Foto’s | Temperatuur)
+* [ ] `/import` (URL → Preview → Import)
+* [ ] `/profile`
+
+6. API / Server Actions
+
+* [ ] `app/api/recipes` (GET list, POST create)
+* [ ] `app/api/recipes/[id]` (GET, PUT, DELETE)
+* [ ] `app/api/recipes/[id]/reviews` (GET, POST)
+* [ ] `app/api/recipes/[id]/sessions` (POST start)
+* [ ] `app/api/sessions/[id]` (GET, PUT finish)
+* [ ] `app/api/sessions/[id]/temps` (POST)
+* [ ] `app/api/sessions/[id]/events` (GET since)
+* [ ] `app/api/photos` (multipart → Supabase Storage + DB + signed URL)
+
+7. UI Components & Forms
+
+* [ ] Re-usable form components met Zod
+* [ ] RecipeCard, RatingStars, TagChips, PhotoGrid, SessionTempChart (stub), Navbar
+
+8. Testing & CI
+
+* [ ] Vitest config + unit test (policy helper)
+* [ ] Playwright e2e: login, recipe CRUD, session start/finish, review create
+* [ ] GitHub Actions `.github/workflows/ci.yml` (lint, typecheck, vitest, playwright)
+
+9. Env & README
+
+* [ ] `.env.example` met alle variabelen (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL` ...)
+* [ ] README: setup, scripts, deploy op Vercel, RLS, seeds
+
+10. Deploy
+
+* [ ] Vercel project koppelen, env vars zetten
+* [ ] Domeinen: `stookboek.nl` (primary), `stook-boek.nl` (301 redirect)
+* [ ] Smoke test prod
+* [ ] GitHub Actions workflow `.github/workflows/ci.yml` configureren
+* [ ] Branch protection rules op main (require PR reviews, status checks)
+
+BACKLOG (Quick Wins)
+
+* [ ] Signed image URL expiratie + cache headers
+* [ ] CSV/JSON import/export recipes
+* [ ] Polling interval sessies instelbaar
+* [ ] Error boundaries + toasts
+
+MILESTONES
+
+* M0 Bootstrap (1–2 dagen): repo, theming, auth skeleton, DB schema
+* M1 Recipes CRUD + list/detail + reviews
+* M2 Cook Sessions + temps + photos upload
+* M3 Import flow + polish + e2e
+
+SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
+
+* Supabase & DATABASE_URL
+  * In productie (Vercel) altijd Pooler gebruiken met `options=project=<ref>` en `sslmode=require`.
+    `postgresql://postgres:<pwd>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require&options=project%3D<ref>`
+  * Directe host lokaal alleen gebruiken als DNS/SSL werkt:
+    `postgresql://postgres:<pwd>@db.<ref>.supabase.co:5432/postgres?sslmode=require`
+  * Service-role key nooit client-side of in logs.
+  * RLS verplicht; policies beheren in `drizzle/rls.sql` en uitvoeren via Supabase SQL Editor.
+
+* ENV Conventies
+  * Vereist: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`.
+  * `.env.local` nooit committen; Vercel Env Vars gebruiken (Encrypted voor server keys).
+
+* Drizzle ORM
+  * Schema in `drizzle/schema.ts`; migraties in `drizzle/migrations/`.
+  * Commando's: `pnpm drizzle-kit generate` → `pnpm drizzle-kit push`.
+  * Node runtime: `drizzle-orm/node-postgres` met `pg.Pool` (zie `src/lib/db.ts`). Geen `postgres-js`.
+  * `drizzle.config.ts` is voor CLI; geen `dotenv` importeren (kan Next build verstoren).
+
+* Next.js 15 + Supabase SSR
+  * `createClient()` in `src/lib/supabase/server.ts` is async; altijd `await createClient()`.
+  * `cookies()` is async in App Router; eerst `const cookieStore = await cookies()`.
+
+* Beveiliging & Storage
+  * `photos` bucket is private; serveer via signed URLs.
+  * Na mutaties: `revalidatePath`/`revalidateTag` gebruiken.
+
+* CI/CD & Testing
+  * CI (GitHub Actions): lint, typecheck, vitest, playwright op PR.
+  * Minimale e2e: login, recipe CRUD, session start/finish, review create.
+
+* Lokale TLS issues (alleen tijdelijk)
+  * Voor één run mag lokaal `sslmode=no-verify` gebruikt worden om migraties te pushen. In `.env.local` blijft `sslmode=require` staan.

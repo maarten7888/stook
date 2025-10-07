@@ -5,6 +5,7 @@ export default defineConfig({
   out: "./drizzle/migrations",
   dialect: "postgresql",
   dbCredentials: {
+    // Drizzle CLI leest deze tijdens gebruik; voor Next build is dit niet relevant
     url: process.env.DATABASE_URL!,
   },
 });
