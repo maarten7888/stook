@@ -13,6 +13,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log("Debug - User ID from auth:", user.id);
+    console.log("Debug - User email:", user.email);
+
     // Get all sessions for the user with additional data
     const sessions = await db
       .select({
@@ -47,6 +50,9 @@ export async function GET() {
       .innerJoin(recipes, eq(cookSessions.recipeId, recipes.id))
       .where(eq(cookSessions.userId, user.id))
       .orderBy(desc(cookSessions.startedAt));
+
+    console.log("Debug - Found sessions:", sessions.length);
+    console.log("Debug - Sessions:", sessions);
 
     return NextResponse.json(sessions);
   } catch (error) {
