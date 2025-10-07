@@ -29,23 +29,23 @@ export default async function RootPage() {
     };
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Hero Section */}
         <div className="text-center">
-          <h1 className="text-4xl font-heading font-bold text-ash mb-4">
+          <h1 className="text-3xl sm:text-4xl font-heading font-bold text-ash mb-4">
             Welkom bij Stook
           </h1>
-          <p className="text-xl text-smoke mb-8">
+          <p className="text-lg sm:text-xl text-smoke mb-6 sm:mb-8">
             Elke sessie beter — je ultieme BBQ companion
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild className="bg-ember hover:bg-ember/90">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Button asChild size="sm" className="bg-ember hover:bg-ember/90 w-full sm:w-auto">
               <Link href="/recipes/new">
                 <BookOpen className="h-4 w-4 mr-2" />
                 Nieuw Recept
               </Link>
             </Button>
-            <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
+            <Button asChild size="sm" variant="outline" className="border-ash text-ash hover:bg-coals w-full sm:w-auto">
               <Link href="/import">
                 <Camera className="h-4 w-4 mr-2" />
                 Importeren

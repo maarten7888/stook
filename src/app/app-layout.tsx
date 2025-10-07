@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, User, ChefHat, BookOpen, Camera, Plus } from "lucide-react";
+import { LogOut, User, ChefHat, BookOpen, Camera, Plus, Clock } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -30,13 +30,13 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
               <ChefHat className="h-8 w-8 text-ember" />
               <span className="text-xl font-heading font-bold text-ash">Stook</span>
             </Link>
 
-            {/* Navigation Links */}
-            <div className="hidden md:flex items-center space-x-8">
+            {/* Navigation Links - Hidden on mobile */}
+            <div className="hidden lg:flex items-center space-x-8">
               <Link
                 href="/"
                 className="text-smoke hover:text-ash transition-colors"
@@ -57,26 +57,41 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
               </Link>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center space-x-4">
-              <Button asChild className="bg-ember hover:bg-ember/90">
+            {/* Actions - Responsive */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Mobile: Only show icons, Desktop: Show full buttons */}
+              <Button asChild size="sm" className="bg-ember hover:bg-ember/90 hidden sm:flex">
                 <Link href="/recipes/new">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nieuw Recept
+                  <span className="hidden sm:inline">Nieuw Recept</span>
                 </Link>
               </Button>
               
-              <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
+              {/* Mobile icon button */}
+              <Button asChild size="sm" className="bg-ember hover:bg-ember/90 sm:hidden">
+                <Link href="/recipes/new">
+                  <Plus className="h-4 w-4" />
+                </Link>
+              </Button>
+              
+              <Button asChild size="sm" variant="outline" className="border-ash text-ash hover:bg-coals hidden sm:flex">
                 <Link href="/import">
                   <Camera className="h-4 w-4 mr-2" />
-                  Importeren
+                  <span className="hidden sm:inline">Importeren</span>
+                </Link>
+              </Button>
+
+              {/* Mobile icon button */}
+              <Button asChild size="sm" variant="outline" className="border-ash text-ash hover:bg-coals sm:hidden">
+                <Link href="/import">
+                  <Camera className="h-4 w-4" />
                 </Link>
               </Button>
 
               {/* User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full flex-shrink-0">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={session.user.user_metadata?.avatar_url} />
                       <AvatarFallback className="bg-ember text-white">
@@ -99,6 +114,12 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/sessions" className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4" />
+                      <span>Mijn Sessies</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <form action="/auth/logout" method="post" className="w-full">
                       <button type="submit" className="flex items-center w-full text-left">
                         <LogOut className="mr-2 h-4 w-4" />
@@ -114,7 +135,7 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {children}
       </main>
     </div>
