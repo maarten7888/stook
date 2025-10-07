@@ -17,6 +17,9 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
     redirect("/recipes");
   }
 
+  type StepItem = { id: string; orderNo: number; instruction: string };
+  type IngredientItem = { id: string; amount: string | null; unit: string | null; ingredientName: string };
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,7 +37,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           </CardHeader>
           <CardContent className="space-y-2">
             {data.steps?.length ? (
-              data.steps.map((s: any) => (
+              (data.steps as StepItem[]).map((s) => (
                 <div key={s.id} className="text-ash">
                   <span className="text-smoke mr-2">{s.orderNo}.</span>
                   {s.instruction}
@@ -51,7 +54,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           </CardHeader>
           <CardContent className="space-y-2">
             {data.ingredients?.length ? (
-              data.ingredients.map((ri: any) => (
+              (data.ingredients as IngredientItem[]).map((ri) => (
                 <div key={ri.id} className="text-ash">
                   {ri.amount ? `${ri.amount}${ri.unit ?? ""} ` : ""}
                   {ri.ingredientName}

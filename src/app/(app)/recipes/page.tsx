@@ -22,6 +22,12 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
   const query = searchParams?.query;
   const data = await fetchRecipes(query);
 
+  type RecipeListItem = {
+    id: string;
+    title: string;
+    description: string | null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
@@ -51,7 +57,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.items.map((r: any) => (
+          {(data.items as RecipeListItem[]).map((r) => (
             <Card key={r.id} className="bg-coals border-ash">
               <CardContent className="p-4">
                 <Link href={`/recipes/${r.id}`} className="block">

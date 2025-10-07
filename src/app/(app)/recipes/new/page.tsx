@@ -30,8 +30,8 @@ export default function NewRecipePage() {
         const body = await res.json();
         router.push(`/recipes/${body.id}`);
       }
-    } catch (err: any) {
-      setError(err?.message || "Onbekende fout");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Onbekende fout");
     } finally {
       setLoading(false);
     }
