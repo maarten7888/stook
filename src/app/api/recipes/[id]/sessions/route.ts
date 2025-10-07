@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
-import { cookSessions, recipes, profiles } from "@/drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { cookSessions, recipes } from "@/drizzle/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const startSessionSchema = z.object({
   recipeId: z.string().uuid(),
 });
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();

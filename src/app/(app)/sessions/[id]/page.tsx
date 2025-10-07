@@ -114,7 +114,7 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
             Notities
           </TabsTrigger>
           <TabsTrigger value="photos" className="text-smoke data-[state=active]:text-ash">
-            Foto's
+            Foto&apos;s
           </TabsTrigger>
           <TabsTrigger value="temps" className="text-smoke data-[state=active]:text-ash">
             Temperatuur
@@ -172,20 +172,21 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
             <CardHeader>
               <CardTitle className="text-ash flex items-center gap-2">
                 <Camera className="h-5 w-5" />
-                Sessie foto's
+                Sessie foto&apos;s
               </CardTitle>
             </CardHeader>
             <CardContent>
               {photos.length === 0 ? (
                 <div className="text-center py-8 text-smoke">
                   <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nog geen foto's toegevoegd</p>
-                  <p className="text-sm">Upload foto's om je kooksessie vast te leggen</p>
+                  <p>Nog geen foto&apos;s toegevoegd</p>
+                  <p className="text-sm">Upload foto&apos;s om je kooksessie vast te leggen</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {photos.map((photo: any) => (
+                  {photos.map((photo: { id: string; signedUrl: string }) => (
                     <div key={photo.id} className="aspect-square bg-charcoal rounded-lg border border-ash overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img 
                         src={photo.signedUrl} 
                         alt={`Sessie foto ${photo.id}`}

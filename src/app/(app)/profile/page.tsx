@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, getUser } from "@/lib/supabase/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   User, 
   Mail, 
-  MapPin, 
   ChefHat, 
   Clock, 
   Star, 
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 import { headers } from "next/headers";
 
-async function fetchUserProfile(userId: string) {
+async function fetchUserProfile() {
   const headersList = await headers();
   const host = headersList.get("host") || "localhost:3000";
   const protocol = headersList.get("x-forwarded-proto") || "http";
@@ -34,7 +33,7 @@ async function fetchUserProfile(userId: string) {
   return res.json();
 }
 
-async function fetchUserStats(userId: string) {
+async function fetchUserStats() {
   const headersList = await headers();
   const host = headersList.get("host") || "localhost:3000";
   const protocol = headersList.get("x-forwarded-proto") || "http";
@@ -53,8 +52,8 @@ export default async function ProfilePage() {
   if (!session) redirect("/login");
 
   const user = await getUser();
-  const profile = await fetchUserProfile(user?.id || "");
-  const stats = await fetchUserStats(user?.id || "");
+  const profile = await fetchUserProfile();
+  const stats = await fetchUserStats();
 
   return (
     <div className="space-y-6">
