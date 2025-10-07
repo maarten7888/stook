@@ -13,7 +13,7 @@ export default async function RootLayout({
     <html lang="nl">
       <body className="font-sans antialiased">
         {session ? (
-          <AppLayout>{children}</AppLayout>
+          <AppLayout session={session}>{children}</AppLayout>
         ) : (
           children
         )}

@@ -30,7 +30,7 @@ export default async function RootPage() {
     };
 
     return (
-      <AppLayout>
+      <AppLayout session={session}>
         <div className="space-y-8">
           {/* Hero Section */}
           <div className="text-center">

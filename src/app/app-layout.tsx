@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,16 +9,19 @@ import {
 import Link from "next/link";
 import { LogOut, User, ChefHat, BookOpen, Camera, Plus } from "lucide-react";
 
-export default async function AppLayout({
-  children,
-}: {
+interface AppLayoutProps {
   children: React.ReactNode;
-}) {
-  const session = await getSession();
+  session: {
+    user: {
+      email?: string;
+      user_metadata?: {
+        avatar_url?: string;
+      };
+    };
+  };
+}
 
-  if (!session) {
-    redirect("/");
-  }
+export default function AppLayout({ children, session }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-charcoal">
