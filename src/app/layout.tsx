@@ -1,34 +1,22 @@
-import type { Metadata } from "next";
-import { Outfit, Inter } from "next/font/google";
-import "./globals.css";
+import { getSession } from "@/lib/supabase/server";
+import AppLayout from "./app-layout";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-export const metadata: Metadata = {
-  title: "Stook — elke sessie beter",
-  description: "De ultieme BBQ app voor kamado liefhebbers. Recepten, kooksessies en meer.",
-};
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  const session = await getSession();
+
+  // If user is logged in, use the app layout
+  if (session) {
+    return <AppLayout>{children}</AppLayout>;
+  }
+
+  // If user is not logged in, use the marketing layout
   return (
     <html lang="nl">
-      <body
-        className={`${outfit.variable} ${inter.variable} antialiased`}
-      >
+      <body className="font-sans antialiased">
         {children}
       </body>
     </html>

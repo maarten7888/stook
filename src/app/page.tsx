@@ -4,12 +4,13 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Camera, Clock, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import { headers } from "next/headers";
+import AppLayout from "./app-layout";
 
 export default async function RootPage() {
   const session = await getSession();
   
   if (session) {
-    // User is logged in, show the app content directly
+    // User is logged in, show the app content with layout
     async function fetchFeed() {
       const headersList = await headers();
       const host = headersList.get("host") || "localhost:3000";
@@ -29,8 +30,8 @@ export default async function RootPage() {
     };
 
     return (
-      <div className="min-h-screen bg-charcoal text-ash">
-        <div className="container mx-auto px-4 py-8 space-y-8">
+      <AppLayout>
+        <div className="space-y-8">
           {/* Hero Section */}
           <div className="text-center">
             <h1 className="text-4xl font-heading font-bold text-ash mb-4">
@@ -146,7 +147,7 @@ export default async function RootPage() {
             </Card>
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
@@ -176,6 +177,45 @@ export default async function RootPage() {
 
   return (
     <div className="min-h-screen bg-charcoal text-ash">
+      {/* Navigation for non-authenticated users */}
+      <nav className="bg-coals border-b border-ash">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-2">
+              <BookOpen className="h-8 w-8 text-ember" />
+              <span className="text-xl font-heading font-bold text-ash">Stook</span>
+            </Link>
+
+            {/* Navigation Links */}
+            <div className="hidden md:flex items-center space-x-8">
+              <Link
+                href="#recipes"
+                className="text-smoke hover:text-ash transition-colors"
+              >
+                Recepten
+              </Link>
+              <Link
+                href="#features"
+                className="text-smoke hover:text-ash transition-colors"
+              >
+                Features
+              </Link>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center space-x-4">
+              <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
+                <Link href="/login">Inloggen</Link>
+              </Button>
+              <Button asChild className="bg-ember hover:bg-ember/90 text-white">
+                <Link href="/register">Registreren</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <section className="relative py-20 px-4 text-center">
         <div className="max-w-4xl mx-auto">
@@ -200,7 +240,7 @@ export default async function RootPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4">
+      <section id="features" className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-ash text-center mb-12 font-outfit">
             Alles wat je nodig hebt voor perfecte BBQ
