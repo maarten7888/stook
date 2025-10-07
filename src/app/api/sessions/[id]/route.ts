@@ -33,6 +33,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           title: recipes.title,
           description: recipes.description,
           visibility: recipes.visibility,
+          serves: recipes.serves,
+          prepMinutes: recipes.prepMinutes,
+          cookMinutes: recipes.cookMinutes,
+          targetInternalTemp: recipes.targetInternalTemp,
         },
         user: {
           id: profiles.id,
