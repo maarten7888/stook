@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/supabase/server";
 import AppLayout from "./app-layout";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export default async function RootLayout({
@@ -17,6 +18,7 @@ export default async function RootLayout({
         ) : (
           children
         )}
+        <Toaster />
       </body>
     </html>
   );
