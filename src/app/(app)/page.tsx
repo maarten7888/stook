@@ -12,6 +12,14 @@ export default async function HomePage() {
     redirect("/login");
   }
 
+  async function fetchFeed() {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/recipes`, { cache: "no-store" });
+    if (!res.ok) return { items: [] };
+    return res.json();
+  }
+
+  const data = await fetchFeed();
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -84,6 +92,31 @@ export default async function HomePage() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Feed */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-heading font-bold text-ash">Feed</h2>
+        {data.items.length === 0 ? (
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-6 text-smoke">
+              Nog geen recepten. Begin met een nieuw recept of importeer er een.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.items.slice(0, 6).map((r: any) => (
+              <Card key={r.id} className="bg-coals border-ash">
+                <CardContent className="p-4">
+                  <Link href={`/recipes/${r.id}`} className="block">
+                    <h3 className="text-lg font-heading text-ash mb-1">{r.title}</h3>
+                    <p className="text-sm text-smoke line-clamp-2">{r.description ?? ""}</p>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent Activity */}

@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  <h1>Stook — elke sessie beter</h1>
+  <p>Kamado‑first BBQ webapp. Next.js 15 + Supabase + Drizzle + Tailwind + shadcn/ui.</p>
+</div>
 
-## Getting Started
+## Stack
+- Next.js 15 (App Router, RSC), TypeScript
+- Tailwind CSS v4, shadcn/ui (Radix), lucide‑react
+- Supabase (Postgres + Auth + Storage), regio eu‑central (Frankfurt)
+- Drizzle ORM + drizzle‑kit (migraties in `drizzle/`)
+- Vitest + Testing Library, Playwright (e2e)
 
-First, run the development server:
-
+## Setup
+1) Installeer dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2) Zet `.env.local` op basis van `.env.example`
+- `SITE_URL`, `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server‑only)
+- `DATABASE_URL` (Postgres, gebruik Pooler in prod met sslmode=require)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3) Database migraties (Drizzle)
+```bash
+pnpm db:push
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4) RLS en Storage
+```bash
+pnpm db:rls        # voert policies uit indien nodig
+pnpm db:bucket     # maakt 'photos' bucket aan
+```
 
-## Learn More
+5) Start dev server
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
+- `pnpm db:push` — Drizzle migraties pushen
+- `pnpm db:rls` — RLS policies toepassen
+- `pnpm db:bucket` — Supabase Storage bucket `photos` aanmaken
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Conventies
+- Schema in `drizzle/schema.ts`, migraties in `drizzle/migrations/`
+- Server‑only keys nooit client‑side of in logs
+- Muterende API‑routes draaien op Node runtime (geen Edge)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy (Vercel)
+- Repo koppelen, env vars instellen (zie `.env.example`)
+- Prod `DATABASE_URL`: Supabase Pooler + `sslmode=require`
+- Domeinen: `stookboek.nl` primair; `stook-boek.nl` 301 → `stookboek.nl`
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Roadmap Sprint 0
+- Pages: `/`, `/recipes`, `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit`, `/sessions/[id]`, `/import`, `/profile`
+- API: recepten, reviews, sessies, foto‑upload, events
+- Seeds + demo user, tests (vitest/playwright), CI workflow
