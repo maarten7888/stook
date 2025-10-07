@@ -22,12 +22,12 @@ export default function EditRecipePage() {
       try {
         const res = await fetch(`/api/recipes/${id}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Laden mislukt");
-        const data = await res.json();
+        const data: { title?: string; description?: string | null } = await res.json();
         if (!active) return;
         setTitle(data.title ?? "");
         setDescription(data.description ?? "");
-      } catch (e: any) {
-        setError(e?.message || "Fout");
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Fout");
       } finally {
         setLoading(false);
       }
@@ -49,8 +49,8 @@ export default function EditRecipePage() {
       });
       if (!res.ok) throw new Error("Opslaan mislukt");
       router.push(`/recipes/${id}`);
-    } catch (e: any) {
-      setError(e?.message || "Fout");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Fout");
     } finally {
       setSaving(false);
     }
@@ -63,8 +63,8 @@ export default function EditRecipePage() {
       const res = await fetch(`/api/recipes/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Verwijderen mislukt");
       router.push("/recipes");
-    } catch (e: any) {
-      setError(e?.message || "Fout");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Fout");
     } finally {
       setSaving(false);
     }

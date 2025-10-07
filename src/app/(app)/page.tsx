@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChefHat, BookOpen, Camera, Clock, Star } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +19,12 @@ export default async function HomePage() {
   }
 
   const data = await fetchFeed();
+
+  type RecipeListItem = {
+    id: string;
+    title: string;
+    description: string | null;
+  };
 
   return (
     <div className="space-y-8">
@@ -105,7 +111,7 @@ export default async function HomePage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.items.slice(0, 6).map((r: any) => (
+            {data.items.slice(0, 6).map((r: RecipeListItem) => (
               <Card key={r.id} className="bg-coals border-ash">
                 <CardContent className="p-4">
                   <Link href={`/recipes/${r.id}`} className="block">
