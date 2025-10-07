@@ -22,10 +22,11 @@ CREATE POLICY "Users can insert own profile" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Recipes policies
-CREATE POLICY "Users can view public recipes or own recipes" ON recipes
-  FOR SELECT USING (
-    visibility = 'public' OR user_id = auth.uid()
-  );
+CREATE POLICY "Anyone can view public recipes" ON recipes
+  FOR SELECT USING (visibility = 'public');
+
+CREATE POLICY "Users can view own recipes" ON recipes
+  FOR SELECT USING (user_id = auth.uid());
 
 CREATE POLICY "Users can insert own recipes" ON recipes
   FOR INSERT WITH CHECK (user_id = auth.uid());
@@ -44,12 +45,21 @@ CREATE POLICY "Authenticated users can insert ingredients" ON ingredients
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Recipe ingredients policies
-CREATE POLICY "Users can view recipe ingredients for accessible recipes" ON recipe_ingredients
+CREATE POLICY "Anyone can view recipe ingredients for public recipes" ON recipe_ingredients
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM recipes 
       WHERE recipes.id = recipe_ingredients.recipe_id 
-      AND (recipes.visibility = 'public' OR recipes.user_id = auth.uid())
+      AND recipes.visibility = 'public'
+    )
+  );
+
+CREATE POLICY "Users can view recipe ingredients for own recipes" ON recipe_ingredients
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM recipes 
+      WHERE recipes.id = recipe_ingredients.recipe_id 
+      AND recipes.user_id = auth.uid()
     )
   );
 
@@ -63,12 +73,21 @@ CREATE POLICY "Users can manage recipe ingredients for own recipes" ON recipe_in
   );
 
 -- Steps policies
-CREATE POLICY "Users can view steps for accessible recipes" ON steps
+CREATE POLICY "Anyone can view steps for public recipes" ON steps
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM recipes 
       WHERE recipes.id = steps.recipe_id 
-      AND (recipes.visibility = 'public' OR recipes.user_id = auth.uid())
+      AND recipes.visibility = 'public'
+    )
+  );
+
+CREATE POLICY "Users can view steps for own recipes" ON steps
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM recipes 
+      WHERE recipes.id = steps.recipe_id 
+      AND recipes.user_id = auth.uid()
     )
   );
 
@@ -189,12 +208,21 @@ CREATE POLICY "Authenticated users can insert tags" ON tags
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- Recipe tags policies
-CREATE POLICY "Users can view recipe tags for accessible recipes" ON recipe_tags
+CREATE POLICY "Anyone can view recipe tags for public recipes" ON recipe_tags
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM recipes 
       WHERE recipes.id = recipe_tags.recipe_id 
-      AND (recipes.visibility = 'public' OR recipes.user_id = auth.uid())
+      AND recipes.visibility = 'public'
+    )
+  );
+
+CREATE POLICY "Users can view recipe tags for own recipes" ON recipe_tags
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM recipes 
+      WHERE recipes.id = recipe_tags.recipe_id 
+      AND recipes.user_id = auth.uid()
     )
   );
 
