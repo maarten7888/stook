@@ -45,7 +45,7 @@ export async function GET(request: Request) {
           created_at,
           updated_at,
           user_id,
-          profiles(display_name)
+          profiles!inner(display_name)
         `)
         .eq('visibility', 'public');
 
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Database error" }, { status: 500 });
       }
 
-      const items = data?.map(row => ({
+      const items = data?.map((row: any) => ({
         id: row.id,
         title: row.title,
         description: row.description,
