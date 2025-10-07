@@ -5,10 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChefHat, Search } from "lucide-react";
+import { headers } from "next/headers";
 
 async function fetchRecipes(query?: string) {
   const params = query ? `?query=${encodeURIComponent(query)}` : "";
-  const res = await fetch(`/api/recipes${params}`, {
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = headersList.get("x-forwarded-proto") || "http";
+  const baseUrl = `${protocol}://${host}`;
+  const res = await fetch(`${baseUrl}/api/recipes${params}`, {
     cache: "no-store",
   });
   if (!res.ok) return { items: [] };

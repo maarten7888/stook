@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { headers } from "next/headers";
 
 async function fetchRecipe(id: string) {
-  const res = await fetch(`/api/recipes/${id}`, { cache: "no-store" });
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = headersList.get("x-forwarded-proto") || "http";
+  const baseUrl = `${protocol}://${host}`;
+  const res = await fetch(`${baseUrl}/api/recipes/${id}`, { cache: "no-store" });
   if (!res.ok) return null;
   return res.json();
 }

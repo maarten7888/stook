@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ChefHat, BookOpen, Camera, Clock, Star } from "lucide-react";
 import Link from "next/link";
+import { headers } from "next/headers";
 
 export default async function HomePage() {
   const session = await getSession();
@@ -13,7 +14,11 @@ export default async function HomePage() {
   }
 
   async function fetchFeed() {
-    const res = await fetch(`/api/recipes`, { cache: "no-store" });
+    const headersList = await headers();
+    const host = headersList.get("host") || "localhost:3000";
+    const protocol = headersList.get("x-forwarded-proto") || "http";
+    const baseUrl = `${protocol}://${host}`;
+    const res = await fetch(`${baseUrl}/api/recipes`, { cache: "no-store" });
     if (!res.ok) return { items: [] };
     return res.json();
   }
