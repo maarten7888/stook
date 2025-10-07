@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChefHat, BookOpen, Camera, Clock, Star, ArrowRight } from "lucide-react";
+import { ChefHat, BookOpen, Camera, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { headers } from "next/headers";
 
@@ -103,7 +103,7 @@ export default async function MarketingPage() {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-smoke">
-                  Track je kooksessies met temperatuur logs, foto's en notities.
+                  Track je kooksessies met temperatuur logs, foto&apos;s en notities.
                 </p>
               </CardContent>
             </Card>
