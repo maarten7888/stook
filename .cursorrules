@@ -34,9 +34,9 @@ REPO CONVENTIES
 
   * `app/(marketing)` – landing.
   * `app/(app)/...` – authed app (layout met nav).
-  * `app/api/*` – Route Handlers (Node runtime, no edge voor DB‑mutaties).
+  * `app/api/*` – Route Handlers (Node runtime, no edge voor DB‑mutaties). Next.js 15: gebruik `NextRequest` en async `params` (`{ params: Promise<{ id: string }> }`).
 * `components/` (ui, forms, layout), `lib/` (utils, auth, db), `server/` (server actions), `drizzle/` (schema & migrations).
-* **ENV**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only), `NEXTAUTH_URL` (indien NextAuth alternatief), `NEXTAUTH_SECRET`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`.
+* **ENV**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only), `NEXTAUTH_URL` (indien NextAuth alternatief), `NEXTAUTH_SECRET`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`. In SSR fetches: bouw absolute URL via request headers (`host`, `x-forwarded-proto`).
 * **Brand assets**: `public/images/logo.svg`, favicons (`public/favicon.ico`, apple‑touch‑icon 180x180).
 
 AUTH & SECURITY
@@ -83,11 +83,11 @@ STORAGE BUCKETS
 
 ROUTES / PAGINA’S (Next.js App Router)
 
-* `/` → feed (eigen + public recipes; server component + cache revalidate).
-* `/recipes` (lijst, filters op titel/tags)
-* `/recipes/new` (create)
-* `/recipes/[id]` (detail: ingrediënten, stappen, foto’s, reviews, **Kooksessies** sectie + "Start sessie")
-* `/recipes/[id]/edit`
+* `/` → feed (eigen + public recipes; server component + cache revalidate). [Gereed]
+* `/recipes` (lijst, filters op titel/tags) [Gereed]
+* `/recipes/new` (create) [Gereed]
+* `/recipes/[id]` (detail: ingrediënten, stappen; reviews/sessies later) [Gereed, basis]
+* `/recipes/[id]/edit` [Gereed]
 * `/sessions/[id]` (detail tabs: Notities · Foto’s · Temperatuur; afronden met rating/conclusie)
 * `/import` (URL → Preview → Import, met confidence scoring)
 * `/profile` (preferences, stats)
@@ -95,8 +95,8 @@ ROUTES / PAGINA’S (Next.js App Router)
 
 API (Route Handlers in `app/api/*`)
 
-* `GET /api/recipes[?query=&tag=]`, `GET /api/recipes/:id`
-* `POST /api/recipes` (authed), `PUT /api/recipes/:id`, `DELETE /api/recipes/:id`
+* `GET /api/recipes[?query=&tag=]`, `GET /api/recipes/:id` [Gereed]
+* `POST /api/recipes` (authed), `PUT /api/recipes/:id`, `DELETE /api/recipes/:id` [Gereed]
 * `POST /api/recipes/:id/reviews`, `GET /api/recipes/:id/reviews`
 * `POST /api/recipes/:id/sessions`
 * `GET /api/sessions/:id`, `PUT /api/sessions/:id/finish`
@@ -121,7 +121,7 @@ QUALITY BAR / DONE
 
 * Vitest unit tests (policies/helpers); Playwright scenario’s: recipe CRUD, session start/finish, review create.
 * ESLint clean; type‑safe server actions; Zod schema’s voor API payloads.
-* Seed scripts: `pnpm seed` om demo data te vullen via server script. Demo user: `demo@stook.nl/password`.
+* Seed scripts: `pnpm seed` beschikbaar, maar in prod bij voorkeur via SQL Editor. Demo user aanmaken via Supabase Auth + insert in `profiles`.
 * README met setup, `.env.example`, deploy‑stappen Vercel, RLS policies, seeds.
 * GitHub Actions CI draait lint + test + e2e bij push.
 * **GitHub**: Repository `maarten7888/stook`, main branch, auto-deploy naar Vercel.
@@ -285,12 +285,5 @@ SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
   * `cookies()` is async in App Router; eerst `const cookieStore = await cookies()`.
 
 * Beveiliging & Storage
-  * `photos` bucket is private; serveer via signed URLs.
-  * Na mutaties: `revalidatePath`/`revalidateTag` gebruiken.
-
-* CI/CD & Testing
-  * CI (GitHub Actions): lint, typecheck, vitest, playwright op PR.
-  * Minimale e2e: login, recipe CRUD, session start/finish, review create.
-
-* Lokale TLS issues (alleen tijdelijk)
-  * Voor één run mag lokaal `sslmode=no-verify` gebruikt worden om migraties te pushen. In `.env.local` blijft `sslmode=require` staan.
+  * `photos` bucket is private; serveer via signed URLs. [Aangemaakt]
+  * Na mutaties: `revalidatePath`/`
