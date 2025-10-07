@@ -6,6 +6,19 @@ import { ilike, or, eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 
+type SupabaseRecipeRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  profiles: {
+    display_name: string | null;
+  } | null;
+};
+
 export const runtime = "nodejs";
 
 const QuerySchema = z.object({
@@ -60,7 +73,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Database error" }, { status: 500 });
       }
 
-      const items = data?.map((row: any) => ({
+      const items = data?.map((row: SupabaseRecipeRow) => ({
         id: row.id,
         title: row.title,
         description: row.description,
