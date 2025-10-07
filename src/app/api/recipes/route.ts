@@ -58,7 +58,7 @@ export async function GET(request: Request) {
           created_at,
           updated_at,
           user_id,
-          profiles!inner(display_name)
+          profiles(display_name)
         `)
         .eq('visibility', 'public');
 
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Database error" }, { status: 500 });
       }
 
-      const items = data?.map((row: SupabaseRecipeRow) => ({
+      const items = data?.map((row: any) => ({
         id: row.id,
         title: row.title,
         description: row.description,
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         updatedAt: row.updated_at,
         userId: row.user_id,
         user: {
-          displayName: row.profiles?.display_name || null,
+          displayName: Array.isArray(row.profiles) ? row.profiles[0]?.display_name || null : row.profiles?.display_name || null,
         },
       })) || [];
 
