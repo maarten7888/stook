@@ -6,7 +6,8 @@ import { ilike, or, eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 
-type SupabaseRecipeRow = {
+// Type for Supabase response with profiles join
+type SupabaseRecipeWithProfile = {
   id: string;
   title: string;
   description: string | null;
@@ -15,6 +16,8 @@ type SupabaseRecipeRow = {
   updated_at: string;
   user_id: string;
   profiles: {
+    display_name: string | null;
+  }[] | {
     display_name: string | null;
   } | null;
 };
@@ -73,7 +76,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Database error" }, { status: 500 });
       }
 
-      const items = data?.map((row: any) => ({
+      const items = data?.map((row: SupabaseRecipeWithProfile) => ({
         id: row.id,
         title: row.title,
         description: row.description,
@@ -82,7 +85,13 @@ export async function GET(request: Request) {
         updatedAt: row.updated_at,
         userId: row.user_id,
         user: {
-          displayName: Array.isArray(row.profiles) ? row.profiles[0]?.display_name || null : row.profiles?.display_name || null,
+          displayName: (() => {
+            if (!row.profiles) return null;
+            if (Array.isArray(row.profiles)) {
+              return row.profiles[0]?.display_name || null;
+            }
+            return row.profiles.display_name || null;
+          })(),
         },
       })) || [];
 
