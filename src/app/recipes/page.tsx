@@ -57,14 +57,6 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
               </Link>
             </Button>
           )}
-          {!session && (
-            <Button asChild className="bg-ember hover:bg-ember/90">
-              <Link href="/register">
-                <ChefHat className="h-4 w-4 mr-2" />
-                Registreer
-              </Link>
-            </Button>
-          )}
         </div>
       </div>
 
