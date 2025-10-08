@@ -1,9 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { recipes, steps, recipeIngredients, ingredients, photos, reviews, recipeTags, tags } from "@/../drizzle/schema";
-import { eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -14,43 +12,92 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const userId = session?.user.id ?? null;
 
   try {
-    const [rec] = await db.select().from(recipes).where(eq(recipes.id, id));
-    if (!rec) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // First, try to get the recipe via Supabase for better compatibility
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data: recipeData, error: recipeError } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (recipeError || !recipeData) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     // Visibility check: public or owner
-    if (!(rec.visibility === "public" || (userId && rec.userId === userId))) {
+    if (!(recipeData.visibility === "public" || (userId && recipeData.user_id === userId))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const [stepsRows, ingRows, photoRows, reviewRows, tagRows] = await Promise.all([
-      db.select().from(steps).where(eq(steps.recipeId, id)).orderBy(steps.orderNo),
-      db
-        .select({
-          id: recipeIngredients.id,
-          amount: recipeIngredients.amount,
-          unit: recipeIngredients.unit,
-          ingredientId: ingredients.id,
-          ingredientName: ingredients.name,
-        })
-        .from(recipeIngredients)
-        .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
-        .where(eq(recipeIngredients.recipeId, id)),
-      db.select().from(photos).where(and(eq(photos.recipeId, id))),
-      db.select().from(reviews).where(eq(reviews.recipeId, id)),
-      db
-        .select({ tagId: tags.id, tagName: tags.name })
-        .from(recipeTags)
-        .innerJoin(tags, eq(recipeTags.tagId, tags.id))
-        .where(eq(recipeTags.recipeId, id)),
+    // Get related data via Supabase
+    const [stepsResult, ingredientsResult, photosResult, reviewsResult, tagsResult] = await Promise.all([
+      supabase
+        .from('steps')
+        .select('*')
+        .eq('recipe_id', id)
+        .order('order_no'),
+      supabase
+        .from('recipe_ingredients')
+        .select(`
+          id,
+          amount,
+          unit,
+          ingredients(id, name)
+        `)
+        .eq('recipe_id', id),
+      supabase
+        .from('photos')
+        .select('*')
+        .eq('recipe_id', id),
+      supabase
+        .from('reviews')
+        .select('*')
+        .eq('recipe_id', id),
+      supabase
+        .from('recipe_tags')
+        .select(`
+          tags(id, name)
+        `)
+        .eq('recipe_id', id)
     ]);
 
+    // Transform the data to match expected format
+    const steps = stepsResult.data || [];
+    const ingredients = (ingredientsResult.data || []).map(ri => ({
+      id: ri.id,
+      amount: ri.amount,
+      unit: ri.unit,
+      ingredientId: Array.isArray(ri.ingredients) ? ri.ingredients[0]?.id : ri.ingredients?.id,
+      ingredientName: Array.isArray(ri.ingredients) ? ri.ingredients[0]?.name : ri.ingredients?.name
+    }));
+    const photos = photosResult.data || [];
+    const reviews = reviewsResult.data || [];
+    const tags = (tagsResult.data || []).map(rt => ({
+      tagId: Array.isArray(rt.tags) ? rt.tags[0]?.id : rt.tags?.id,
+      tagName: Array.isArray(rt.tags) ? rt.tags[0]?.name : rt.tags?.name
+    }));
+
     return NextResponse.json({
-      ...rec,
-      steps: stepsRows,
-      ingredients: ingRows,
-      photos: photoRows,
-      reviews: reviewRows,
-      tags: tagRows,
+      id: recipeData.id,
+      userId: recipeData.user_id,
+      title: recipeData.title,
+      description: recipeData.description,
+      serves: recipeData.serves,
+      prepMinutes: recipeData.prep_minutes,
+      cookMinutes: recipeData.cook_minutes,
+      targetInternalTemp: recipeData.target_internal_temp,
+      visibility: recipeData.visibility,
+      createdAt: recipeData.created_at,
+      updatedAt: recipeData.updated_at,
+      steps,
+      ingredients,
+      photos,
+      reviews,
+      tags,
     });
   } catch (err) {
     console.error("GET /api/recipes/[id] failed", err);
@@ -77,23 +124,47 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
   const parsed = UpdateSchema.safeParse(payload ?? {});
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
-  const [rec] = await db.select().from(recipes).where(eq(recipes.id, id));
-  if (!rec) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (rec.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
   try {
-    await db
-      .update(recipes)
-      .set({
-        title: parsed.data.title ?? rec.title,
-        description: parsed.data.description ?? rec.description,
-        serves: parsed.data.serves ?? rec.serves,
-        prepMinutes: parsed.data.prepMinutes ?? rec.prepMinutes,
-        cookMinutes: parsed.data.cookMinutes ?? rec.cookMinutes,
-        targetInternalTemp: parsed.data.targetInternalTemp ?? rec.targetInternalTemp,
-        visibility: parsed.data.visibility ?? rec.visibility,
-      })
-      .where(eq(recipes.id, id));
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Check if user owns the recipe
+    const { data: recipeData, error: recipeError } = await supabase
+      .from('recipes')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (recipeError || !recipeData) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (recipeData.user_id !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Update the recipe
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
+    if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
+    if (parsed.data.serves !== undefined) updateData.serves = parsed.data.serves;
+    if (parsed.data.prepMinutes !== undefined) updateData.prep_minutes = parsed.data.prepMinutes;
+    if (parsed.data.cookMinutes !== undefined) updateData.cook_minutes = parsed.data.cookMinutes;
+    if (parsed.data.targetInternalTemp !== undefined) updateData.target_internal_temp = parsed.data.targetInternalTemp;
+    if (parsed.data.visibility !== undefined) updateData.visibility = parsed.data.visibility;
+
+    const { error: updateError } = await supabase
+      .from('recipes')
+      .update(updateData)
+      .eq('id', id);
+
+    if (updateError) {
+      console.error("Update error:", updateError);
+      return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("PUT /api/recipes/[id] failed", err);
@@ -106,17 +177,41 @@ export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id:
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [rec] = await db.select().from(recipes).where(eq(recipes.id, id));
-  if (!rec) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (rec.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
   try {
-    await db.delete(recipes).where(eq(recipes.id, id));
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Check if user owns the recipe
+    const { data: recipeData, error: recipeError } = await supabase
+      .from('recipes')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (recipeError || !recipeData) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (recipeData.user_id !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Delete the recipe (cascade will handle related records)
+    const { error: deleteError } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error("Delete error:", deleteError);
+      return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("DELETE /api/recipes/[id] failed", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
-
-
