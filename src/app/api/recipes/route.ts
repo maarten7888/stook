@@ -11,6 +11,10 @@ type SupabaseRecipeWithProfile = {
   id: string;
   title: string;
   description: string | null;
+  serves: number | null;
+  prep_minutes: number | null;
+  cook_minutes: number | null;
+  target_internal_temp: number | null;
   visibility: string;
   created_at: string;
   updated_at: string;
@@ -57,6 +61,10 @@ export async function GET(request: Request) {
           id,
           title,
           description,
+          serves,
+          prep_minutes,
+          cook_minutes,
+          target_internal_temp,
           visibility,
           created_at,
           updated_at,
@@ -80,6 +88,10 @@ export async function GET(request: Request) {
         id: row.id,
         title: row.title,
         description: row.description,
+        serves: row.serves,
+        prepMinutes: row.prep_minutes,
+        cookMinutes: row.cook_minutes,
+        targetInternalTemp: row.target_internal_temp,
         visibility: row.visibility,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -122,6 +134,10 @@ export async function GET(request: Request) {
         id: recipes.id,
         title: recipes.title,
         description: recipes.description,
+        serves: recipes.serves,
+        prepMinutes: recipes.prepMinutes,
+        cookMinutes: recipes.cookMinutes,
+        targetInternalTemp: recipes.targetInternalTemp,
         visibility: recipes.visibility,
         createdAt: recipes.createdAt,
         updatedAt: recipes.updatedAt,

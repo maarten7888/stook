@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ChefHat, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChefHat, Search, Clock, Users, Thermometer, ArrowRight, Star } from "lucide-react";
 import { headers } from "next/headers";
 
 async function fetchRecipes(params?: string) {
@@ -34,50 +35,153 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
     id: string;
     title: string;
     description: string | null;
+    serves?: number;
+    prepMinutes?: number;
+    cookMinutes?: number;
+    targetInternalTemp?: number;
+    user?: { displayName?: string };
+    tags?: { tagName: string }[];
+    reviews?: { rating: number }[];
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <h1 className="text-3xl font-heading font-bold text-ash">
-          {session ? "Recepten" : "Publieke Recepten"}
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header Section */}
+      <div className="text-center py-8">
+        <h1 className="text-4xl md:text-5xl font-heading font-bold text-ash mb-4">
+          {session ? "Mijn Recepten" : "Publieke Recepten"}
         </h1>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <form action="/recipes" className="flex w-full sm:w-80 items-center gap-2">
-            <Input name="query" placeholder="Zoek op titel" defaultValue={query ?? ""} className="bg-charcoal border-ash text-ash" />
-            <Button type="submit" variant="outline" className="border-ash text-ash">
-              <Search className="h-4 w-4" />
-            </Button>
-          </form>
-          {session && (
-            <Button asChild className="bg-ember hover:bg-ember/90">
-              <Link href="/recipes/new">
-                <ChefHat className="h-4 w-4 mr-2" />
-                Nieuw
-              </Link>
-            </Button>
-          )}
-        </div>
+        <p className="text-lg text-smoke max-w-2xl mx-auto">
+          {session ? "Beheer je BBQ recepten en ontdek nieuwe ideeën" : "Ontdek geweldige BBQ recepten van de community"}
+        </p>
       </div>
 
+      {/* Search and Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+        <form action="/recipes" className="flex w-full sm:w-96 items-center gap-2">
+          <Input 
+            name="query" 
+            placeholder="Zoek recepten..." 
+            defaultValue={query ?? ""} 
+            className="bg-coals border-ash text-ash placeholder:text-smoke focus:border-ember" 
+          />
+          <Button type="submit" variant="outline" className="border-ash text-ash hover:bg-coals">
+            <Search className="h-4 w-4" />
+          </Button>
+        </form>
+        {session && (
+          <Button asChild className="bg-ember hover:bg-ember/90">
+            <Link href="/recipes/new">
+              <ChefHat className="h-4 w-4 mr-2" />
+              Nieuw Recept
+            </Link>
+          </Button>
+        )}
+      </div>
+
+      {/* Results */}
       {data.items.length === 0 ? (
         <Card className="bg-coals border-ash">
-          <CardHeader>
-            <CardTitle className="text-ash">Geen recepten gevonden</CardTitle>
-            <CardDescription className="text-smoke">
+          <CardContent className="p-12 text-center">
+            <ChefHat className="h-16 w-16 mx-auto mb-6 text-ember/50" />
+            <CardTitle className="text-xl text-ash mb-4">Geen recepten gevonden</CardTitle>
+            <CardDescription className="text-smoke text-lg">
               {session ? "Maak je eerste recept of pas je zoekopdracht aan." : "Er zijn nog geen publieke recepten beschikbaar."}
             </CardDescription>
-          </CardHeader>
+            {session && (
+              <Button asChild className="mt-6 bg-ember hover:bg-ember/90">
+                <Link href="/recipes/new">
+                  <ChefHat className="h-4 w-4 mr-2" />
+                  Maak je eerste recept
+                </Link>
+              </Button>
+            )}
+          </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(data.items as RecipeListItem[]).map((r) => (
-            <Card key={r.id} className="bg-coals border-ash hover:border-ember transition-colors">
-              <CardContent className="p-4">
-                <Link href={`/recipes/${r.id}`} className="block">
-                  <h3 className="text-lg font-heading text-ash mb-1">{r.title}</h3>
-                  <p className="text-sm text-smoke line-clamp-2">{r.description ?? ""}</p>
-                </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {(data.items as RecipeListItem[]).map((recipe) => (
+            <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all duration-300 group hover:shadow-lg hover:shadow-ember/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-lg text-ash font-outfit group-hover:text-ember transition-colors line-clamp-2">
+                    {recipe.title}
+                  </CardTitle>
+                  {recipe.reviews && recipe.reviews.length > 0 && (
+                    <div className="flex items-center gap-1 ml-2">
+                      <Star className="h-4 w-4 text-ember fill-ember" />
+                      <span className="text-sm text-smoke">
+                        {(recipe.reviews.reduce((sum, r) => sum + r.rating, 0) / recipe.reviews.length).toFixed(1)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {recipe.user?.displayName && (
+                  <p className="text-smoke text-sm">
+                    door {recipe.user.displayName}
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                <p className="text-smoke text-sm line-clamp-3">
+                  {recipe.description || "Geen beschrijving beschikbaar."}
+                </p>
+                
+                {/* Recipe Info */}
+                <div className="flex flex-wrap gap-2 text-xs text-smoke">
+                  {recipe.serves && (
+                    <div className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      <span>{recipe.serves} porties</span>
+                    </div>
+                  )}
+                  {recipe.prepMinutes && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{recipe.prepMinutes} min prep</span>
+                    </div>
+                  )}
+                  {recipe.cookMinutes && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{recipe.cookMinutes} min koken</span>
+                    </div>
+                  )}
+                  {recipe.targetInternalTemp && (
+                    <div className="flex items-center gap-1">
+                      <Thermometer className="h-3 w-3" />
+                      <span>{recipe.targetInternalTemp}°C</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                {recipe.tags && recipe.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {recipe.tags.slice(0, 3).map((tag, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="bg-ember/20 text-ember border-ember/30 text-xs"
+                      >
+                        {tag.tagName}
+                      </Badge>
+                    ))}
+                    {recipe.tags.length > 3 && (
+                      <Badge variant="secondary" className="bg-ash/20 text-smoke text-xs">
+                        +{recipe.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Button */}
+                <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full group-hover:border-ember transition-colors">
+                  <Link href={`/recipes/${recipe.id}`}>
+                    Bekijk Recept
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           ))}
