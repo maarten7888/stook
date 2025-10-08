@@ -126,7 +126,9 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               {data.ingredients?.length ? (
                 (data.ingredients as IngredientItem[]).map((ri) => (
                   <div key={ri.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                    <span className="text-ash font-medium">{ri.ingredientName}</span>
+                    <span className="text-ash font-medium">
+                      {ri.ingredientName || 'Onbekend ingrediënt'}
+                    </span>
                     <span className="text-ember font-bold text-lg">
                       {ri.amount ? `${ri.amount}${ri.unit ?? ""}` : ""}
                     </span>
@@ -159,7 +161,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               {data.steps?.length ? (
                 (data.steps as StepItem[]).map((s) => (
                   <div key={s.id} className="flex gap-4 p-4 bg-charcoal/30 rounded-lg border border-ash/20">
-                    <div className="flex-shrink-0 w-10 h-10 bg-ember text-white rounded-full flex items-center justify-center text-lg font-bold">
+                    <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-ember to-ember/80 text-white rounded-lg flex items-center justify-center text-sm font-bold shadow-lg">
                       {s.orderNo}
                     </div>
                     <div className="flex-1 space-y-2">
