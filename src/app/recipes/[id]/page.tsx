@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { headers } from "next/headers";
-import { Clock, Users, Thermometer, ChefHat, Star, Calendar } from "lucide-react";
+import { Clock, Thermometer, ChefHat, Star } from "lucide-react";
 
 async function fetchRecipe(id: string) {
   const headersList = await headers();
@@ -50,90 +50,49 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      {/* Hero Section */}
-      <div className="space-y-6">
-        {/* Title and Description */}
-        <div className="space-y-4">
-          <h1 className="text-4xl md:text-5xl font-heading font-bold text-ash leading-tight">
-            {data.title}
-          </h1>
-          {data.description && (
-            <div className="prose prose-lg max-w-none">
-              <p className="text-lg text-smoke leading-relaxed">
-                {data.description}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Recipe Info Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {data.serves && (
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Users className="h-8 w-8 text-ember mx-auto mb-2" />
-                <div className="text-3xl font-bold text-ember">{data.serves}</div>
-                <div className="text-sm text-smoke font-medium">Personen</div>
-              </CardContent>
-            </Card>
-          )}
-          {data.prepMinutes && (
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Clock className="h-8 w-8 text-ember mx-auto mb-2" />
-                <div className="text-3xl font-bold text-ember">{data.prepMinutes}</div>
-                <div className="text-sm text-smoke font-medium">Min. voorbereiding</div>
-              </CardContent>
-            </Card>
-          )}
-          {data.cookMinutes && (
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
-              <CardContent className="p-6 text-center">
-                <ChefHat className="h-8 w-8 text-ember mx-auto mb-2" />
-                <div className="text-3xl font-bold text-ember">{data.cookMinutes}</div>
-                <div className="text-sm text-smoke font-medium">Min. kooktijd</div>
-              </CardContent>
-            </Card>
-          )}
-          {data.targetInternalTemp && (
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Thermometer className="h-8 w-8 text-ember mx-auto mb-2" />
-                <div className="text-3xl font-bold text-ember">{data.targetInternalTemp}°C</div>
-                <div className="text-sm text-smoke font-medium">Kerntemperatuur</div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Title */}
+      <div className="text-center">
+        <h1 className="text-4xl md:text-5xl font-heading font-bold text-ash leading-tight">
+          {data.title}
+        </h1>
       </div>
 
-      {/* Main Content Grid */}
+      {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Ingredients */}
-        <div className="lg:col-span-1">
-          <Card className="bg-coals border-ash sticky top-8">
+        {/* Left Column - Main Content */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Description Section */}
+          {data.description && (
+            <Card className="bg-coals border-ash">
+              <CardHeader>
+                <CardTitle className="text-xl text-ash">Beschrijving</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-smoke leading-relaxed">{data.description}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ingredients Section */}
+          <Card className="bg-coals border-ash">
             <CardHeader>
-              <CardTitle className="text-xl text-ash flex items-center gap-2">
-                <ChefHat className="h-5 w-5 text-ember" />
-                Ingrediënten
-              </CardTitle>
-              <CardDescription className="text-smoke">
-                Voor {data.serves || '?'} personen
-              </CardDescription>
+              <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent>
               {data.ingredients?.length ? (
-                (data.ingredients as IngredientItem[]).map((ri) => (
-                  <div key={ri.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                    <span className="text-ash font-medium">
-                      {ri.ingredientName || 'Onbekend ingrediënt'}
-                    </span>
-                    <span className="text-ember font-bold text-lg">
-                      {ri.amount ? `${ri.amount}${ri.unit ?? ""}` : ""}
-                    </span>
-                  </div>
-                ))
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(data.ingredients as IngredientItem[]).map((ri) => (
+                    <div key={ri.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
+                      <span className="text-ash font-medium">
+                        {ri.ingredientName || 'Onbekend ingrediënt'}
+                      </span>
+                      <span className="text-ember font-bold text-lg">
+                        {ri.amount ? `${ri.amount}${ri.unit ?? ""}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-8 text-smoke">
                   <ChefHat className="h-12 w-12 mx-auto mb-4 text-ash/30" />
@@ -142,26 +101,17 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Right Column - Steps and Reviews */}
-        <div className="lg:col-span-2 space-y-8">
           {/* Cooking Steps */}
           <Card className="bg-coals border-ash">
             <CardHeader>
-              <CardTitle className="text-xl text-ash flex items-center gap-2">
-                <ChefHat className="h-5 w-5 text-ember" />
-                Bereidingswijze
-              </CardTitle>
-              <CardDescription className="text-smoke">
-                Stap-voor-stap instructies
-              </CardDescription>
+              <CardTitle className="text-xl text-ash">Bereidingswijze</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               {data.steps?.length ? (
                 (data.steps as StepItem[]).map((s) => (
-                  <div key={s.id} className="flex gap-4 p-4 bg-charcoal/30 rounded-lg border border-ash/20">
-                    <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-ember to-ember/80 text-white rounded-lg flex items-center justify-center text-sm font-bold shadow-lg">
+                  <div key={s.id} className="flex gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 bg-ember text-white rounded-full flex items-center justify-center text-lg font-bold">
                       {s.orderNo}
                     </div>
                     <div className="flex-1 space-y-2">
@@ -194,15 +144,48 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Right Column - Sidebar */}
+        <div className="space-y-6">
+          {/* Recipe Info */}
+          <Card className="bg-coals border-ash">
+            <CardHeader>
+              <CardTitle className="text-xl text-ash">Recept Info</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {data.serves && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-smoke">Porties:</span>
+                  <span className="text-ash font-medium">{data.serves}</span>
+                </div>
+              )}
+              {data.prepMinutes && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-smoke">Voorbereiding:</span>
+                  <span className="text-ash font-medium">{data.prepMinutes} min</span>
+                </div>
+              )}
+              {data.cookMinutes && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-smoke">Bereiding:</span>
+                  <span className="text-ash font-medium">{data.cookMinutes} min</span>
+                </div>
+              )}
+              {data.targetInternalTemp && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-smoke">Doel temperatuur:</span>
+                  <span className="text-ember font-bold">{data.targetInternalTemp}°C</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Tags */}
           {data.tags?.length > 0 && (
             <Card className="bg-coals border-ash">
               <CardHeader>
                 <CardTitle className="text-xl text-ash">Tags</CardTitle>
-                <CardDescription className="text-smoke">
-                  Categorieën voor dit recept
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
@@ -223,54 +206,36 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           {/* Reviews */}
           <Card className="bg-coals border-ash">
             <CardHeader>
-              <CardTitle className="text-xl text-ash flex items-center gap-2">
-                <Star className="h-5 w-5 text-ember" />
-                Reviews
-                {data.reviews?.length > 0 && (
-                  <span className="text-sm text-smoke font-normal">
-                    ({data.reviews.length})
-                  </span>
-                )}
-              </CardTitle>
-              <CardDescription className="text-smoke">
-                Wat anderen vinden van dit recept
-              </CardDescription>
+              <CardTitle className="text-xl text-ash">Reviews</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {data.reviews?.length ? (
                 (data.reviews as ReviewItem[]).map((review) => (
-                  <div key={review.id} className="p-4 bg-charcoal/30 rounded-lg border border-ash/20">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`h-4 w-4 ${
-                                i < review.rating ? 'text-ember fill-ember' : 'text-ash/30'
-                              }`} 
-                            />
-                          ))}
-                        </div>
-                        <span className="text-smoke text-sm">
-                          {review.user?.displayName || 'Anoniem'}
-                        </span>
-                      </div>
-                      <span className="text-smoke text-sm flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(review.createdAt).toLocaleDateString('nl-NL')}
+                  <div key={review.id} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-smoke text-sm">
+                        {review.user?.displayName || 'Anoniem'}
                       </span>
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star 
+                            key={i} 
+                            className={`h-4 w-4 ${
+                              i < review.rating ? 'text-ember fill-ember' : 'text-ash/30'
+                            }`} 
+                          />
+                        ))}
+                      </div>
                     </div>
                     {review.comment && (
-                      <p className="text-ash leading-relaxed">{review.comment}</p>
+                      <p className="text-ash text-sm leading-relaxed">{review.comment}</p>
                     )}
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 text-smoke">
-                  <Star className="h-16 w-16 mx-auto mb-4 text-ash/30" />
-                  <p className="text-lg">Nog geen reviews</p>
-                  <p className="text-sm">Wees de eerste om dit recept te beoordelen!</p>
+                <div className="text-center py-8 text-smoke">
+                  <Star className="h-12 w-12 mx-auto mb-4 text-ash/30" />
+                  <p className="text-sm">Nog geen reviews</p>
                 </div>
               )}
             </CardContent>
