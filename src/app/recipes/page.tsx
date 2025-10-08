@@ -68,24 +68,6 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
         </div>
       </div>
 
-      {!session && (
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-6 text-center">
-            <p className="text-smoke mb-4">
-              Bekijk publieke recepten van de community. Registreer je om je eigen recepten te maken en te beheren.
-            </p>
-            <div className="flex gap-3 justify-center">
-              <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
-                <Link href="/login">Inloggen</Link>
-              </Button>
-              <Button asChild className="bg-ember hover:bg-ember/90">
-                <Link href="/register">Registreer Gratis</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {data.items.length === 0 ? (
         <Card className="bg-coals border-ash">
           <CardHeader>
@@ -98,7 +80,7 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {(data.items as RecipeListItem[]).map((r) => (
-            <Card key={r.id} className="bg-coals border-ash">
+            <Card key={r.id} className="bg-coals border-ash hover:border-ember transition-colors">
               <CardContent className="p-4">
                 <Link href={`/recipes/${r.id}`} className="block">
                   <h3 className="text-lg font-heading text-ash mb-1">{r.title}</h3>

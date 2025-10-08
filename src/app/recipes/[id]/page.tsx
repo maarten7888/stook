@@ -27,46 +27,92 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="space-y-6">
-      <div>
+      {/* Header */}
+      <div className="space-y-2">
         <h1 className="text-3xl font-heading font-bold text-ash">{data.title}</h1>
         {data.description && (
-          <p className="text-smoke mt-2">{data.description}</p>
+          <p className="text-lg text-smoke">{data.description}</p>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-coals border-ash md:col-span-2">
+      {/* Recipe Info Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {data.serves && (
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-ember">{data.serves}</div>
+              <div className="text-sm text-smoke">Personen</div>
+            </CardContent>
+          </Card>
+        )}
+        {data.prepMinutes && (
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-ember">{data.prepMinutes}</div>
+              <div className="text-sm text-smoke">Min. voorbereiding</div>
+            </CardContent>
+          </Card>
+        )}
+        {data.cookMinutes && (
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-ember">{data.cookMinutes}</div>
+              <div className="text-sm text-smoke">Min. kooktijd</div>
+            </CardContent>
+          </Card>
+        )}
+        {data.targetInternalTemp && (
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-ember">{data.targetInternalTemp}°C</div>
+              <div className="text-sm text-smoke">Kerntemperatuur</div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Steps */}
+        <Card className="bg-coals border-ash">
           <CardHeader>
-            <CardTitle className="text-ash">Stappen</CardTitle>
-            <CardDescription className="text-smoke">Volgorde en timers</CardDescription>
+            <CardTitle className="text-ash">Bereidingswijze</CardTitle>
+            <CardDescription className="text-smoke">Volgorde en instructies</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-4">
             {data.steps?.length ? (
               (data.steps as StepItem[]).map((s) => (
-                <div key={s.id} className="text-ash">
-                  <span className="text-smoke mr-2">{s.orderNo}.</span>
-                  {s.instruction}
+                <div key={s.id} className="flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-ember text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    {s.orderNo}
+                  </div>
+                  <div className="text-ash">{s.instruction}</div>
                 </div>
               ))
             ) : (
-              <div className="text-smoke">Nog geen stappen</div>
+              <div className="text-smoke">Nog geen stappen toegevoegd</div>
             )}
           </CardContent>
         </Card>
+
+        {/* Ingredients */}
         <Card className="bg-coals border-ash">
           <CardHeader>
             <CardTitle className="text-ash">Ingrediënten</CardTitle>
+            <CardDescription className="text-smoke">Benodigde ingrediënten</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {data.ingredients?.length ? (
               (data.ingredients as IngredientItem[]).map((ri) => (
-                <div key={ri.id} className="text-ash">
-                  {ri.amount ? `${ri.amount}${ri.unit ?? ""} ` : ""}
-                  {ri.ingredientName}
+                <div key={ri.id} className="flex justify-between items-center py-2 border-b border-ash/20 last:border-b-0">
+                  <span className="text-ash">{ri.ingredientName}</span>
+                  <span className="text-smoke font-medium">
+                    {ri.amount ? `${ri.amount}${ri.unit ?? ""}` : ""}
+                  </span>
                 </div>
               ))
             ) : (
-              <div className="text-smoke">Nog geen ingrediënten</div>
+              <div className="text-smoke">Nog geen ingrediënten toegevoegd</div>
             )}
           </CardContent>
         </Card>
