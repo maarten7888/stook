@@ -6,6 +6,18 @@ import { z } from "zod";
 
 export const runtime = "nodejs";
 
+// Types for Supabase responses
+type IngredientResponse = {
+  id: string;
+  amount: number | null;
+  unit: string | null;
+  ingredients: { id: string; name: string }[] | null;
+};
+
+type TagResponse = {
+  tags: { id: string; name: string }[] | null;
+};
+
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const session = await getSession();
@@ -67,18 +79,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
     // Transform the data to match expected format
     const steps = stepsResult.data || [];
-    const ingredients = (ingredientsResult.data || []).map(ri => ({
+    const ingredients = (ingredientsResult.data || []).map((ri: IngredientResponse) => ({
       id: ri.id,
       amount: ri.amount,
       unit: ri.unit,
-      ingredientId: Array.isArray(ri.ingredients) ? ri.ingredients[0]?.id : ri.ingredients?.id,
-      ingredientName: Array.isArray(ri.ingredients) ? ri.ingredients[0]?.name : ri.ingredients?.name
+      ingredientId: ri.ingredients?.[0]?.id,
+      ingredientName: ri.ingredients?.[0]?.name
     }));
     const photos = photosResult.data || [];
     const reviews = reviewsResult.data || [];
-    const tags = (tagsResult.data || []).map(rt => ({
-      tagId: Array.isArray(rt.tags) ? rt.tags[0]?.id : rt.tags?.id,
-      tagName: Array.isArray(rt.tags) ? rt.tags[0]?.name : rt.tags?.name
+    const tags = (tagsResult.data || []).map((rt: TagResponse) => ({
+      tagId: rt.tags?.[0]?.id,
+      tagName: rt.tags?.[0]?.name
     }));
 
     return NextResponse.json({
