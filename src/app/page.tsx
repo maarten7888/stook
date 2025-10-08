@@ -173,46 +173,7 @@ export default async function RootPage() {
   const { items: recipes } = await fetchPublicRecipes();
 
   return (
-    <div className="min-h-screen bg-charcoal text-ash">
-      {/* Navigation for non-authenticated users */}
-      <nav className="bg-coals border-b border-ash">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-ember" />
-              <span className="text-xl font-heading font-bold text-ash">Stook</span>
-            </Link>
-
-            {/* Navigation Links */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link
-                href="#recipes"
-                className="text-smoke hover:text-ash transition-colors"
-              >
-                Recepten
-              </Link>
-              <Link
-                href="#features"
-                className="text-smoke hover:text-ash transition-colors"
-              >
-                Features
-              </Link>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
-                <Link href="/login">Inloggen</Link>
-              </Button>
-              <Button asChild className="bg-ember hover:bg-ember/90 text-white">
-                <Link href="/register">Registreren</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="space-y-20">
       {/* Hero Section */}
       <section className="relative py-20 px-4 text-center">
         <div className="max-w-4xl mx-auto">
@@ -230,7 +191,7 @@ export default async function RootPage() {
               <Link href="/register">Start Gratis</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-ash text-ash hover:bg-coals">
-              <Link href="#recipes">Bekijk Recepten</Link>
+              <Link href="/recipes">Bekijk Recepten</Link>
             </Button>
           </div>
         </div>
