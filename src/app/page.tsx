@@ -285,7 +285,18 @@ export default async function RootPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-smoke text-lg">Geen publieke recepten beschikbaar.</p>
+              <p className="text-smoke text-lg mb-6">Geen publieke recepten beschikbaar.</p>
+              <p className="text-smoke text-sm mb-8">
+                Registreer je om je eigen recepten te maken en te delen met de community.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
+                  <Link href="/login">Inloggen</Link>
+                </Button>
+                <Button asChild className="bg-ember hover:bg-ember/90">
+                  <Link href="/register">Registreer Gratis</Link>
+                </Button>
+              </div>
             </div>
           )}
         </div>
