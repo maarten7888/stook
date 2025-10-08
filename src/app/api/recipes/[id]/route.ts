@@ -7,13 +7,6 @@ import { z } from "zod";
 export const runtime = "nodejs";
 
 // Types for Supabase responses
-type IngredientResponse = {
-  id: string;
-  amount: number | null;
-  unit: string | null;
-  ingredients: { id: string; name: string }[] | null;
-};
-
 type TagResponse = {
   tags: { id: string; name: string }[] | null;
 };
@@ -79,13 +72,35 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
     // Transform the data to match expected format
     const steps = stepsResult.data || [];
-    const ingredients = (ingredientsResult.data || []).map((ri: IngredientResponse) => ({
-      id: ri.id,
-      amount: ri.amount,
-      unit: ri.unit,
-      ingredientId: ri.ingredients?.[0]?.id,
-      ingredientName: ri.ingredients?.[0]?.name
-    }));
+    
+    // Debug: log the ingredients data structure
+    console.log('Ingredients result:', JSON.stringify(ingredientsResult.data, null, 2));
+    
+    const ingredients = (ingredientsResult.data || []).map((ri: Record<string, unknown>) => {
+      // Handle different possible structures from Supabase
+      let ingredientName = 'Onbekend ingrediënt';
+      let ingredientId = null;
+      
+      if (ri.ingredients) {
+        const ingredients = ri.ingredients as Record<string, unknown>;
+        if (Array.isArray(ingredients) && ingredients.length > 0) {
+          const firstIngredient = ingredients[0] as Record<string, unknown>;
+          ingredientName = (firstIngredient.name as string) || 'Onbekend ingrediënt';
+          ingredientId = firstIngredient.id as string;
+        } else if (ingredients.name) {
+          ingredientName = (ingredients.name as string) || 'Onbekend ingrediënt';
+          ingredientId = ingredients.id as string;
+        }
+      }
+      
+      return {
+        id: ri.id as string,
+        amount: ri.amount as number | null,
+        unit: ri.unit as string | null,
+        ingredientId: ingredientId,
+        ingredientName: ingredientName
+      };
+    });
     const photos = photosResult.data || [];
     const reviews = reviewsResult.data || [];
     const tags = (tagsResult.data || []).map((rt: TagResponse) => ({
