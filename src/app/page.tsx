@@ -173,24 +173,21 @@ export default async function RootPage() {
   const { items: recipes } = await fetchPublicRecipes();
 
   return (
-    <div className="space-y-20">
+    <div className="max-w-7xl mx-auto space-y-12">
       {/* Hero Section */}
-      <section className="relative py-20 px-4 text-center">
+      <section className="py-16 px-4 text-center">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-ash mb-6 font-outfit">
+          <h1 className="text-4xl md:text-5xl font-bold text-ash mb-4 font-outfit">
             Stook
           </h1>
-          <p className="text-xl text-smoke mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-smoke mb-6 max-w-2xl mx-auto">
             Elke sessie beter
           </p>
-          <p className="text-lg text-smoke mb-12 max-w-3xl mx-auto">
+          <p className="text-lg text-smoke mb-8 max-w-3xl mx-auto">
             Je ultieme BBQ companion. Deel recepten, track je kooksessies en word een betere pitmaster.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white">
-              <Link href="/register">Start Gratis</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-ash text-ash hover:bg-coals">
               <Link href="/recipes">Bekijk Recepten</Link>
             </Button>
           </div>
@@ -198,47 +195,47 @@ export default async function RootPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4">
+      <section id="features" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-ash text-center mb-12 font-outfit">
+          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-outfit">
             Alles wat je nodig hebt voor perfecte BBQ
           </h2>
-          <p className="text-lg text-smoke text-center mb-16 max-w-2xl mx-auto">
+          <p className="text-lg text-smoke text-center mb-12 max-w-2xl mx-auto">
             Van recepten tot temperatuur tracking
           </p>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bg-coals border-ash">
-              <CardHeader className="text-center">
-                <BookOpen className="h-12 w-12 text-ember mx-auto mb-4" />
-                <CardTitle className="text-xl text-ash">Recepten</CardTitle>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
+              <CardHeader className="text-center pb-4">
+                <BookOpen className="h-10 w-10 text-ember mx-auto mb-3" />
+                <CardTitle className="text-lg text-ash">Recepten</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-smoke">
+                <p className="text-smoke text-sm">
                   Bewaar en deel je favoriete BBQ recepten. Van klassiekers tot experimenten.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash">
-              <CardHeader className="text-center">
-                <Clock className="h-12 w-12 text-ember mx-auto mb-4" />
-                <CardTitle className="text-xl text-ash">Kooksessies</CardTitle>
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
+              <CardHeader className="text-center pb-4">
+                <Clock className="h-10 w-10 text-ember mx-auto mb-3" />
+                <CardTitle className="text-lg text-ash">Kooksessies</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-smoke">
+                <p className="text-smoke text-sm">
                   Track je kooksessies met temperatuur logs, foto&apos;s en notities.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash">
-              <CardHeader className="text-center">
-                <Camera className="h-12 w-12 text-ember mx-auto mb-4" />
-                <CardTitle className="text-xl text-ash">Importeren</CardTitle>
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
+              <CardHeader className="text-center pb-4">
+                <Camera className="h-10 w-10 text-ember mx-auto mb-3" />
+                <CardTitle className="text-lg text-ash">Importeren</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-smoke">
+                <p className="text-smoke text-sm">
                   Importeer recepten van je favoriete BBQ websites met één klik.
                 </p>
               </CardContent>
@@ -248,32 +245,32 @@ export default async function RootPage() {
       </section>
 
       {/* Public Recipes Section */}
-      <section id="recipes" className="py-20 px-4 bg-coals">
+      <section id="recipes" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-ash text-center mb-12 font-outfit">
+          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-outfit">
             Publieke Recepten
           </h2>
-          <p className="text-lg text-smoke text-center mb-16 max-w-2xl mx-auto">
+          <p className="text-lg text-smoke text-center mb-12 max-w-2xl mx-auto">
             Ontdek recepten van de community
           </p>
           
           {recipes.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {recipes.map((recipe: { id: string; title: string; description?: string; user?: { displayName?: string } }) => (
-                <Card key={recipe.id} className="bg-charcoal border-ash hover:border-ember transition-colors">
-                  <CardHeader>
-                    <CardTitle className="text-xl text-ash font-outfit">
+                <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-colors group">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg text-ash font-outfit group-hover:text-ember transition-colors">
                       {recipe.title}
                     </CardTitle>
                     <p className="text-smoke text-sm">
                       door {recipe.user?.displayName || "Anoniem"}
                     </p>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0">
                     <p className="text-smoke text-sm mb-4 line-clamp-3">
                       {recipe.description || "Geen beschrijving beschikbaar."}
                     </p>
-                    <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white">
+                    <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full">
                       <Link href={`/recipes/${recipe.id}`}>
                         Bekijk Recept
                         <ArrowRight className="ml-2 h-4 w-4" />
@@ -285,40 +282,13 @@ export default async function RootPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-smoke text-lg mb-6">Geen publieke recepten beschikbaar.</p>
-              <p className="text-smoke text-sm mb-8">
+              <BookOpen className="h-16 w-16 mx-auto mb-6 text-ember/50" />
+              <p className="text-smoke text-lg mb-4">Geen publieke recepten beschikbaar.</p>
+              <p className="text-smoke text-sm">
                 Registreer je om je eigen recepten te maken en te delen met de community.
               </p>
-              <div className="flex gap-4 justify-center">
-                <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
-                  <Link href="/login">Inloggen</Link>
-                </Button>
-                <Button asChild className="bg-ember hover:bg-ember/90">
-                  <Link href="/register">Registreer Gratis</Link>
-                </Button>
-              </div>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-ash mb-6 font-outfit">
-            Klaar om te beginnen?
-          </h2>
-          <p className="text-lg text-smoke mb-12 max-w-2xl mx-auto">
-            Sluit je aan bij de BBQ community en deel je passie voor perfecte vlees.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white">
-              <Link href="/register">Registreer Gratis</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-ash text-ash hover:bg-coals">
-              <Link href="/login">Al een account? Inloggen</Link>
-            </Button>
-          </div>
         </div>
       </section>
     </div>
