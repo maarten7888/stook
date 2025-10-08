@@ -15,11 +15,16 @@ async function fetchRecipe(id: string) {
 
 export default async function RecipeDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
-  if (!session) redirect("/login");
-
   const data = await fetchRecipe(params.id);
+  
   if (!data) {
     redirect("/recipes");
+  }
+
+  // Check if user has access to this recipe
+  // Public recipes are accessible to everyone, private recipes only to owners
+  if (data.visibility !== "public" && (!session || data.userId !== session.user.id)) {
+    redirect("/login");
   }
 
   type StepItem = { id: string; orderNo: number; instruction: string };
