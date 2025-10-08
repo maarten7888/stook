@@ -71,9 +71,16 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     ]);
 
     // Transform the data to match expected format
-    const steps = stepsResult.data || [];
+    const steps = (stepsResult.data || []).map((step: Record<string, unknown>) => ({
+      id: step.id as string,
+      orderNo: step.order_no as number,
+      instruction: step.instruction as string,
+      timerMinutes: step.timer_minutes as number | null,
+      targetTemp: step.target_temp as number | null,
+    }));
     
-    // Debug: log the ingredients data structure
+    // Debug: log the data structures
+    console.log('Steps result:', JSON.stringify(stepsResult.data, null, 2));
     console.log('Ingredients result:', JSON.stringify(ingredientsResult.data, null, 2));
     
     const ingredients = (ingredientsResult.data || []).map((ri: Record<string, unknown>) => {
