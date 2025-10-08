@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { headers } from "next/headers";
 
@@ -14,18 +13,14 @@ async function fetchRecipe(id: string) {
 }
 
 export default async function RecipeDetailPage({ params }: { params: { id: string } }) {
-  const session = await getSession();
   const data = await fetchRecipe(params.id);
   
   if (!data) {
     redirect("/recipes");
   }
 
-  // Check if user has access to this recipe
-  // Public recipes are accessible to everyone, private recipes only to owners
-  if (data.visibility !== "public" && (!session || data.userId !== session.user.id)) {
-    redirect("/login");
-  }
+  // The API already handles access control - if we get data, user has access
+  // No need for additional checks here
 
   type StepItem = { id: string; orderNo: number; instruction: string };
   type IngredientItem = { id: string; amount: string | null; unit: string | null; ingredientName: string };
