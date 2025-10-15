@@ -61,6 +61,29 @@ export default function RegisterPage() {
         console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
       }
       
+      // Eerst controleren of het email adres al bestaat via een server action
+      try {
+        const checkResponse = await fetch('/api/check-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+        
+        const checkResult = await checkResponse.json();
+        
+        if (checkResult.exists) {
+          setIsDuplicateEmail(true);
+          toast.error("Dit email adres is al geregistreerd.");
+          return;
+        }
+      } catch (checkErr) {
+        console.error("Email check error:", checkErr);
+        // Ga door met registratie als check faalt
+      }
+      
+      // Nu proberen te registreren
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
