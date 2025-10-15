@@ -71,12 +71,22 @@ export default function RegisterPage() {
           body: JSON.stringify({ email }),
         });
         
-        const checkResult = await checkResponse.json();
-        
-        if (checkResult.exists) {
-          setIsDuplicateEmail(true);
-          toast.error("Dit email adres is al geregistreerd.");
-          return;
+        if (!checkResponse.ok) {
+          console.error("Email check failed with status:", checkResponse.status);
+          // Ga door met registratie als check faalt
+        } else {
+          const checkResult = await checkResponse.json();
+          
+          if (checkResult.exists) {
+            setIsDuplicateEmail(true);
+            toast.error("Dit email adres is al geregistreerd.");
+            return;
+          }
+          
+          if (checkResult.error) {
+            console.log("Email check warning:", checkResult.error);
+            // Ga door met registratie
+          }
         }
       } catch (checkErr) {
         console.error("Email check error:", checkErr);

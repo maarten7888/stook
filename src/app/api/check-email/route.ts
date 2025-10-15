@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -9,26 +9,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
     
-    const supabase = await createClient();
+    console.log("Checking email:", email);
     
-    // Gebruik de Admin API om te controleren of de user bestaat
-    const { data: users, error } = await supabase.auth.admin.listUsers();
+    const supabase = createAdminClient();
     
-    if (error) {
-      console.error("Error checking users:", error);
-      return NextResponse.json({ error: "Failed to check email" }, { status: 500 });
+    // Probeer de Admin API te gebruiken
+    try {
+      const { data: users, error } = await supabase.auth.admin.listUsers();
+      
+      if (error) {
+        console.error("Admin API error:", error);
+        // Fallback: return false (ga door met registratie)
+        return NextResponse.json({ 
+          exists: false,
+          email: email,
+          error: "Admin API not available, proceeding with registration"
+        });
+      }
+      
+      // Zoek naar een user met dit email adres
+      const existingUser = users.users.find(user => user.email === email);
+      
+      console.log("User check result:", { exists: !!existingUser, email });
+      
+      return NextResponse.json({ 
+        exists: !!existingUser,
+        email: email 
+      });
+      
+    } catch (adminError) {
+      console.error("Admin API catch error:", adminError);
+      // Fallback: return false (ga door met registratie)
+      return NextResponse.json({ 
+        exists: false,
+        email: email,
+        error: "Admin API failed, proceeding with registration"
+      });
     }
-    
-    // Zoek naar een user met dit email adres
-    const existingUser = users.users.find(user => user.email === email);
-    
-    return NextResponse.json({ 
-      exists: !!existingUser,
-      email: email 
-    });
     
   } catch (error) {
     console.error("Check email error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Internal server error", 
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }
