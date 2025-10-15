@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [isDuplicateEmail, setIsDuplicateEmail] = useState(false);
   const router = useRouter();
 
   // Debug Supabase configuratie
@@ -51,12 +52,14 @@ export default function RegisterPage() {
     try {
       const supabase = createClient();
       
-      // Debug info
-      console.log("=== REGISTRATION DEBUG ===");
-      console.log("Email:", email);
-      console.log("Display Name:", displayName);
-      console.log("Redirect URL:", `${window.location.origin}/auth/callback`);
-      console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+      // Debug info (alleen in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log("=== REGISTRATION DEBUG ===");
+        console.log("Email:", email);
+        console.log("Display Name:", displayName);
+        console.log("Redirect URL:", `${window.location.origin}/auth/callback`);
+        console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+      }
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -69,25 +72,51 @@ export default function RegisterPage() {
         },
       });
 
-      console.log("=== SIGNUP RESPONSE ===");
-      console.log("Data:", data);
-      console.log("Error:", error);
-      console.log("User:", data?.user);
-      console.log("Session:", data?.session);
+      // Debug response (alleen in development)
+      if (process.env.NODE_ENV === 'development') {
+        console.log("=== SIGNUP RESPONSE ===");
+        console.log("Data:", data);
+        console.log("Error:", error);
+        console.log("User:", data?.user);
+        console.log("Session:", data?.session);
+      }
 
       if (error) {
         console.error("SIGNUP ERROR:", error);
-        toast.error(`Registratie fout: ${error.message}`);
+        
+        // Specifieke foutmeldingen voor verschillende scenario's
+        let errorMessage = "Er is iets misgegaan bij het registreren";
+        
+        if (error.message.includes("already registered") || 
+            error.message.includes("already been registered") ||
+            error.message.includes("User already registered")) {
+          errorMessage = "Dit email adres is al geregistreerd.";
+          setIsDuplicateEmail(true);
+        } else if (error.message.includes("Invalid email")) {
+          errorMessage = "Voer een geldig email adres in";
+        } else if (error.message.includes("Password should be at least")) {
+          errorMessage = "Wachtwoord moet minimaal 6 karakters lang zijn";
+        } else if (error.message.includes("Signup is disabled")) {
+          errorMessage = "Registratie is tijdelijk uitgeschakeld";
+        } else {
+          errorMessage = `Registratie fout: ${error.message}`;
+        }
+        
+        toast.error(errorMessage);
         return;
       }
 
       if (data.user) {
-        console.log("✅ USER CREATED SUCCESSFULLY");
-        console.log("User ID:", data.user.id);
-        console.log("Email confirmed:", data.user.email_confirmed_at);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("✅ USER CREATED SUCCESSFULLY");
+          console.log("User ID:", data.user.id);
+          console.log("Email confirmed:", data.user.email_confirmed_at);
+        }
         toast.success("Account aangemaakt! Check je email voor verificatie.");
       } else {
-        console.log("❌ NO USER IN RESPONSE");
+        if (process.env.NODE_ENV === 'development') {
+          console.log("❌ NO USER IN RESPONSE");
+        }
         toast.error("Geen gebruiker aangemaakt - onbekende fout");
       }
       
@@ -171,6 +200,33 @@ export default function RegisterPage() {
               Log hier in
             </Link>
           </div>
+          
+          {/* Speciale melding voor duplicate email */}
+          {isDuplicateEmail && (
+            <div className="mt-4 p-4 bg-ember/10 border border-ember/20 rounded-lg">
+              <p className="text-ember text-sm text-center mb-3">
+                Dit email adres is al geregistreerd.
+              </p>
+              <div className="text-center">
+                <Link 
+                  href="/login" 
+                  className="text-ember hover:text-ember/80 font-medium underline"
+                >
+                  Ga naar inloggen
+                </Link>
+                <span className="text-smoke mx-2">of</span>
+                <button 
+                  onClick={() => {
+                    setEmail("");
+                    setIsDuplicateEmail(false);
+                  }}
+                  className="text-ember hover:text-ember/80 font-medium underline"
+                >
+                  probeer een ander email adres
+                </button>
+              </div>
+            </div>
+          )}
           
           {/* Debug info - alleen in development */}
           {process.env.NODE_ENV === 'development' && (
