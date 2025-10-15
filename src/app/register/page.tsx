@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,7 +16,21 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
   const router = useRouter();
+
+  // Debug Supabase configuratie
+  useEffect(() => {
+    const supabase = createClient();
+    const debug = `
+      Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET'}
+      Current Origin: ${window.location.origin}
+      Redirect URL: ${window.location.origin}/auth/callback
+    `;
+    setDebugInfo(debug);
+    console.log("=== SUPABASE CONFIG DEBUG ===");
+    console.log(debug);
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,25 +50,51 @@ export default function RegisterPage() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      
+      // Debug info
+      console.log("=== REGISTRATION DEBUG ===");
+      console.log("Email:", email);
+      console.log("Display Name:", displayName);
+      console.log("Redirect URL:", `${window.location.origin}/auth/callback`);
+      console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             display_name: displayName,
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
+      console.log("=== SIGNUP RESPONSE ===");
+      console.log("Data:", data);
+      console.log("Error:", error);
+      console.log("User:", data?.user);
+      console.log("Session:", data?.session);
+
       if (error) {
-        toast.error(error.message);
+        console.error("SIGNUP ERROR:", error);
+        toast.error(`Registratie fout: ${error.message}`);
         return;
       }
 
-      toast.success("Account aangemaakt! Check je email voor verificatie.");
+      if (data.user) {
+        console.log("✅ USER CREATED SUCCESSFULLY");
+        console.log("User ID:", data.user.id);
+        console.log("Email confirmed:", data.user.email_confirmed_at);
+        toast.success("Account aangemaakt! Check je email voor verificatie.");
+      } else {
+        console.log("❌ NO USER IN RESPONSE");
+        toast.error("Geen gebruiker aangemaakt - onbekende fout");
+      }
+      
       router.push("/login");
-    } catch {
-      toast.error("Er is iets misgegaan bij het registreren");
+    } catch (err) {
+      console.error("CATCH ERROR:", err);
+      toast.error(`Er is iets misgegaan: ${err instanceof Error ? err.message : 'Onbekende fout'}`);
     } finally {
       setIsLoading(false);
     }
@@ -131,6 +171,14 @@ export default function RegisterPage() {
               Log hier in
             </Link>
           </div>
+          
+          {/* Debug info - alleen in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-3 bg-gray-800 rounded text-xs text-gray-300">
+              <strong>Debug Info:</strong>
+              <pre className="whitespace-pre-wrap">{debugInfo}</pre>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
