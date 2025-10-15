@@ -41,7 +41,7 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
                 href="/"
                 className="text-smoke hover:text-ash transition-colors"
               >
-                Feed
+                Home
               </Link>
               <Link
                 href="/recipes"
@@ -55,11 +55,17 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
               >
                 Mijn Sessies
               </Link>
+              <Link
+                href="/import"
+                className="text-smoke hover:text-ash transition-colors"
+              >
+                Importeren
+              </Link>
             </div>
 
             {/* Actions - Responsive */}
             <div className="flex items-center space-x-2 sm:space-x-4">
-              {/* Mobile: Only show icons, Desktop: Show full buttons */}
+              {/* Nieuw Recept knop - Desktop */}
               <Button asChild size="sm" className="bg-ember hover:bg-ember/90 hidden sm:flex">
                 <Link href="/recipes/new">
                   <Plus className="h-4 w-4 mr-2" />
@@ -67,24 +73,10 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
                 </Link>
               </Button>
               
-              {/* Mobile icon button */}
+              {/* Nieuw Recept knop - Mobile */}
               <Button asChild size="sm" className="bg-ember hover:bg-ember/90 sm:hidden">
                 <Link href="/recipes/new">
                   <Plus className="h-4 w-4" />
-                </Link>
-              </Button>
-              
-              <Button asChild size="sm" variant="outline" className="border-ash text-ash hover:bg-coals hidden sm:flex">
-                <Link href="/import">
-                  <Camera className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Importeren</span>
-                </Link>
-              </Button>
-
-              {/* Mobile icon button */}
-              <Button asChild size="sm" variant="outline" className="border-ash text-ash hover:bg-coals sm:hidden">
-                <Link href="/import">
-                  <Camera className="h-4 w-4" />
                 </Link>
               </Button>
 

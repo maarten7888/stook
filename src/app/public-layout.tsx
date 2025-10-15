@@ -22,16 +22,16 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             {/* Navigation Links */}
             <div className="hidden md:flex items-center space-x-8">
               <Link
-                href="/recipes"
-                className="text-smoke hover:text-ash transition-colors"
-              >
-                Recepten
-              </Link>
-              <Link
                 href="/"
                 className="text-smoke hover:text-ash transition-colors"
               >
                 Home
+              </Link>
+              <Link
+                href="/recipes"
+                className="text-smoke hover:text-ash transition-colors"
+              >
+                Recepten
               </Link>
             </div>
 
