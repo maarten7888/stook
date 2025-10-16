@@ -175,75 +175,75 @@ INITIAL PLAN (Sprint 0 → MVP)
 
 1. Repo & Scaffolding
 
-* [ ] `pnpm dlx create-next-app@latest stook --ts --app --eslint --tailwind`
-* [ ] Init repo + branch `feat/bootstrap`
-* [ ] Install deps: `pnpm add @supabase/supabase-js @supabase/ssr drizzle-orm drizzle-kit pg zod lucide-react`
-* [ ] Dev deps: `pnpm add -D vitest @testing-library/react @testing-library/jest-dom playwright eslint-config-next prettier @types/node`
-* [ ] Setup **shadcn/ui**: `pnpm dlx shadcn-ui@latest init` + basis (Button, Input, Label, Dialog, Tabs, Card, DropdownMenu, Avatar, Toast)
+* [x] `pnpm dlx create-next-app@latest stook --ts --app --eslint --tailwind`
+* [x] Init repo + branch `feat/bootstrap`
+* [x] Install deps: `pnpm add @supabase/supabase-js @supabase/ssr drizzle-orm drizzle-kit pg zod lucide-react`
+* [x] Dev deps: `pnpm add -D vitest @testing-library/react @testing-library/jest-dom playwright eslint-config-next prettier @types/node`
+* [x] Setup **shadcn/ui**: `pnpm dlx shadcn-ui@latest init` + basis (Button, Input, Label, Dialog, Tabs, Card, DropdownMenu, Avatar, Toast)
 
 2. Tailwind & Branding
 
-* [ ] Tailwind tokens (charcoal, coals, ash, smoke, ember) in `tailwind.config.ts`
+* [x] Tailwind tokens (charcoal, coals, ash, smoke, ember) in `tailwind.config.ts`
 * [ ] Fonts Outfit/Inter via `next/font`
-* [ ] `components/ui/theme.css` + globale styles
+* [x] `components/ui/theme.css` + globale styles
 
 3. Supabase & DB
 
 * [x] Supabase CLI installatie (via Scoop) - versie 2.47.2
-* [ ] Supabase project (Frankfurt). Noteer `NEXT_PUBLIC_SUPABASE_URL` en keys
-* [ ] Drizzle setup: `drizzle.config.ts` (pg, migrations in `drizzle/`)
-* [ ] Schema’s in `drizzle/schema.ts`: profiles, recipes, ingredients, recipe_ingredients, steps, photos, cook_sessions, session_temps, reviews, tags, recipe_tags
-* [ ] Migraties genereren: `pnpm drizzle-kit generate` → `pnpm drizzle-kit push`
-* [ ] RLS aanzetten; policies SQL in `drizzle/rls.sql` en toepassen
+* [x] Supabase project (Frankfurt). Noteer `NEXT_PUBLIC_SUPABASE_URL` en keys
+* [x] Drizzle setup: `drizzle.config.ts` (pg, migrations in `drizzle/`)
+* [x] Schema's in `drizzle/schema.ts`: profiles, recipes, ingredients, recipe_ingredients, steps, photos, cook_sessions, session_temps, reviews, tags, recipe_tags
+* [x] Migraties genereren: `pnpm drizzle-kit generate` → `pnpm drizzle-kit push`
+* [x] RLS aanzetten; policies SQL in `drizzle/rls.sql` en toepassen
 
 4. Auth
 
-* [ ] `lib/supabase/server.ts` (SSR client) en `lib/supabase/client.ts`
-* [ ] Helpers voor sessie in layout (`getSession()`), redirect op no-auth
-* [ ] `/login`, `/register` (email/password; magic link optioneel)
-* [ ] Protected layout `(app)`
+* [x] `lib/supabase/server.ts` (SSR client) en `lib/supabase/client.ts`
+* [x] Helpers voor sessie in layout (`getSession()`), redirect op no-auth
+* [x] `/login`, `/register` (email/password; magic link optioneel)
+* [x] Protected layout `(app)`
 
 5. Routes & Pages
 
-* [ ] `/` feed (public + own)
-* [ ] `/recipes`, `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit`
-* [ ] `/sessions/[id]` (Notities | Foto’s | Temperatuur)
-* [ ] `/import` (URL → Preview → Import)
-* [ ] `/profile`
+* [x] `/` feed (public + own)
+* [x] `/recipes`, `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit`
+* [x] `/sessions/[id]` (Notities | Foto's | Temperatuur)
+* [x] `/import` (URL → Preview → Import)
+* [x] `/profile`
 
 6. API / Server Actions
 
-* [ ] `app/api/recipes` (GET list, POST create)
-* [ ] `app/api/recipes/[id]` (GET, PUT, DELETE)
-* [ ] `app/api/recipes/[id]/reviews` (GET, POST)
-* [ ] `app/api/recipes/[id]/sessions` (POST start)
-* [ ] `app/api/sessions/[id]` (GET, PUT finish)
-* [ ] `app/api/sessions/[id]/temps` (POST)
-* [ ] `app/api/sessions/[id]/events` (GET since)
-* [ ] `app/api/photos` (multipart → Supabase Storage + DB + signed URL)
+* [x] `app/api/recipes` (GET list, POST create)
+* [x] `app/api/recipes/[id]` (GET, PUT, DELETE)
+* [x] `app/api/recipes/[id]/reviews` (GET, POST)
+* [x] `app/api/recipes/[id]/sessions` (POST start)
+* [x] `app/api/sessions/[id]` (GET, PUT finish)
+* [x] `app/api/sessions/[id]/temps` (POST)
+* [x] `app/api/sessions/[id]/events` (GET since)
+* [x] `app/api/photos` (multipart → Supabase Storage + DB + signed URL)
 
 7. UI Components & Forms
 
-* [ ] Re-usable form components met Zod
+* [x] Re-usable form components met Zod
 * [ ] RecipeCard, RatingStars, TagChips, PhotoGrid, SessionTempChart (stub), Navbar
 
 8. Testing & CI
 
-* [ ] Vitest config + unit test (policy helper)
-* [ ] Playwright e2e: login, recipe CRUD, session start/finish, review create
-* [ ] GitHub Actions `.github/workflows/ci.yml` (lint, typecheck, vitest, playwright)
+* [x] Vitest config + unit test (policy helper)
+* [x] Playwright e2e: login, recipe CRUD, session start/finish, review create
+* [x] GitHub Actions `.github/workflows/ci.yml` (lint, typecheck, vitest, playwright)
 
 9. Env & README
 
-* [ ] `.env.example` met alle variabelen (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL` ...)
-* [ ] README: setup, scripts, deploy op Vercel, RLS, seeds
+* [x] `.env.example` met alle variabelen (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL` ...)
+* [x] README: setup, scripts, deploy op Vercel, RLS, seeds
 
 10. Deploy
 
-* [ ] Vercel project koppelen, env vars zetten
-* [ ] Domeinen: `stookboek.nl` (primary), `stook-boek.nl` (301 redirect)
-* [ ] Smoke test prod
-* [ ] GitHub Actions workflow `.github/workflows/ci.yml` configureren
+* [x] Vercel project koppelen, env vars zetten
+* [x] Domeinen: `stookboek.nl` (primary), `stook-boek.nl` (301 redirect)
+* [x] Smoke test prod
+* [x] GitHub Actions workflow `.github/workflows/ci.yml` configureren
 * [ ] Branch protection rules op main (require PR reviews, status checks)
 
 BACKLOG (Quick Wins)
@@ -255,10 +255,39 @@ BACKLOG (Quick Wins)
 
 MILESTONES
 
-* M0 Bootstrap (1–2 dagen): repo, theming, auth skeleton, DB schema
-* M1 Recipes CRUD + list/detail + reviews
-* M2 Cook Sessions + temps + photos upload
-* M3 Import flow + polish + e2e
+* M0 Bootstrap (1–2 dagen): repo, theming, auth skeleton, DB schema ✅ VOLTOOID
+* M1 Recipes CRUD + list/detail + reviews ✅ VOLTOOID
+* M2 Cook Sessions + temps + photos upload ✅ VOLTOOID
+* M3 Import flow + polish + e2e ✅ VOLTOOID
+* M4 UI Components + Fonts + Branding 🔄 IN PROGRESS
+* M5 Production Polish + Advanced Features 📋 PLANNED
+
+CURRENT STATUS (December 2024)
+
+✅ VOLTOOID:
+- Complete Next.js 15 + Supabase + Drizzle setup
+- Full database schema met RLS policies
+- Complete authentication flow (login/register)
+- All API endpoints (recipes, sessions, reviews, photos, import, profile)
+- All pages en routes geïmplementeerd
+- Testing setup (Vitest + Playwright)
+- CI/CD pipeline (GitHub Actions)
+- Vercel deployment met domeinen
+- Tailwind styling met custom kleuren
+
+🔄 IN PROGRESS:
+- UI Components: RatingStars, TagChips, PhotoGrid, SessionTempChart
+- Fonts: Outfit (headings) + Inter (body) via next/font
+- Branding: Logo SVG, favicons
+
+📋 VOLGENDE STAPPEN:
+1. Missing UI components implementeren
+2. Fonts toevoegen (Outfit/Inter)
+3. Logo en favicons toevoegen
+4. Branch protection rules op main
+5. Advanced features (favorites, search, notifications)
+6. PWA manifest en service worker
+7. Real-time updates (Supabase Realtime)
 
 SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
 
