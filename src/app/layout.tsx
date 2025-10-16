@@ -4,6 +4,19 @@ import PublicLayout from "./public-layout";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import type { Metadata } from "next";
+import { Inter, Outfit } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Stook — elke sessie beter",
@@ -82,7 +95,7 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="nl">
+    <html lang="nl" className={`${inter.variable} ${outfit.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png" />

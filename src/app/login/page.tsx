@@ -58,7 +58,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-charcoal flex items-center justify-center px-4">
       <Card className="w-full max-w-md bg-coals border-ash">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-ash font-outfit">Inloggen</CardTitle>
+          <CardTitle className="text-2xl text-ash font-heading">Inloggen</CardTitle>
           <p className="text-smoke">Welkom terug bij Stook</p>
         </CardHeader>
         <CardContent className="space-y-4">

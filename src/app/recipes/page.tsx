@@ -125,7 +125,7 @@ export default async function RecipesPage({
             <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all duration-300 group hover:shadow-lg hover:shadow-ember/10">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg text-ash font-outfit group-hover:text-ember transition-colors line-clamp-2">
+                  <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors line-clamp-2">
                     {recipe.title}
                   </CardTitle>
                   {recipe.reviews && recipe.reviews.length > 0 && (

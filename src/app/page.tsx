@@ -177,7 +177,7 @@ export default async function RootPage() {
       {/* Hero Section */}
       <section className="py-16 px-4 text-center">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold text-ash mb-4 font-outfit">
+          <h1 className="text-4xl md:text-5xl font-bold text-ash mb-4 font-heading">
             Stook
           </h1>
           <p className="text-xl text-smoke mb-6 max-w-2xl mx-auto">
@@ -197,7 +197,7 @@ export default async function RootPage() {
       {/* Features Section */}
       <section id="features" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-outfit">
+          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-heading">
             Alles wat je nodig hebt voor perfecte BBQ
           </h2>
           <p className="text-lg text-smoke text-center mb-12 max-w-2xl mx-auto">
@@ -247,7 +247,7 @@ export default async function RootPage() {
       {/* Public Recipes Section */}
       <section id="recipes" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-outfit">
+          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-heading">
             Publieke Recepten
           </h2>
           <p className="text-lg text-smoke text-center mb-12 max-w-2xl mx-auto">
@@ -259,7 +259,7 @@ export default async function RootPage() {
               {recipes.map((recipe: { id: string; title: string; description?: string; user?: { displayName?: string } }) => (
                 <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-colors group">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-ash font-outfit group-hover:text-ember transition-colors">
+                    <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors">
                       {recipe.title}
                     </CardTitle>
                     <p className="text-smoke text-sm">

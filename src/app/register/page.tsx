@@ -166,7 +166,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-charcoal flex items-center justify-center px-4">
       <Card className="w-full max-w-md bg-coals border-ash">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-ash font-outfit">Registreren</CardTitle>
+          <CardTitle className="text-2xl text-ash font-heading">Registreren</CardTitle>
           <p className="text-smoke">Word onderdeel van de BBQ community</p>
         </CardHeader>
         <CardContent className="space-y-4">
