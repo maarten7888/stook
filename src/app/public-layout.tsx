@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Home, BookOpen } from "lucide-react";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -26,14 +27,16 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             <div className="hidden md:flex items-center space-x-8">
               <Link
                 href="/"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <Home className="h-4 w-4" />
                 Home
               </Link>
               <Link
                 href="/recipes"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <BookOpen className="h-4 w-4" />
                 Recepten
               </Link>
             </div>

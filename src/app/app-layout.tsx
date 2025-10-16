@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, User, BookOpen, Camera, Plus, Clock } from "lucide-react";
+import { LogOut, User, BookOpen, Camera, Plus, Clock, Home, FileText, Download } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -43,32 +43,37 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
             <div className="hidden lg:flex items-center space-x-8">
               <Link
                 href="/"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <Home className="h-4 w-4" />
                 Home
               </Link>
               <Link
                 href="/recipes?visibility=public"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <BookOpen className="h-4 w-4" />
                 Recepten
               </Link>
               <Link
                 href="/recipes?visibility=private"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <FileText className="h-4 w-4" />
                 Mijn Recepten
               </Link>
               <Link
                 href="/sessions"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <Clock className="h-4 w-4" />
                 Mijn Sessies
               </Link>
               <Link
                 href="/import"
-                className="text-smoke hover:text-ash transition-colors"
+                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
               >
+                <Download className="h-4 w-4" />
                 Importeren
               </Link>
             </div>
