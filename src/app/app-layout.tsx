@@ -48,7 +48,7 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
                 Home
               </Link>
               <Link
-                href="/recipes"
+                href="/recipes?visibility=public"
                 className="text-smoke hover:text-ash transition-colors"
               >
                 Recepten
