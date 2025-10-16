@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, User, ChefHat, BookOpen, Camera, Plus, Clock } from "lucide-react";
+import { LogOut, User, BookOpen, Camera, Plus, Clock } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -31,7 +31,11 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
-              <ChefHat className="h-8 w-8 text-ember" />
+              <img 
+                src="/images/logo.png" 
+                alt="Stook Logo" 
+                className="h-8 w-8"
+              />
               <span className="text-xl font-heading font-bold text-ash">Stook</span>
             </Link>
 

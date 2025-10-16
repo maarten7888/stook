@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ChefHat } from "lucide-react";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -15,7 +14,11 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2">
-              <ChefHat className="h-8 w-8 text-ember" />
+              <img 
+                src="/images/logo.png" 
+                alt="Stook Logo" 
+                className="h-8 w-8"
+              />
               <span className="text-xl font-heading font-bold text-ash">Stook</span>
             </Link>
 
