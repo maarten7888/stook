@@ -184,7 +184,7 @@ INITIAL PLAN (Sprint 0 → MVP)
 2. Tailwind & Branding
 
 * [x] Tailwind tokens (charcoal, coals, ash, smoke, ember) in `tailwind.config.ts`
-* [ ] Fonts Outfit/Inter via `next/font`
+* [x] Fonts Outfit/Inter via `next/font`
 * [x] `components/ui/theme.css` + globale styles
 
 3. Supabase & DB
@@ -259,8 +259,8 @@ MILESTONES
 * M1 Recipes CRUD + list/detail + reviews ✅ VOLTOOID
 * M2 Cook Sessions + temps + photos upload ✅ VOLTOOID
 * M3 Import flow + polish + e2e ✅ VOLTOOID
-* M4 UI Components + Fonts + Branding 🔄 IN PROGRESS
-* M5 Production Polish + Advanced Features 📋 PLANNED
+* M4 UI Components + Fonts + Branding ✅ VOLTOOID
+* M5 Production Polish + Advanced Features 🔄 IN PROGRESS
 
 CURRENT STATUS (December 2024)
 
@@ -274,20 +274,23 @@ CURRENT STATUS (December 2024)
 - CI/CD pipeline (GitHub Actions)
 - Vercel deployment met domeinen
 - Tailwind styling met custom kleuren
+- Fonts: Outfit (headings) + Inter (body) via next/font
+- Logo en favicon geïmplementeerd
+- Complete metadata en SEO setup
+- Mobile navigation met hamburger menu
+- Navigation icons toegevoegd
+- Clean mobile-first layout
 
 🔄 IN PROGRESS:
 - UI Components: RatingStars, TagChips, PhotoGrid, SessionTempChart
-- Fonts: Outfit (headings) + Inter (body) via next/font
-- Branding: Logo SVG, favicons
+- Mobile Navigation: Hamburger menu geïmplementeerd
 
 📋 VOLGENDE STAPPEN:
-1. Missing UI components implementeren
-2. Fonts toevoegen (Outfit/Inter)
-3. Logo en favicons toevoegen
-4. Branch protection rules op main
-5. Advanced features (favorites, search, notifications)
-6. PWA manifest en service worker
-7. Real-time updates (Supabase Realtime)
+1. Missing UI components implementeren (RatingStars, TagChips, PhotoGrid, SessionTempChart)
+2. Branch protection rules op main
+3. Advanced features (favorites, search, notifications)
+4. PWA manifest en service worker
+5. Real-time updates (Supabase Realtime)
 
 SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
 
