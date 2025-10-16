@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { LogOut, User, BookOpen, Camera, Plus, Clock, Home, FileText, Download } from "lucide-react";
+import MobileMenu from "@/components/mobile-menu";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -80,6 +81,9 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
 
             {/* Actions - Responsive */}
             <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Mobile Menu */}
+              <MobileMenu session={session} />
+
               {/* Nieuw Recept knop - Desktop */}
               <Button asChild size="sm" className="bg-ember hover:bg-ember/90 hidden sm:flex">
                 <Link href="/recipes/new">

@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Home, BookOpen } from "lucide-react";
+import MobileMenu from "@/components/mobile-menu";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -43,6 +44,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
+              {/* Mobile Menu */}
+              <MobileMenu />
+
               <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
                 <Link href="/login">Inloggen</Link>
               </Button>
