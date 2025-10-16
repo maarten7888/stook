@@ -19,15 +19,31 @@ async function fetchRecipes(params?: string) {
   return res.json();
 }
 
-export default async function RecipesPage({ searchParams }: { searchParams: { query?: string } }) {
+export default async function RecipesPage({ 
+  searchParams 
+}: { 
+  searchParams: { 
+    query?: string; 
+    visibility?: string; 
+  } 
+}) {
   const session = await getSession();
   const query = searchParams?.query;
+  const visibility = searchParams?.visibility;
   
-  // For non-authenticated users, only show public recipes
-  // For authenticated users, show all accessible recipes (public + own)
-  const apiParams = session ? "" : "?visibility=public";
+  // Determine API parameters based on visibility filter
+  let apiParams = "";
+  if (visibility === "public") {
+    apiParams = "?visibility=public";
+  } else if (visibility === "private") {
+    apiParams = "?visibility=private";
+  } else if (!session) {
+    // For non-authenticated users, only show public recipes
+    apiParams = "?visibility=public";
+  }
+  
   const searchParam = query ? `&query=${encodeURIComponent(query)}` : "";
-  const fullParams = session ? (query ? `?query=${encodeURIComponent(query)}` : "") : apiParams + searchParam;
+  const fullParams = apiParams + searchParam;
   
   const data = await fetchRecipes(fullParams);
 
@@ -49,16 +65,21 @@ export default async function RecipesPage({ searchParams }: { searchParams: { qu
       {/* Header Section */}
       <div className="text-center py-8">
         <h1 className="text-4xl md:text-5xl font-heading font-bold text-ash mb-4">
-          {session ? "Mijn Recepten" : "Publieke Recepten"}
+          {visibility === "public" ? "Publieke Recepten" : 
+           visibility === "private" ? "Mijn Recepten" : 
+           session ? "Alle Recepten" : "Publieke Recepten"}
         </h1>
         <p className="text-lg text-smoke max-w-2xl mx-auto">
-          {session ? "Beheer je BBQ recepten en ontdek nieuwe ideeën" : "Ontdek geweldige BBQ recepten van de community"}
+          {visibility === "public" ? "Ontdek geweldige BBQ recepten van de community" :
+           visibility === "private" ? "Beheer je eigen BBQ recepten" :
+           session ? "Ontdek recepten en beheer je eigen collectie" : "Ontdek geweldige BBQ recepten van de community"}
         </p>
       </div>
 
       {/* Search and Actions */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
         <form action="/recipes" className="flex w-full sm:w-96 items-center gap-2">
+          {visibility && <input type="hidden" name="visibility" value={visibility} />}
           <Input 
             name="query" 
             placeholder="Zoek recepten..." 
