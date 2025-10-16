@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, User, BookOpen, Camera, Plus, Clock, Home, FileText, Download } from "lucide-react";
+import { LogOut, User, BookOpen, Clock, Home, FileText, Download } from "lucide-react";
 import MobileMenu from "@/components/mobile-menu";
 
 interface AppLayoutProps {
@@ -83,21 +83,6 @@ export default function AppLayout({ children, session }: AppLayoutProps) {
             <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Mobile Menu */}
               <MobileMenu session={session} />
-
-              {/* Nieuw Recept knop - Desktop */}
-              <Button asChild size="sm" className="bg-ember hover:bg-ember/90 hidden sm:flex">
-                <Link href="/recipes/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Nieuw Recept</span>
-                </Link>
-              </Button>
-              
-              {/* Nieuw Recept knop - Mobile */}
-              <Button asChild size="sm" className="bg-ember hover:bg-ember/90 sm:hidden">
-                <Link href="/recipes/new">
-                  <Plus className="h-4 w-4" />
-                </Link>
-              </Button>
 
               {/* User Menu */}
               <DropdownMenu>

@@ -46,13 +46,6 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             <div className="flex items-center space-x-4">
               {/* Mobile Menu */}
               <MobileMenu />
-
-              <Button asChild variant="outline" className="border-ash text-ash hover:bg-coals">
-                <Link href="/login">Inloggen</Link>
-              </Button>
-              <Button asChild className="bg-ember hover:bg-ember/90 text-white">
-                <Link href="/register">Registreren</Link>
-              </Button>
             </div>
           </div>
         </div>
