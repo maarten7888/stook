@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, X, Plus, Download, ChefHat, User, LogOut } from "lucide-react";
+import { Menu, X, Plus, Download, ChefHat, User, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -86,13 +86,24 @@ export function Navbar({ user, className }: NavbarProps) {
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full flex-shrink-0">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatarUrl} />
-                        <AvatarFallback className="bg-ember text-white">
-                          {user.displayName?.charAt(0).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
+                    <Button variant="ghost" className="relative h-auto p-2 rounded-lg hover:bg-ash/20 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatarUrl} />
+                          <AvatarFallback className="bg-ember text-white">
+                            {user.displayName?.charAt(0).toUpperCase() || "U"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="hidden lg:block text-left">
+                          <div className="text-white font-medium text-sm">
+                            {user.displayName || "Gebruiker"}
+                          </div>
+                          <div className="text-smoke text-xs">
+                            {user.displayName?.includes("@") ? user.displayName : "gebruiker@stook.nl"}
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4 text-smoke hidden lg:block" />
+                      </div>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56 bg-coals border-ash" align="end">
