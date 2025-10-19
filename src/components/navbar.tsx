@@ -3,8 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, X, Plus, Download, ChefHat, User } from "lucide-react";
+import { Menu, X, Plus, Download, ChefHat, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface NavbarProps {
@@ -82,20 +84,46 @@ export function Navbar({ user, className }: NavbarProps) {
                   </Button>
                 ))}
                 
-                <Link href="/profile" className="flex items-center gap-2 text-smoke hover:text-white transition-colors">
-                  {user.avatarUrl ? (
-                    <Image
-                      src={user.avatarUrl}
-                      alt={user.displayName || "Profiel"}
-                      width={32}
-                      height={32}
-                      className="rounded-full"
-                    />
-                  ) : (
-                    <User className="h-8 w-8 text-smoke" />
-                  )}
-                  <span className="text-sm">{user.displayName || "Profiel"}</span>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full flex-shrink-0">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatarUrl} />
+                        <AvatarFallback className="bg-ember text-white">
+                          {user.displayName?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56 bg-coals border-ash" align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="flex items-center">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Profiel</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/recipes" className="flex items-center">
+                        <ChefHat className="mr-2 h-4 w-4" />
+                        <span>Mijn Recepten</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/sessions" className="flex items-center">
+                        <ChefHat className="mr-2 h-4 w-4" />
+                        <span>Mijn Sessies</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <form action="/auth/logout" method="post" className="w-full">
+                        <button type="submit" className="flex items-center w-full text-left">
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Uitloggen</span>
+                        </button>
+                      </form>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <div className="flex items-center space-x-2">

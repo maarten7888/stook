@@ -1,7 +1,4 @@
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Home, BookOpen } from "lucide-react";
-import MobileMenu from "@/components/mobile-menu";
+import { Navbar } from "@/components/navbar";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -10,47 +7,8 @@ interface PublicLayoutProps {
 export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen bg-charcoal">
-      {/* Navigation for non-authenticated users */}
-      <nav className="bg-coals border-b border-ash">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <img 
-                src="/images/logo.png" 
-                alt="Stook Logo" 
-                className="h-8 w-8"
-              />
-              <span className="text-xl font-heading font-bold text-ash">Stook</span>
-            </Link>
-
-            {/* Navigation Links */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link
-                href="/"
-                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
-              >
-                <Home className="h-4 w-4" />
-                Home
-              </Link>
-              <Link
-                href="/recipes"
-                className="flex items-center gap-2 text-smoke hover:text-ash transition-colors"
-              >
-                <BookOpen className="h-4 w-4" />
-                Recepten
-              </Link>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center space-x-4">
-              {/* Mobile Menu */}
-              <MobileMenu />
-            </div>
-          </div>
-        </div>
-      </nav>
-
+      <Navbar />
+      
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {children}
