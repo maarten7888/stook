@@ -89,38 +89,38 @@ export function Navbar({ user, className }: NavbarProps) {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56 bg-coals border-ash" align="end">
                     <DropdownMenuItem asChild>
-                      <Link href="/profile" className="flex items-center">
+                      <Link href="/profile" className="flex items-center text-smoke hover:text-white">
                         <User className="mr-2 h-4 w-4" />
                         <span>Profiel</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/recipes/new" className="flex items-center">
+                      <Link href="/recipes/new" className="flex items-center text-smoke hover:text-white">
                         <Plus className="mr-2 h-4 w-4" />
                         <span>Nieuw Recept</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/import" className="flex items-center">
+                      <Link href="/import" className="flex items-center text-smoke hover:text-white">
                         <Download className="mr-2 h-4 w-4" />
                         <span>Importeren</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/recipes" className="flex items-center">
+                      <Link href="/recipes" className="flex items-center text-smoke hover:text-white">
                         <ChefHat className="mr-2 h-4 w-4" />
                         <span>Mijn Recepten</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/sessions" className="flex items-center">
+                      <Link href="/sessions" className="flex items-center text-smoke hover:text-white">
                         <ChefHat className="mr-2 h-4 w-4" />
                         <span>Mijn Sessies</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <form action="/auth/logout" method="post" className="w-full">
-                        <button type="submit" className="flex items-center w-full text-left">
+                        <button type="submit" className="flex items-center w-full text-left text-smoke hover:text-white">
                           <LogOut className="mr-2 h-4 w-4" />
                           <span>Uitloggen</span>
                         </button>
