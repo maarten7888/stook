@@ -158,33 +158,9 @@ export function Navbar({ user, className }: NavbarProps) {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-ash">
             <div className="px-2 pt-2 pb-3 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              ))}
-              
-              {user && (
+              {user ? (
                 <>
-                  <div className="border-t border-ash my-2" />
-                  {userActions.map((action) => (
-                    <Link
-                      key={action.name}
-                      href={action.href}
-                      className="block px-3 py-2 text-smoke hover:text-white hover:bg-ember/20 rounded-md transition-colors flex items-center gap-2"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <action.icon className="h-4 w-4" />
-                      {action.name}
-                    </Link>
-                  ))}
-                  
+                  {/* Logged in user menu */}
                   <Link
                     href="/profile"
                     className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
@@ -193,12 +169,58 @@ export function Navbar({ user, className }: NavbarProps) {
                     <User className="h-4 w-4" />
                     Profiel
                   </Link>
-                </>
-              )}
-              
-              {!user && (
-                <>
+                  
+                  <Link
+                    href="/recipes?visibility=private"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <ChefHat className="h-4 w-4" />
+                    Mijn Recepten
+                  </Link>
+                  
+                  <Link
+                    href="/sessions"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <ChefHat className="h-4 w-4" />
+                    Mijn Sessies
+                  </Link>
+                  
+                  {/* Divider */}
                   <div className="border-t border-ash my-2" />
+                  
+                  <Link
+                    href="/recipes/new"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ember/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nieuw Recept
+                  </Link>
+                  
+                  <Link
+                    href="/recipes?visibility=public"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <ChefHat className="h-4 w-4" />
+                    Publieke Recepten
+                  </Link>
+                  
+                  <Link
+                    href="/import"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Download className="h-4 w-4" />
+                    Importeren
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* Not logged in user menu */}
                   <Link
                     href="/login"
                     className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors"
@@ -206,12 +228,22 @@ export function Navbar({ user, className }: NavbarProps) {
                   >
                     Inloggen
                   </Link>
+                  
                   <Link
                     href="/register"
                     className="block px-3 py-2 text-ember hover:text-white hover:bg-ember rounded-md transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Registreren
+                  </Link>
+                  
+                  <Link
+                    href="/recipes?visibility=public"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <ChefHat className="h-4 w-4" />
+                    Recepten
                   </Link>
                 </>
               )}
