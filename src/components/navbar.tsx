@@ -171,6 +171,15 @@ export function Navbar({ user, className }: NavbarProps) {
                   </Link>
                   
                   <Link
+                    href="/recipes/new"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ember/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nieuw Recept
+                  </Link>
+                  
+                  <Link
                     href="/recipes?visibility=private"
                     className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -192,15 +201,6 @@ export function Navbar({ user, className }: NavbarProps) {
                   <div className="border-t border-ash my-2" />
                   
                   <Link
-                    href="/recipes/new"
-                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ember/20 rounded-md transition-colors flex items-center gap-2"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Nieuw Recept
-                  </Link>
-                  
-                  <Link
                     href="/recipes?visibility=public"
                     className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -217,6 +217,19 @@ export function Navbar({ user, className }: NavbarProps) {
                     <Download className="h-4 w-4" />
                     Importeren
                   </Link>
+                  
+                  {/* Logout at bottom */}
+                  <div className="border-t border-ash my-2" />
+                  
+                  <form action="/auth/logout" method="post" className="w-full">
+                    <button 
+                      type="submit" 
+                      className="block w-full px-3 py-2 text-left text-smoke hover:text-white hover:bg-red-600/20 rounded-md transition-colors flex items-center gap-2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Uitloggen
+                    </button>
+                  </form>
                 </>
               ) : (
                 <>
