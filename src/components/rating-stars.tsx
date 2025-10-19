@@ -53,7 +53,7 @@ export function RatingStars({
               !interactive && "cursor-default"
             )}
             onClick={() => handleStarClick(starRating)}
-            onMouseEnter={() => handleStarHover(starRating)}
+            onMouseEnter={handleStarHover}
             disabled={!interactive}
             aria-label={`${starRating} sterren`}
           >
