@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, X, Plus, Download, ChefHat, User, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, Plus, Download, ChefHat, User, LogOut, ChevronDown, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,13 +22,10 @@ export function Navbar({ user, className }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navigation = [
-    { name: "Recepten", href: "/recipes", icon: ChefHat },
-    { name: "Sessies", href: "/sessions", icon: ChefHat },
-  ];
-
-  const userActions = [
-    { name: "Nieuw Recept", href: "/recipes/new", icon: Plus },
-    { name: "Importeren", href: "/import", icon: Download },
+    { name: "Home", href: "/", icon: Home },
+    { name: "Recepten", href: "/recipes?visibility=public", icon: ChefHat },
+    { name: "Mijn Recepten", href: "/recipes?visibility=private", icon: ChefHat },
+    { name: "Mijn Sessies", href: "/sessions", icon: ChefHat },
   ];
 
   return (
@@ -68,23 +65,7 @@ export function Navbar({ user, className }: NavbarProps) {
           {/* Desktop User Actions */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
-              <>
-                {userActions.map((action) => (
-                  <Button
-                    key={action.name}
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="border-ash text-smoke hover:bg-ember hover:text-white hover:border-ember"
-                  >
-                    <Link href={action.href} className="flex items-center gap-2">
-                      <action.icon className="h-4 w-4" />
-                      {action.name}
-                    </Link>
-                  </Button>
-                ))}
-                
-                <DropdownMenu>
+              <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-auto p-2 rounded-lg hover:bg-ash/20 transition-colors">
                       <div className="flex items-center gap-3">
@@ -114,6 +95,18 @@ export function Navbar({ user, className }: NavbarProps) {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link href="/recipes/new" className="flex items-center">
+                        <Plus className="mr-2 h-4 w-4" />
+                        <span>Nieuw Recept</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/import" className="flex items-center">
+                        <Download className="mr-2 h-4 w-4" />
+                        <span>Importeren</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link href="/recipes" className="flex items-center">
                         <ChefHat className="mr-2 h-4 w-4" />
                         <span>Mijn Recepten</span>
@@ -135,7 +128,6 @@ export function Navbar({ user, className }: NavbarProps) {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </>
             ) : (
               <div className="flex items-center space-x-2">
                 <Button variant="ghost" size="sm" asChild>
