@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -18,10 +18,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
   try {
     // First, try to get the recipe via Supabase for better compatibility
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = createAdminClient();
 
     const { data: recipeData, error: recipeError } = await supabase
       .from('recipes')
@@ -159,10 +156,7 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createAdminClient();
 
     // Check if user owns the recipe
     const { data: recipeData, error: recipeError } = await supabase
@@ -212,10 +206,7 @@ export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = createAdminClient();
 
     // Check if user owns the recipe
     const { data: recipeData, error: recipeError } = await supabase

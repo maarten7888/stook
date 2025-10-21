@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { recipes, profiles } from "@/../drizzle/schema";
-import { ilike, or, eq, and } from "drizzle-orm";
 import { getSession } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Type for Supabase response with profiles join
 type SupabaseRecipeWithProfile = {
@@ -110,49 +108,74 @@ export async function GET(request: Request) {
       return NextResponse.json({ items });
     }
 
-    // For private/all recipes, use Drizzle with proper authentication
-    let visibilityFilter;
+    // For private/all recipes, use Supabase Admin Client
+    const supabase = createAdminClient();
     
+    let query = supabase
+      .from('recipes')
+      .select(`
+        id,
+        title,
+        description,
+        serves,
+        prep_minutes,
+        cook_minutes,
+        target_internal_temp,
+        visibility,
+        created_at,
+        updated_at,
+        user_id,
+        profiles(display_name)
+      `);
+
     if (visibility === "private") {
       if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      visibilityFilter = eq(recipes.userId, userId);
+      query = query.eq('user_id', userId);
     } else { // "all"
-      const wherePublic = eq(recipes.visibility, "public");
-      const whereOwn = userId ? eq(recipes.userId, userId) : undefined;
-      visibilityFilter = whereOwn ? or(wherePublic, whereOwn) : wherePublic;
+      if (userId) {
+        query = query.or(`visibility.eq.public,user_id.eq.${userId}`);
+      } else {
+        query = query.eq('visibility', 'public');
+      }
     }
 
-    const textFilter = q ? ilike(recipes.title, `%${q}%`) : undefined;
-    const combined = textFilter ? and(visibilityFilter, textFilter) : visibilityFilter;
+    if (q) {
+      query = query.ilike('title', `%${q}%`);
+    }
 
-    console.log("Querying recipes with Drizzle:", { visibility, q, userId });
+    const { data, error } = await query.order('created_at', { ascending: false });
 
-    const rows = await db
-      .select({
-        id: recipes.id,
-        title: recipes.title,
-        description: recipes.description,
-        serves: recipes.serves,
-        prepMinutes: recipes.prepMinutes,
-        cookMinutes: recipes.cookMinutes,
-        targetInternalTemp: recipes.targetInternalTemp,
-        visibility: recipes.visibility,
-        createdAt: recipes.createdAt,
-        updatedAt: recipes.updatedAt,
-        userId: recipes.userId,
-        user: {
-          displayName: profiles.displayName,
-        },
-      })
-      .from(recipes)
-      .leftJoin(profiles, eq(recipes.userId, profiles.id))
-      .where(combined)
-      .orderBy(recipes.createdAt);
+    if (error) {
+      console.error("Supabase query error:", error);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
 
-    console.log("Found recipes:", rows.length);
-    return NextResponse.json({ items: rows });
+    const items = data?.map((row: SupabaseRecipeWithProfile) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      serves: row.serves,
+      prepMinutes: row.prep_minutes,
+      cookMinutes: row.cook_minutes,
+      targetInternalTemp: row.target_internal_temp,
+      visibility: row.visibility,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      userId: row.user_id,
+      user: {
+        displayName: (() => {
+          if (!row.profiles) return null;
+          if (Array.isArray(row.profiles)) {
+            return row.profiles[0]?.display_name || null;
+          }
+          return row.profiles.display_name || null;
+        })(),
+      },
+    })) || [];
+
+    return NextResponse.json({ items });
   } catch (err) {
     console.error("GET /api/recipes failed", err);
     return NextResponse.json({ 
@@ -184,19 +207,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const values = {
-      userId: session.user.id,
-      title: parsed.data.title,
-      description: parsed.data.description ?? null,
-      serves: parsed.data.serves ?? null,
-      prepMinutes: parsed.data.prepMinutes ?? null,
-      cookMinutes: parsed.data.cookMinutes ?? null,
-      targetInternalTemp: parsed.data.targetInternalTemp ?? null,
-      visibility: parsed.data.visibility,
-    } as const;
+    const supabase = createAdminClient();
+    
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert({
+        user_id: session.user.id,
+        title: parsed.data.title,
+        description: parsed.data.description ?? null,
+        serves: parsed.data.serves ?? null,
+        prep_minutes: parsed.data.prepMinutes ?? null,
+        cook_minutes: parsed.data.cookMinutes ?? null,
+        target_internal_temp: parsed.data.targetInternalTemp ?? null,
+        visibility: parsed.data.visibility,
+      })
+      .select('id')
+      .single();
 
-    const [row] = await db.insert(recipes).values(values).returning({ id: recipes.id });
-    return NextResponse.json({ id: row.id }, { status: 201 });
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
+
+    return NextResponse.json({ id: data.id }, { status: 201 });
   } catch (err) {
     console.error("POST /api/recipes failed", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
