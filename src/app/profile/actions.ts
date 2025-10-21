@@ -52,6 +52,7 @@ export async function updateProfile(formData: FormData) {
     console.log("Update data prepared:", updateData);
 
     // Check if profile exists
+    console.log("Checking for existing profile...");
     const existingProfile = await db
       .select()
       .from(profiles)
@@ -62,20 +63,24 @@ export async function updateProfile(formData: FormData) {
 
     if (existingProfile.length === 0) {
       // Create new profile
-      console.log("Creating new profile...");
-      await db
+      console.log("Creating new profile with data:", { id: user.id, ...updateData });
+      const result = await db
         .insert(profiles)
         .values({
           id: user.id,
           ...updateData,
-        });
+        })
+        .returning();
+      console.log("Profile created:", result);
     } else {
       // Update existing profile
-      console.log("Updating existing profile...");
-      await db
+      console.log("Updating existing profile with data:", updateData);
+      const result = await db
         .update(profiles)
         .set(updateData)
-        .where(eq(profiles.id, user.id));
+        .where(eq(profiles.id, user.id))
+        .returning();
+      console.log("Profile updated:", result);
     }
 
     console.log("Profile update successful, revalidating...");
