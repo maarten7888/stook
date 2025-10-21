@@ -20,7 +20,7 @@ STACK & HOSTING (NIET‑ONDERHANDELBAAR)
 * **Next.js 15** (App Router, RSC), **TypeScript**.
 * **Tailwind CSS** + **shadcn/ui** (Radix) + **lucide-react** iconen.
 * **Supabase** (Postgres 15/16, Auth, Storage) – regio **eu-central** (Frankfurt).
-* **ORM**: **Drizzle ORM** (Postgres) met drizzle‑kit voor SQL migraties (in repo). → Altijd Drizzle gebruiken voor schema management.
+* **Database**: **Supabase Admin Client** voor alle database operaties. Drizzle ORM alleen voor schema management en migraties, NIET voor runtime database operaties.
 * **CLI**: **Supabase CLI** (via Scoop) voor lokale development, database seeding en deployment.
 * **Hosting**: **Vercel**. Edge/Node runtimes per route: standaard **Node.js 20**; edge alleen waar nuttig.
 * **Uploads**: Supabase Storage buckets.
@@ -45,6 +45,15 @@ AUTH & SECURITY
 * Sessies in App Router: authenticatie via Supabase SSR helpers + cookies, server components valideren sessie op de server.
 * Server actions en route handlers valideren sessie server‑side (geen vertrouwensrelatie met client).
 * **Row Level Security (RLS)** verplicht: schrijf SQL policies per tabel. Service‑role key alléén server‑side (Route Handlers/Server Actions).
+
+DATABASE BEST PRACTICES
+
+* **Gebruik ALTIJD Supabase Admin Client** voor database operaties in server actions en API routes.
+* **Drizzle ORM alleen voor**: schema definitie (`drizzle/schema.ts`) en migraties (`drizzle-kit generate/push`).
+* **NIET gebruiken**: Drizzle ORM voor runtime database queries in server actions of API routes.
+* **Consistente aanpak**: Alle database operaties via `createAdminClient()` met service role key.
+* **Performance**: Server-side data fetching voor initial page loads, client-side updates voor real-time updates.
+* **Error handling**: Gebruik Supabase error codes (bijv. `PGRST116` voor "no rows returned").
 
 DATAMODEL (Postgres + RLS)
 (Geporteerd uit Laravel variant; velden gelijk waar zinvol)
@@ -311,15 +320,23 @@ SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
   * Vereist: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`.
   * `.env.local` nooit committen; Vercel Env Vars gebruiken (Encrypted voor server keys).
 
-* Drizzle ORM
-  * Schema in `drizzle/schema.ts`; migraties in `drizzle/migrations/`.
-  * Commando's: `pnpm drizzle-kit generate` → `pnpm drizzle-kit push`.
-  * Node runtime: `drizzle-orm/node-postgres` met `pg.Pool` (zie `src/lib/db.ts`). Geen `postgres-js`.
-  * `drizzle.config.ts` is voor CLI; geen `dotenv` importeren (kan Next build verstoren).
+* Database Operaties
+  * **Runtime queries**: ALTIJD Supabase Admin Client (`createAdminClient()`) gebruiken.
+  * **Schema management**: Drizzle ORM alleen voor schema definitie en migraties.
+  * **Migraties**: `pnpm drizzle-kit generate` → `pnpm drizzle-kit push`.
+  * **NIET gebruiken**: Drizzle ORM voor runtime database queries in server actions/API routes.
+  * **Consistentie**: Alle database operaties via Supabase Admin Client voor betrouwbaarheid.
 
 * Next.js 15 + Supabase SSR
   * `createClient()` in `src/lib/supabase/server.ts` is async; altijd `await createClient()`.
   * `cookies()` is async in App Router; eerst `const cookieStore = await cookies()`.
+
+* Performance Best Practices
+  * **Server-side data fetching**: Pre-fetch data in server components voor initial page loads.
+  * **Client-side updates**: Gebruik client components voor real-time updates na form submissions.
+  * **Loading states**: Minimaliseer loading states door server-side data fetching.
+  * **Cache invalidation**: `revalidatePath()` na mutaties voor cache updates.
+  * **Parallel fetching**: Gebruik `Promise.all()` voor meerdere API calls.
 
 * Beveiliging & Storage
   * `photos` bucket is private; serveer via signed URLs. [Aangemaakt]
