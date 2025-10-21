@@ -7,12 +7,19 @@ export async function testSimpleConnection() {
     console.log("Testing simple database connection...");
     console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
     console.log("DATABASE_URL starts with:", process.env.DATABASE_URL?.substring(0, 20));
+    console.log("DATABASE_URL contains pooler:", process.env.DATABASE_URL?.includes("pooler"));
+    console.log("DATABASE_URL contains sslmode:", process.env.DATABASE_URL?.includes("sslmode"));
     
     if (!process.env.DATABASE_URL) {
       return { success: false, error: "DATABASE_URL not found" };
     }
 
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const pool = new Pool({ 
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false, // Allow self-signed certificates
+      },
+    });
     
     console.log("Pool created, testing connection...");
     const client = await pool.connect();
