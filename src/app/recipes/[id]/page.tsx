@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { createClient } from "@/lib/supabase/server";
-import { Clock, Thermometer, ChefHat, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { createClient, getSession } from "@/lib/supabase/server";
+import { Clock, Thermometer, ChefHat, Star, Edit, ArrowLeft, Users, Calendar, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 async function fetchRecipe(id: string) {
   try {
@@ -84,167 +86,217 @@ async function fetchRecipe(id: string) {
 }
 
 export default async function RecipeDetailPage({ params }: { params: { id: string } }) {
+  const session = await getSession();
   const data = await fetchRecipe(params.id);
   
   if (!data) {
     redirect("/recipes");
   }
 
-  // The RLS policies already handle access control - if we get data, user has access
-  // No need for additional checks here
-
-  type StepItem = { 
-    id: string; 
-    orderNo: number; 
-    instruction: string; 
-    timerMinutes: number | null; 
-    targetTemp: number | null; 
-  };
-
-  type IngredientItem = { 
-    id: string; 
-    amount: number | null; 
-    unit: string | null; 
-    ingredientName: string; 
-  };
-
-  type TagItem = { 
-    tagName: string; 
-  };
+  const isOwner = session?.user.id === data.userId;
+  const totalTime = (data.prepMinutes || 0) + (data.cookMinutes || 0);
 
   return (
-    <div className="min-h-screen bg-charcoal text-ash">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <ChefHat className="h-6 w-6 text-ember" />
-            <h1 className="text-3xl font-heading font-bold text-ash">{data.title}</h1>
+    <div className="min-h-screen bg-charcoal">
+      {/* Header */}
+      <div className="bg-coals border-b border-ash/20">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
+                <Link href="/recipes">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Terug naar recepten
+                </Link>
+              </Button>
+            </div>
+            
+            {isOwner && (
+              <div className="flex items-center gap-3">
+                <Badge 
+                  variant="secondary" 
+                  className={`${data.visibility === 'public' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-orange-500/20 text-orange-400 border-orange-500/30'}`}
+                >
+                  {data.visibility === 'public' ? (
+                    <>
+                      <Eye className="h-3 w-3 mr-1" />
+                      Publiek
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="h-3 w-3 mr-1" />
+                      Privé
+                    </>
+                  )}
+                </Badge>
+                <Button asChild size="sm" className="bg-ember hover:bg-ember/90">
+                  <Link href={`/recipes/${data.id}/edit`}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Bewerken
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
-          
-          {data.user?.displayName && (
-            <p className="text-smoke text-lg mb-4">
-              door {data.user.displayName}
-            </p>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Recipe Header */}
+        <div className="mb-8">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="w-16 h-16 bg-ember/20 rounded-xl flex items-center justify-center">
+              <ChefHat className="h-8 w-8 text-ember" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-4xl font-heading font-bold text-ash mb-2">{data.title}</h1>
+              {data.user?.displayName && (
+                <p className="text-smoke text-lg mb-3">
+                  door {data.user.displayName}
+                </p>
+              )}
+              {data.description && (
+                <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Recipe Stats */}
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {data.serves && (
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Users className="h-6 w-6 text-ember" />
+                    </div>
+                    <p className="text-2xl font-bold text-ash">{data.serves}</p>
+                    <p className="text-sm text-smoke">porties</p>
+                  </div>
+                )}
+                {data.prepMinutes && (
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Clock className="h-6 w-6 text-ember" />
+                    </div>
+                    <p className="text-2xl font-bold text-ash">{data.prepMinutes}</p>
+                    <p className="text-sm text-smoke">min prep</p>
+                  </div>
+                )}
+                {data.cookMinutes && (
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Clock className="h-6 w-6 text-ember" />
+                    </div>
+                    <p className="text-2xl font-bold text-ash">{data.cookMinutes}</p>
+                    <p className="text-sm text-smoke">min koken</p>
+                  </div>
+                )}
+                {data.targetInternalTemp && (
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Thermometer className="h-6 w-6 text-ember" />
+                    </div>
+                    <p className="text-2xl font-bold text-ash">{data.targetInternalTemp}°</p>
+                    <p className="text-sm text-smoke">doel temperatuur</p>
+                  </div>
+                )}
+              </div>
+              
+              {totalTime > 0 && (
+                <div className="mt-6 pt-6 border-t border-ash/20 text-center">
+                  <p className="text-smoke">
+                    <span className="font-semibold text-ash">Totale tijd:</span> {totalTime} minuten
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Ingredients */}
+          {data.ingredients && data.ingredients.length > 0 && (
+            <Card className="bg-coals border-ash">
+              <CardHeader>
+                <CardTitle className="text-xl text-ash flex items-center gap-2">
+                  <ChefHat className="h-5 w-5 text-ember" />
+                  Ingrediënten
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {data.ingredients.map((ingredient, index) => (
+                    <div key={ingredient.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20 hover:border-ember/30 transition-colors">
+                      <span className="text-ash font-medium">
+                        {ingredient.ingredientName}
+                      </span>
+                      <span className="text-smoke font-semibold">
+                        {ingredient.amount && ingredient.unit ? `${ingredient.amount} ${ingredient.unit}` : ingredient.amount || 'Naar smaak'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
-          
-          {data.description && (
-            <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
+
+          {/* Steps */}
+          {data.steps && data.steps.length > 0 && (
+            <Card className="bg-coals border-ash">
+              <CardHeader>
+                <CardTitle className="text-xl text-ash flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-ember" />
+                  Bereidingswijze
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {data.steps.map((step, index) => (
+                    <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20 hover:border-ember/30 transition-colors">
+                      <div className="flex-shrink-0 w-8 h-8 bg-ember rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">{step.orderNo || index + 1}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-ash leading-relaxed">{step.instruction}</p>
+                        {(step.timerMinutes || step.targetTemp) && (
+                          <div className="flex gap-4 mt-3 text-sm text-smoke">
+                            {step.timerMinutes && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{step.timerMinutes} min</span>
+                              </div>
+                            )}
+                            {step.targetTemp && (
+                              <div className="flex items-center gap-1">
+                                <Thermometer className="h-3 w-3" />
+                                <span>{step.targetTemp}°C</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
-        {/* Recipe Info */}
-        <Card className="bg-coals border-ash mb-8">
-          <CardHeader>
-            <CardTitle className="text-xl text-ash">Recept Informatie</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {data.serves && (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-ember/20 rounded-full flex items-center justify-center">
-                    <span className="text-ember text-sm font-bold">{data.serves}</span>
-                  </div>
-                  <span className="text-smoke">porties</span>
-                </div>
-              )}
-              {data.prepMinutes && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-ember" />
-                  <span className="text-smoke">{data.prepMinutes} min prep</span>
-                </div>
-              )}
-              {data.cookMinutes && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-ember" />
-                  <span className="text-smoke">{data.cookMinutes} min koken</span>
-                </div>
-              )}
-              {data.targetInternalTemp && (
-                <div className="flex items-center gap-2">
-                  <Thermometer className="h-4 w-4 text-ember" />
-                  <span className="text-smoke">{data.targetInternalTemp}°C</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Ingredients */}
-        {data.ingredients && data.ingredients.length > 0 && (
-          <Card className="bg-coals border-ash mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(data.ingredients as IngredientItem[]).map((ri) => (
-                  <div key={ri.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                    <span className="text-ash font-medium">
-                      {ri.ingredientName || 'Onbekend ingrediënt'}
-                    </span>
-                    <span className="text-smoke">
-                      {ri.amount && ri.unit ? `${ri.amount} ${ri.unit}` : ri.amount || 'Naar smaak'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Steps */}
-        {data.steps && data.steps.length > 0 && (
-          <Card className="bg-coals border-ash mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl text-ash">Bereidingswijze</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {(data.steps as StepItem[]).map((step, index) => (
-                  <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                    <div className="flex-shrink-0 w-8 h-8 bg-ember rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">{step.orderNo || index + 1}</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-ash leading-relaxed">{step.instruction}</p>
-                      {(step.timerMinutes || step.targetTemp) && (
-                        <div className="flex gap-4 mt-2 text-sm text-smoke">
-                          {step.timerMinutes && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              <span>{step.timerMinutes} min</span>
-                            </div>
-                          )}
-                          {step.targetTemp && (
-                            <div className="flex items-center gap-1">
-                              <Thermometer className="h-3 w-3" />
-                              <span>{step.targetTemp}°C</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Tags */}
         {data.tags && data.tags.length > 0 && (
-          <Card className="bg-coals border-ash">
+          <Card className="bg-coals border-ash mt-8">
             <CardHeader>
               <CardTitle className="text-xl text-ash">Tags</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {(data.tags as TagItem[]).map((tag, index) => (
+                {data.tags.map((tag, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
-                    className="bg-ember/20 text-ember border-ember/30"
+                    className="bg-ember/20 text-ember border-ember/30 hover:bg-ember/30 transition-colors"
                   >
                     {tag.tagName}
                   </Badge>
@@ -253,6 +305,39 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
             </CardContent>
           </Card>
         )}
+
+        {/* Meta Info */}
+        <Card className="bg-coals border-ash mt-8">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between text-sm text-smoke">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Aangemaakt: {new Date(data.createdAt).toLocaleDateString('nl-NL')}</span>
+                </div>
+                {data.updatedAt !== data.createdAt && (
+                  <div className="flex items-center gap-1">
+                    <Edit className="h-4 w-4" />
+                    <span>Bijgewerkt: {new Date(data.updatedAt).toLocaleDateString('nl-NL')}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                {data.visibility === 'public' ? (
+                  <>
+                    <Eye className="h-4 w-4" />
+                    <span>Publiek recept</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-4 w-4" />
+                    <span>Privé recept</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
