@@ -101,41 +101,14 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Recipe Header - Single Column Layout */}
         <div>
-          {/* Back button and owner actions */}
-          <div className="flex items-center justify-between mb-6">
+          {/* Back button */}
+          <div className="mb-6">
             <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
               <Link href="/recipes">
                 <ArrowLeft className="h-5 w-5 sm:h-4 sm:w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Terug naar recepten</span>
               </Link>
             </Button>
-            
-            {isOwner && (
-              <div className="flex items-center gap-3">
-                <Badge 
-                  variant="secondary" 
-                  className={`${data.visibility === 'public' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-orange-500/20 text-orange-400 border-orange-500/30'}`}
-                >
-                  {data.visibility === 'public' ? (
-                    <>
-                      <Eye className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">Publiek</span>
-                    </>
-                  ) : (
-                    <>
-                      <EyeOff className="h-3 w-3 sm:mr-1" />
-                      <span className="hidden sm:inline">Privé</span>
-                    </>
-                  )}
-                </Badge>
-                <Button asChild size="sm" className="bg-ember hover:bg-ember/90">
-                  <Link href={`/recipes/${data.id}/edit`}>
-                    <Edit className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Bewerken</span>
-                  </Link>
-                </Button>
-              </div>
-            )}
           </div>
 
           <h1 className="text-4xl font-heading font-bold text-ash mb-4">{data.title}</h1>
@@ -146,20 +119,27 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
                 door {data.user.displayName}
               </p>
               {isOwner && (
-                <div className="flex items-center gap-2 sm:hidden">
+                <div className="flex items-center gap-2">
                   <Badge 
                     variant="secondary" 
                     className={`${data.visibility === 'public' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-orange-500/20 text-orange-400 border-orange-500/30'}`}
                   >
                     {data.visibility === 'public' ? (
-                      <Eye className="h-3 w-3" />
+                      <>
+                        <Eye className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Publiek</span>
+                      </>
                     ) : (
-                      <EyeOff className="h-3 w-3" />
+                      <>
+                        <EyeOff className="h-3 w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Privé</span>
+                      </>
                     )}
                   </Badge>
                   <Button asChild size="sm" className="bg-ember hover:bg-ember/90">
                     <Link href={`/recipes/${data.id}/edit`}>
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Bewerken</span>
                     </Link>
                   </Button>
                 </div>
