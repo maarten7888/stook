@@ -8,9 +8,10 @@ import { toast } from "sonner";
 
 interface ProfileFormProps {
   children: React.ReactNode;
+  onUpdate?: () => void;
 }
 
-export function ProfileForm({ children }: ProfileFormProps) {
+export function ProfileForm({ children, onUpdate }: ProfileFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(formData: FormData) {
@@ -19,6 +20,9 @@ export function ProfileForm({ children }: ProfileFormProps) {
     try {
       await updateProfile(formData);
       toast.success("Profiel succesvol opgeslagen!");
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
       console.error("Profile update error:", error);
       toast.error(error instanceof Error ? error.message : "Er is een fout opgetreden");
