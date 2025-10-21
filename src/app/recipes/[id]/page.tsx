@@ -142,62 +142,45 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Recipe Header */}
+        {/* Recipe Header - Single Column Layout */}
         <div className="mb-8">
-          <div className="flex items-start gap-4 mb-6">
-            <div className="w-16 h-16 bg-ember/20 rounded-xl flex items-center justify-center">
-              <ChefHat className="h-8 w-8 text-ember" />
-            </div>
-            <div className="flex-1">
-              <h1 className="text-4xl font-heading font-bold text-ash mb-2">{data.title}</h1>
-              {data.user?.displayName && (
-                <p className="text-smoke text-lg mb-3">
-                  door {data.user.displayName}
-                </p>
-              )}
-              {data.description && (
-                <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
-              )}
-            </div>
-          </div>
+          <h1 className="text-4xl font-heading font-bold text-ash mb-4">{data.title}</h1>
+          
+          {data.user?.displayName && (
+            <p className="text-smoke text-lg mb-4">
+              door {data.user.displayName}
+            </p>
+          )}
+          
+          {data.description && (
+            <p className="text-smoke text-lg leading-relaxed mb-6">{data.description}</p>
+          )}
 
-          {/* Recipe Stats */}
-          <Card className="bg-coals border-ash">
+          {/* Recipe Stats - Horizontal Layout */}
+          <Card className="bg-coals border-ash mb-8">
             <CardContent className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {data.serves && (
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Users className="h-6 w-6 text-ember" />
-                    </div>
-                    <p className="text-2xl font-bold text-ash">{data.serves}</p>
+                    <p className="text-3xl font-bold text-ash">{data.serves}</p>
                     <p className="text-sm text-smoke">porties</p>
                   </div>
                 )}
                 {data.prepMinutes && (
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Clock className="h-6 w-6 text-ember" />
-                    </div>
-                    <p className="text-2xl font-bold text-ash">{data.prepMinutes}</p>
+                    <p className="text-3xl font-bold text-ash">{data.prepMinutes}</p>
                     <p className="text-sm text-smoke">min prep</p>
                   </div>
                 )}
                 {data.cookMinutes && (
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Clock className="h-6 w-6 text-ember" />
-                    </div>
-                    <p className="text-2xl font-bold text-ash">{data.cookMinutes}</p>
+                    <p className="text-3xl font-bold text-ash">{data.cookMinutes}</p>
                     <p className="text-sm text-smoke">min koken</p>
                   </div>
                 )}
                 {data.targetInternalTemp && (
                   <div className="text-center">
-                    <div className="w-12 h-12 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Thermometer className="h-6 w-6 text-ember" />
-                    </div>
-                    <p className="text-2xl font-bold text-ash">{data.targetInternalTemp}°</p>
+                    <p className="text-3xl font-bold text-ash">{data.targetInternalTemp}°</p>
                     <p className="text-sm text-smoke">doel temperatuur</p>
                   </div>
                 )}
@@ -214,20 +197,18 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Single Column Layout for Ingredients and Steps */}
+        <div className="space-y-8">
           {/* Ingredients */}
           {data.ingredients && data.ingredients.length > 0 && (
             <Card className="bg-coals border-ash">
               <CardHeader>
-                <CardTitle className="text-xl text-ash flex items-center gap-2">
-                  <ChefHat className="h-5 w-5 text-ember" />
-                  Ingrediënten
-                </CardTitle>
+                <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {data.ingredients.map((ingredient, index) => (
-                    <div key={ingredient.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20 hover:border-ember/30 transition-colors">
+                  {data.ingredients.map((ingredient) => (
+                    <div key={ingredient.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
                       <span className="text-ash font-medium">
                         {ingredient.ingredientName}
                       </span>
@@ -245,34 +226,20 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           {data.steps && data.steps.length > 0 && (
             <Card className="bg-coals border-ash">
               <CardHeader>
-                <CardTitle className="text-xl text-ash flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-ember" />
-                  Bereidingswijze
-                </CardTitle>
+                <CardTitle className="text-xl text-ash">Bereidingswijze</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {data.steps.map((step, index) => (
-                    <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20 hover:border-ember/30 transition-colors">
+                    <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20">
                       <div className="flex-shrink-0 w-8 h-8 bg-ember rounded-full flex items-center justify-center">
                         <span className="text-white font-bold text-sm">{step.orderNo || index + 1}</span>
                       </div>
                       <div className="flex-1">
                         <p className="text-ash leading-relaxed">{step.instruction}</p>
-                        {(step.timerMinutes || step.targetTemp) && (
-                          <div className="flex gap-4 mt-3 text-sm text-smoke">
-                            {step.timerMinutes && (
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                <span>{step.timerMinutes} min</span>
-                              </div>
-                            )}
-                            {step.targetTemp && (
-                              <div className="flex items-center gap-1">
-                                <Thermometer className="h-3 w-3" />
-                                <span>{step.targetTemp}°C</span>
-                              </div>
-                            )}
+                        {step.timerMinutes && (
+                          <div className="mt-2 text-sm text-smoke">
+                            <span>{step.timerMinutes} min</span>
                           </div>
                         )}
                       </div>
@@ -282,62 +249,62 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               </CardContent>
             </Card>
           )}
-        </div>
 
-        {/* Tags */}
-        {data.tags && data.tags.length > 0 && (
-          <Card className="bg-coals border-ash mt-8">
-            <CardHeader>
-              <CardTitle className="text-xl text-ash">Tags</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {data.tags.map((tag, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="bg-ember/20 text-ember border-ember/30 hover:bg-ember/30 transition-colors"
-                  >
-                    {tag.tagName}
-                  </Badge>
-                ))}
+          {/* Tags */}
+          {data.tags && data.tags.length > 0 && (
+            <Card className="bg-coals border-ash">
+              <CardHeader>
+                <CardTitle className="text-xl text-ash">Tags</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {data.tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="bg-ember/20 text-ember border-ember/30"
+                    >
+                      {tag.tagName}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Meta Info */}
+          <Card className="bg-coals border-ash">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between text-sm text-smoke">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>Aangemaakt: {new Date(data.createdAt).toLocaleDateString('nl-NL')}</span>
+                  </div>
+                  {data.updatedAt !== data.createdAt && (
+                    <div className="flex items-center gap-1">
+                      <Edit className="h-4 w-4" />
+                      <span>Bijgewerkt: {new Date(data.updatedAt).toLocaleDateString('nl-NL')}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {data.visibility === 'public' ? (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      <span>Publiek recept</span>
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="h-4 w-4" />
+                      <span>Privé recept</span>
+                    </>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Meta Info */}
-        <Card className="bg-coals border-ash mt-8">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between text-sm text-smoke">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Aangemaakt: {new Date(data.createdAt).toLocaleDateString('nl-NL')}</span>
-                </div>
-                {data.updatedAt !== data.createdAt && (
-                  <div className="flex items-center gap-1">
-                    <Edit className="h-4 w-4" />
-                    <span>Bijgewerkt: {new Date(data.updatedAt).toLocaleDateString('nl-NL')}</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                {data.visibility === 'public' ? (
-                  <>
-                    <Eye className="h-4 w-4" />
-                    <span>Publiek recept</span>
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="h-4 w-4" />
-                    <span>Privé recept</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
     </div>
   );
