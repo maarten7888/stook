@@ -152,10 +152,6 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
             </p>
           )}
           
-          {data.description && (
-            <p className="text-smoke text-lg leading-relaxed mb-6">{data.description}</p>
-          )}
-
           {/* Recipe Stats - Horizontal Layout */}
           <Card className="bg-coals border-ash mb-8">
             <CardContent className="p-6">
@@ -197,8 +193,16 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           </Card>
         </div>
 
-        {/* Single Column Layout for Ingredients and Steps */}
+        {/* Single Column Layout for Description, Ingredients and Steps */}
         <div className="space-y-8">
+          {/* Description */}
+          {data.description && (
+            <Card className="bg-coals border-ash">
+              <CardContent className="p-6">
+                <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
+              </CardContent>
+            </Card>
+          )}
           {/* Ingredients */}
           {data.ingredients && data.ingredients.length > 0 && (
             <Card className="bg-coals border-ash">
