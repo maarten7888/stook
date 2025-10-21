@@ -1,5 +1,4 @@
-import { getSession } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { getSession, createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,8 @@ import { ChefHat, Search, Clock, Users, Thermometer, ArrowRight, Star } from "lu
 
 async function fetchRecipes(visibility?: string, query?: string, userId?: string) {
   try {
-    const supabase = createAdminClient();
+    // Use regular client with RLS policies instead of admin client
+    const supabase = await createClient();
     
     let dbQuery = supabase
       .from('recipes')
@@ -28,19 +28,20 @@ async function fetchRecipes(visibility?: string, query?: string, userId?: string
         profiles(display_name)
       `);
 
-    // Apply visibility filter
+    // Apply visibility filter - RLS policies will handle authorization
     if (visibility === "public") {
       dbQuery = dbQuery.eq('visibility', 'public');
     } else if (visibility === "private") {
       if (!userId) {
         return { items: [] };
       }
+      // RLS policy "Users can view own recipes" will ensure only own recipes are returned
       dbQuery = dbQuery.eq('user_id', userId);
     } else if (userId) {
-      // "all" - show public recipes + user's own recipes
-      dbQuery = dbQuery.or(`visibility.eq.public,user_id.eq.${userId}`);
+      // "all" - RLS policies will automatically filter to public + own recipes
+      // No need for explicit OR clause - RLS handles this
     } else {
-      // No user - only public recipes
+      // No user - only public recipes (RLS policy "Anyone can view public recipes")
       dbQuery = dbQuery.eq('visibility', 'public');
     }
 
