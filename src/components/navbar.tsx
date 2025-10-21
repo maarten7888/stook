@@ -50,16 +50,25 @@ export function Navbar({ user, className }: NavbarProps) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-smoke hover:text-white transition-colors flex items-center gap-2"
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </Link>
-            ))}
+            {navigation
+              .filter((item) => {
+                // Voor niet-ingelogde gebruikers: alleen Home en Recepten
+                if (!user) {
+                  return item.name === "Home" || item.name === "Recepten";
+                }
+                // Voor ingelogde gebruikers: alle items
+                return true;
+              })
+              .map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="text-smoke hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              ))}
           </div>
 
           {/* Desktop User Actions */}
@@ -129,14 +138,42 @@ export function Navbar({ user, className }: NavbarProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">Inloggen</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/register">Registreren</Link>
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-auto p-2 rounded-lg hover:bg-ash/20 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-smoke text-charcoal">
+                          G
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="hidden lg:block text-left">
+                        <div className="text-white font-medium text-sm">
+                          Gast
+                        </div>
+                        <div className="text-smoke text-xs">
+                          Inloggen om meer te doen
+                        </div>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-smoke hidden lg:block" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-coals border-ash" align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href="/login" className="flex items-center text-smoke hover:text-white">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Inloggen</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/register" className="flex items-center text-smoke hover:text-white">
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Registreren</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
 
