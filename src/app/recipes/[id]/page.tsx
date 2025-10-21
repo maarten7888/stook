@@ -198,7 +198,10 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           {/* Description */}
           {data.description && (
             <Card className="bg-coals border-ash">
-              <CardContent className="p-6">
+              <CardHeader>
+                <CardTitle className="text-xl text-ash">Beschrijving</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
               </CardContent>
             </Card>
