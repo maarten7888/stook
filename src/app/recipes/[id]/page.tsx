@@ -106,7 +106,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
                 <Link href="/recipes">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Terug naar recepten
+                  <span className="hidden sm:inline">Terug naar recepten</span>
                 </Link>
               </Button>
             </div>
@@ -119,20 +119,20 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
                 >
                   {data.visibility === 'public' ? (
                     <>
-                      <Eye className="h-3 w-3 mr-1" />
-                      Publiek
+                      <Eye className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Publiek</span>
                     </>
                   ) : (
                     <>
-                      <EyeOff className="h-3 w-3 mr-1" />
-                      Privé
+                      <EyeOff className="h-3 w-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Privé</span>
                     </>
                   )}
                 </Badge>
                 <Button asChild size="sm" className="bg-ember hover:bg-ember/90">
                   <Link href={`/recipes/${data.id}/edit`}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Bewerken
+                    <Edit className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Bewerken</span>
                   </Link>
                 </Button>
               </div>
