@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { testDatabaseConnection } from "./test-db";
 import { testSimpleConnection } from "./test-simple-db";
+import { testAlternativeUrls } from "./test-urls";
 import { toast } from "sonner";
 
 export function DatabaseTest() {
@@ -16,21 +17,32 @@ export function DatabaseTest() {
     setResult(null);
     
     try {
-      // Test 1: Simple connection
+      // Test 1: Alternative URLs
+      console.log("Testing alternative URLs...");
+      const urlResult = await testAlternativeUrls();
+      console.log("URL test result:", urlResult);
+      
+      if (!urlResult.success) {
+        setResult({ test: "urls", ...urlResult });
+        toast.error(`URL test failed: ${urlResult.error}`);
+        return;
+      }
+      
+      // Test 2: Simple connection with working URL
       console.log("Testing simple connection...");
       const simpleResult = await testSimpleConnection();
       console.log("Simple test result:", simpleResult);
       
       if (!simpleResult.success) {
-        setResult({ test: "simple", ...simpleResult });
+        setResult({ url: urlResult, simple: simpleResult });
         toast.error(`Simple connection failed: ${simpleResult.error}`);
         return;
       }
       
-      // Test 2: Full database connection
+      // Test 3: Full database connection
       console.log("Testing full database connection...");
       const testResult = await testDatabaseConnection();
-      setResult({ simple: simpleResult, full: testResult });
+      setResult({ url: urlResult, simple: simpleResult, full: testResult });
       
       if (testResult.success) {
         toast.success("Database connectie succesvol!");

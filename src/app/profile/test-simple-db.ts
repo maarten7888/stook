@@ -9,33 +9,60 @@ export async function testSimpleConnection() {
     console.log("DATABASE_URL starts with:", process.env.DATABASE_URL?.substring(0, 20));
     console.log("DATABASE_URL contains pooler:", process.env.DATABASE_URL?.includes("pooler"));
     console.log("DATABASE_URL contains sslmode:", process.env.DATABASE_URL?.includes("sslmode"));
+    console.log("Full DATABASE_URL:", process.env.DATABASE_URL);
     
     if (!process.env.DATABASE_URL) {
       return { success: false, error: "DATABASE_URL not found" };
     }
 
-    const pool = new Pool({ 
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false, // Allow self-signed certificates
+    // Try different SSL configurations
+    const configs = [
+      {
+        name: "SSL disabled",
+        config: { connectionString: process.env.DATABASE_URL, ssl: false }
       },
-    });
-    
-    console.log("Pool created, testing connection...");
-    const client = await pool.connect();
-    
-    console.log("Connected to database, testing query...");
-    const result = await client.query("SELECT NOW() as current_time");
-    
-    console.log("Query successful:", result.rows[0]);
-    
-    client.release();
-    await pool.end();
-    
+      {
+        name: "SSL with rejectUnauthorized false",
+        config: { 
+          connectionString: process.env.DATABASE_URL, 
+          ssl: { rejectUnauthorized: false } 
+        }
+      },
+      {
+        name: "SSL with require",
+        config: { 
+          connectionString: process.env.DATABASE_URL, 
+          ssl: { require: true, rejectUnauthorized: false } 
+        }
+      }
+    ];
+
+    for (const { name, config } of configs) {
+      try {
+        console.log(`Trying ${name}...`);
+        const pool = new Pool(config);
+        const client = await pool.connect();
+        const result = await client.query("SELECT NOW() as current_time");
+        client.release();
+        await pool.end();
+        
+        console.log(`${name} successful:`, result.rows[0]);
+        return { 
+          success: true, 
+          message: `${name} successful`,
+          time: result.rows[0].current_time,
+          config: name
+        };
+      } catch (error) {
+        console.log(`${name} failed:`, error instanceof Error ? error.message : error);
+        continue;
+      }
+    }
+
     return { 
-      success: true, 
-      message: "Simple connection successful",
-      time: result.rows[0].current_time
+      success: false, 
+      error: "All SSL configurations failed", 
+      details: "Tried SSL disabled, rejectUnauthorized false, and SSL require"
     };
     
   } catch (error) {
