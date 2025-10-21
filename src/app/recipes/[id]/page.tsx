@@ -156,30 +156,22 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           <Card className="bg-coals border-ash">
             <CardContent className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {data.serves && (
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-ash">{data.serves}</p>
-                    <p className="text-sm text-smoke">porties</p>
-                  </div>
-                )}
-                {data.prepMinutes && (
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-ash">{data.prepMinutes}</p>
-                    <p className="text-sm text-smoke">min prep</p>
-                  </div>
-                )}
-                {data.cookMinutes && (
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-ash">{data.cookMinutes}</p>
-                    <p className="text-sm text-smoke">min koken</p>
-                  </div>
-                )}
-                {data.targetInternalTemp && (
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-ash">{data.targetInternalTemp}°</p>
-                    <p className="text-sm text-smoke">doel temperatuur</p>
-                  </div>
-                )}
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-ash">{data.serves || '-'}</p>
+                  <p className="text-sm text-smoke">porties</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-ash">{data.prepMinutes || '-'}</p>
+                  <p className="text-sm text-smoke">min prep</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-ash">{data.cookMinutes || '-'}</p>
+                  <p className="text-sm text-smoke">min koken</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-ash">{data.targetInternalTemp ? `${data.targetInternalTemp}°` : '-'}</p>
+                  <p className="text-sm text-smoke">doel temperatuur</p>
+                </div>
               </div>
               
               {totalTime > 0 && (
