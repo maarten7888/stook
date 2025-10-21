@@ -15,9 +15,11 @@ import {
   Star, 
   TrendingUp,
   Calendar,
-  Award
+  Award,
+  Save
 } from "lucide-react";
 import { headers } from "next/headers";
+import { updateProfile } from "./actions";
 
 async function fetchUserProfile() {
   const headersList = await headers();
@@ -56,13 +58,14 @@ export default async function ProfilePage() {
   const stats = await fetchUserStats();
 
   return (
-    <div className="space-y-6">
+    <form action={updateProfile} className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
         <div>
           <h1 className="text-3xl font-heading font-bold text-ash">Profiel</h1>
           <p className="text-smoke mt-1">Beheer je account en bekijk je statistieken</p>
         </div>
-        <Button className="bg-ember hover:bg-ember/90">
+        <Button type="submit" className="bg-ember hover:bg-ember/90 flex items-center gap-2">
+          <Save className="h-4 w-4" />
           Profiel opslaan
         </Button>
       </div>
@@ -98,15 +101,18 @@ export default async function ProfilePage() {
                   <Label htmlFor="displayName" className="text-ash">Weergavenaam</Label>
                   <Input
                     id="displayName"
+                    name="displayName"
                     defaultValue={profile?.displayName || ""}
                     placeholder="Je naam"
                     className="bg-charcoal border-ash text-ash"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="location" className="text-ash">Locatie</Label>
                   <Input
                     id="location"
+                    name="location"
                     defaultValue={profile?.location || ""}
                     placeholder="Amsterdam, Nederland"
                     className="bg-charcoal border-ash text-ash"
@@ -118,6 +124,7 @@ export default async function ProfilePage() {
                 <Label htmlFor="bio" className="text-ash">Bio</Label>
                 <Textarea
                   id="bio"
+                  name="bio"
                   defaultValue={profile?.bio || ""}
                   placeholder="Vertel iets over jezelf en je BBQ ervaring..."
                   className="bg-charcoal border-ash text-ash min-h-[100px]"
@@ -139,6 +146,7 @@ export default async function ProfilePage() {
                   <Label htmlFor="favoriteMeat" className="text-ash">Favoriete vlees</Label>
                   <Input
                     id="favoriteMeat"
+                    name="favoriteMeat"
                     defaultValue={profile?.favoriteMeat || ""}
                     placeholder="Brisket, ribs, pulled pork..."
                     className="bg-charcoal border-ash text-ash"
@@ -148,6 +156,7 @@ export default async function ProfilePage() {
                   <Label htmlFor="bbqStyle" className="text-ash">BBQ stijl</Label>
                   <Input
                     id="bbqStyle"
+                    name="bbqStyle"
                     defaultValue={profile?.bbqStyle || ""}
                     placeholder="Texas, Kansas City, Carolina..."
                     className="bg-charcoal border-ash text-ash"
@@ -160,6 +169,7 @@ export default async function ProfilePage() {
                   <Label htmlFor="experienceLevel" className="text-ash">Ervaring</Label>
                   <Input
                     id="experienceLevel"
+                    name="experienceLevel"
                     defaultValue={profile?.experienceLevel || ""}
                     placeholder="Beginner, Gevorderd, Expert..."
                     className="bg-charcoal border-ash text-ash"
@@ -169,6 +179,7 @@ export default async function ProfilePage() {
                   <Label htmlFor="favoriteWood" className="text-ash">Favoriete hout</Label>
                   <Input
                     id="favoriteWood"
+                    name="favoriteWood"
                     defaultValue={profile?.favoriteWood || ""}
                     placeholder="Hickory, Apple, Cherry..."
                     className="bg-charcoal border-ash text-ash"
@@ -278,6 +289,6 @@ export default async function ProfilePage() {
           </Card>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
