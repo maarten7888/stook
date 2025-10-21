@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 
 export const runtime = "nodejs";
 
@@ -193,6 +193,11 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
 
+    // Revalidate the recipes pages
+    revalidatePath("/recipes");
+    revalidatePath(`/recipes/${id}`);
+    revalidatePath("/");
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("PUT /api/recipes/[id] failed", err);
@@ -233,6 +238,10 @@ export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id:
       console.error("Delete error:", deleteError);
       return NextResponse.json({ error: "Delete failed" }, { status: 500 });
     }
+
+    // Revalidate the recipes pages
+    revalidatePath("/recipes");
+    revalidatePath("/");
 
     return NextResponse.json({ ok: true });
   } catch (err) {

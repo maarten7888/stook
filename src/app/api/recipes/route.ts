@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/supabase/server";
+import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 
 // Type for Supabase response with profiles join
 type SupabaseRecipeWithProfile = {
@@ -228,6 +228,10 @@ export async function POST(request: Request) {
       console.error("Supabase insert error:", error);
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
+
+    // Revalidate the recipes pages to show the new recipe
+    revalidatePath("/recipes");
+    revalidatePath("/");
 
     return NextResponse.json({ id: data.id }, { status: 201 });
   } catch (err) {
