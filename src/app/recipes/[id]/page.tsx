@@ -1,17 +1,86 @@
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { headers } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { Clock, Thermometer, ChefHat, Star } from "lucide-react";
 
 async function fetchRecipe(id: string) {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  const baseUrl = `${protocol}://${host}`;
-  const res = await fetch(`${baseUrl}/api/recipes/${id}`, { cache: "no-store" });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase
+      .from('recipes')
+      .select(`
+        id,
+        title,
+        description,
+        serves,
+        prep_minutes,
+        cook_minutes,
+        target_internal_temp,
+        visibility,
+        created_at,
+        updated_at,
+        user_id,
+        profiles(display_name),
+        steps(id, order_no, instruction, timer_minutes, target_temp),
+        recipe_ingredients(
+          amount,
+          unit,
+          ingredients(name)
+        ),
+        recipe_tags(
+          tags(name)
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      console.error("Error fetching recipe:", error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      serves: data.serves,
+      prepMinutes: data.prep_minutes,
+      cookMinutes: data.cook_minutes,
+      targetInternalTemp: data.target_internal_temp,
+      visibility: data.visibility,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      userId: data.user_id,
+      user: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        displayName: (data.profiles as any)?.display_name || null,
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      steps: data.steps?.map((step: any) => ({
+        id: step.id,
+        orderNo: step.order_no,
+        instruction: step.instruction,
+        timerMinutes: step.timer_minutes,
+        targetTemp: step.target_temp,
+      })) || [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ingredients: data.recipe_ingredients?.map((ri: any) => ({
+        id: ri.id || Math.random().toString(),
+        amount: ri.amount,
+        unit: ri.unit,
+        ingredientName: ri.ingredients?.name || 'Unknown',
+      })) || [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tags: data.recipe_tags?.map((rt: any) => ({
+        tagName: rt.tags?.name || 'Unknown',
+      })) || [],
+    };
+  } catch (error) {
+    console.error("Error fetching recipe:", error);
+    return null;
+  }
 }
 
 export default async function RecipeDetailPage({ params }: { params: { id: string } }) {
@@ -21,229 +90,170 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
     redirect("/recipes");
   }
 
-  // The API already handles access control - if we get data, user has access
+  // The RLS policies already handle access control - if we get data, user has access
   // No need for additional checks here
 
   type StepItem = { 
     id: string; 
     orderNo: number; 
     instruction: string; 
-    timerMinutes?: number; 
-    targetTemp?: number; 
+    timerMinutes: number | null; 
+    targetTemp: number | null; 
   };
+
   type IngredientItem = { 
     id: string; 
     amount: number | null; 
     unit: string | null; 
     ingredientName: string; 
   };
+
   type TagItem = { 
-    tagId: string; 
     tagName: string; 
-  };
-  type ReviewItem = { 
-    id: string; 
-    rating: number; 
-    comment: string | null; 
-    createdAt: string; 
-    user?: { displayName: string | null }; 
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      {/* Title */}
-      <div className="text-center">
-        <h1 className="text-4xl md:text-5xl font-heading font-bold text-ash leading-tight">
-          {data.title}
-        </h1>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column - Main Content */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Description Section */}
-          {data.description && (
-            <Card className="bg-coals border-ash">
-              <CardHeader>
-                <CardTitle className="text-xl text-ash">Beschrijving</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-smoke leading-relaxed">{data.description}</p>
-              </CardContent>
-            </Card>
+    <div className="min-h-screen bg-charcoal text-ash">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <ChefHat className="h-6 w-6 text-ember" />
+            <h1 className="text-3xl font-heading font-bold text-ash">{data.title}</h1>
+          </div>
+          
+          {data.user?.displayName && (
+            <p className="text-smoke text-lg mb-4">
+              door {data.user.displayName}
+            </p>
           )}
+          
+          {data.description && (
+            <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
+          )}
+        </div>
 
-          {/* Ingredients Section */}
-          <Card className="bg-coals border-ash">
+        {/* Recipe Info */}
+        <Card className="bg-coals border-ash mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl text-ash">Recept Informatie</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {data.serves && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-ember/20 rounded-full flex items-center justify-center">
+                    <span className="text-ember text-sm font-bold">{data.serves}</span>
+                  </div>
+                  <span className="text-smoke">porties</span>
+                </div>
+              )}
+              {data.prepMinutes && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-ember" />
+                  <span className="text-smoke">{data.prepMinutes} min prep</span>
+                </div>
+              )}
+              {data.cookMinutes && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-ember" />
+                  <span className="text-smoke">{data.cookMinutes} min koken</span>
+                </div>
+              )}
+              {data.targetInternalTemp && (
+                <div className="flex items-center gap-2">
+                  <Thermometer className="h-4 w-4 text-ember" />
+                  <span className="text-smoke">{data.targetInternalTemp}°C</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Ingredients */}
+        {data.ingredients && data.ingredients.length > 0 && (
+          <Card className="bg-coals border-ash mb-8">
             <CardHeader>
               <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
             </CardHeader>
             <CardContent>
-              {data.ingredients?.length ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {(data.ingredients as IngredientItem[]).map((ri) => (
-                    <div key={ri.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                      <span className="text-ash font-medium">
-                        {ri.ingredientName || 'Onbekend ingrediënt'}
-                      </span>
-                      <span className="text-ember font-bold text-lg">
-                        {ri.amount ? `${ri.amount}${ri.unit ?? ""}` : ""}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-smoke">
-                  <ChefHat className="h-12 w-12 mx-auto mb-4 text-ash/30" />
-                  <p>Nog geen ingrediënten toegevoegd</p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(data.ingredients as IngredientItem[]).map((ri) => (
+                  <div key={ri.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
+                    <span className="text-ash font-medium">
+                      {ri.ingredientName || 'Onbekend ingrediënt'}
+                    </span>
+                    <span className="text-smoke">
+                      {ri.amount && ri.unit ? `${ri.amount} ${ri.unit}` : ri.amount || 'Naar smaak'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Cooking Steps */}
-          <Card className="bg-coals border-ash">
+        {/* Steps */}
+        {data.steps && data.steps.length > 0 && (
+          <Card className="bg-coals border-ash mb-8">
             <CardHeader>
               <CardTitle className="text-xl text-ash">Bereidingswijze</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {data.steps?.length ? (
-                (data.steps as StepItem[]).map((s) => (
-                  <div key={s.id} className="flex gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 bg-ember text-white rounded-full flex items-center justify-center text-lg font-bold">
-                      {s.orderNo}
+            <CardContent>
+              <div className="space-y-4">
+                {(data.steps as StepItem[]).map((step, index) => (
+                  <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20">
+                    <div className="flex-shrink-0 w-8 h-8 bg-ember rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">{step.orderNo || index + 1}</span>
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <p className="text-ash leading-relaxed">{s.instruction}</p>
-                      {(s.timerMinutes || s.targetTemp) && (
-                        <div className="flex gap-4 text-sm text-smoke">
-                          {s.timerMinutes && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              {s.timerMinutes} min
-                            </span>
+                    <div className="flex-1">
+                      <p className="text-ash leading-relaxed">{step.instruction}</p>
+                      {(step.timerMinutes || step.targetTemp) && (
+                        <div className="flex gap-4 mt-2 text-sm text-smoke">
+                          {step.timerMinutes && (
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{step.timerMinutes} min</span>
+                            </div>
                           )}
-                          {s.targetTemp && (
-                            <span className="flex items-center gap-1">
-                              <Thermometer className="h-4 w-4" />
-                              {s.targetTemp}°C
-                            </span>
+                          {step.targetTemp && (
+                            <div className="flex items-center gap-1">
+                              <Thermometer className="h-3 w-3" />
+                              <span>{step.targetTemp}°C</span>
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-12 text-smoke">
-                  <ChefHat className="h-16 w-16 mx-auto mb-4 text-ash/30" />
-                  <p className="text-lg">Nog geen stappen toegevoegd</p>
-                  <p className="text-sm">De bereidingswijze wordt binnenkort toegevoegd</p>
-                </div>
-              )}
+                ))}
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Right Column - Sidebar */}
-        <div className="space-y-6">
-          {/* Recipe Info */}
+        {/* Tags */}
+        {data.tags && data.tags.length > 0 && (
           <Card className="bg-coals border-ash">
             <CardHeader>
-              <CardTitle className="text-xl text-ash">Recept Info</CardTitle>
+              <CardTitle className="text-xl text-ash">Tags</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {data.serves && (
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-smoke">Porties:</span>
-                  <span className="text-ash font-medium">{data.serves}</span>
-                </div>
-              )}
-              {data.prepMinutes && (
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-smoke">Voorbereiding:</span>
-                  <span className="text-ash font-medium">{data.prepMinutes} min</span>
-                </div>
-              )}
-              {data.cookMinutes && (
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-smoke">Bereiding:</span>
-                  <span className="text-ash font-medium">{data.cookMinutes} min</span>
-                </div>
-              )}
-              {data.targetInternalTemp && (
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-smoke">Doel temperatuur:</span>
-                  <span className="text-ember font-bold">{data.targetInternalTemp}°C</span>
-                </div>
-              )}
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {(data.tags as TagItem[]).map((tag, index) => (
+                  <Badge
+                    key={index}
+                    variant="secondary"
+                    className="bg-ember/20 text-ember border-ember/30"
+                  >
+                    {tag.tagName}
+                  </Badge>
+                ))}
+              </div>
             </CardContent>
           </Card>
-
-          {/* Tags */}
-          {data.tags?.length > 0 && (
-            <Card className="bg-coals border-ash">
-              <CardHeader>
-                <CardTitle className="text-xl text-ash">Tags</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {(data.tags as TagItem[]).map((tag) => (
-                    <Badge 
-                      key={tag.tagId} 
-                      variant="secondary" 
-                      className="bg-ember/20 text-ember border-ember/30 hover:bg-ember/30 transition-colors"
-                    >
-                      {tag.tagName}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Reviews */}
-          <Card className="bg-coals border-ash">
-            <CardHeader>
-              <CardTitle className="text-xl text-ash">Reviews</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {data.reviews?.length ? (
-                (data.reviews as ReviewItem[]).map((review) => (
-                  <div key={review.id} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-smoke text-sm">
-                        {review.user?.displayName || 'Anoniem'}
-                      </span>
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className={`h-4 w-4 ${
-                              i < review.rating ? 'text-ember fill-ember' : 'text-ash/30'
-                            }`} 
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    {review.comment && (
-                      <p className="text-ash text-sm leading-relaxed">{review.comment}</p>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-smoke">
-                  <Star className="h-12 w-12 mx-auto mb-4 text-ash/30" />
-                  <p className="text-sm">Nog geen reviews</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        )}
       </div>
     </div>
   );
 }
-
-
