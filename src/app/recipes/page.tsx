@@ -1,22 +1,90 @@
 import { getSession } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChefHat, Search, Clock, Users, Thermometer, ArrowRight, Star } from "lucide-react";
-import { headers } from "next/headers";
 
-async function fetchRecipes(params?: string) {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  const baseUrl = `${protocol}://${host}`;
-  const res = await fetch(`${baseUrl}/api/recipes${params || ""}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return { items: [] };
-  return res.json();
+async function fetchRecipes(visibility?: string, query?: string, userId?: string) {
+  try {
+    const supabase = createAdminClient();
+    
+    let dbQuery = supabase
+      .from('recipes')
+      .select(`
+        id,
+        title,
+        description,
+        serves,
+        prep_minutes,
+        cook_minutes,
+        target_internal_temp,
+        visibility,
+        created_at,
+        updated_at,
+        user_id,
+        profiles(display_name)
+      `);
+
+    // Apply visibility filter
+    if (visibility === "public") {
+      dbQuery = dbQuery.eq('visibility', 'public');
+    } else if (visibility === "private") {
+      if (!userId) {
+        return { items: [] };
+      }
+      dbQuery = dbQuery.eq('user_id', userId);
+    } else if (userId) {
+      // "all" - show public recipes + user's own recipes
+      dbQuery = dbQuery.or(`visibility.eq.public,user_id.eq.${userId}`);
+    } else {
+      // No user - only public recipes
+      dbQuery = dbQuery.eq('visibility', 'public');
+    }
+
+    // Apply search filter
+    if (query) {
+      dbQuery = dbQuery.ilike('title', `%${query}%`);
+    }
+
+    const { data, error } = await dbQuery.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Database error:", error);
+      return { items: [] };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = data?.map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      serves: row.serves,
+      prepMinutes: row.prep_minutes,
+      cookMinutes: row.cook_minutes,
+      targetInternalTemp: row.target_internal_temp,
+      visibility: row.visibility,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      userId: row.user_id,
+      user: {
+        displayName: (() => {
+          if (!row.profiles) return null;
+          if (Array.isArray(row.profiles)) {
+            return row.profiles[0]?.display_name || null;
+          }
+          return row.profiles.display_name || null;
+        })(),
+      },
+    })) || [];
+
+    return { items };
+  } catch (error) {
+    console.error("Error fetching recipes:", error);
+    return { items: [] };
+  }
 }
 
 export default async function RecipesPage({ 
@@ -30,22 +98,9 @@ export default async function RecipesPage({
   const session = await getSession();
   const query = searchParams?.query;
   const visibility = searchParams?.visibility;
+  const userId = session?.user.id;
   
-  // Determine API parameters based on visibility filter
-  let apiParams = "";
-  if (visibility === "public") {
-    apiParams = "?visibility=public";
-  } else if (visibility === "private") {
-    apiParams = "?visibility=private";
-  } else if (!session) {
-    // For non-authenticated users, only show public recipes
-    apiParams = "?visibility=public";
-  }
-  
-  const searchParam = query ? `&query=${encodeURIComponent(query)}` : "";
-  const fullParams = apiParams + searchParam;
-  
-  const data = await fetchRecipes(fullParams);
+  const data = await fetchRecipes(visibility, query, userId);
 
   type RecipeListItem = {
     id: string;
