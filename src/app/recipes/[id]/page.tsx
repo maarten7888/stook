@@ -143,7 +143,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Recipe Header - Single Column Layout */}
-        <div className="mb-8">
+        <div>
           <h1 className="text-4xl font-heading font-bold text-ash mb-4">{data.title}</h1>
           
           {data.user?.displayName && (
@@ -194,7 +194,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
         </div>
 
         {/* Single Column Layout for Description, Ingredients and Steps */}
-        <div className="space-y-8">
+        <div className="mt-8 space-y-8">
           {/* Description */}
           {data.description && (
             <Card className="bg-coals border-ash">
