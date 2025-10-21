@@ -193,6 +193,16 @@ const CreateSchema = z.object({
   cookMinutes: z.number().int().min(0).max(48 * 60).optional(),
   targetInternalTemp: z.number().int().min(0).max(200).optional(),
   visibility: z.enum(["private", "public"]).optional().default("private"),
+  ingredients: z.array(z.object({
+    name: z.string().min(1),
+    amount: z.string().optional(),
+    unit: z.string().optional(),
+  })).optional().default([]),
+  steps: z.array(z.object({
+    instruction: z.string().min(1),
+    timerMinutes: z.string().optional(),
+  })).optional().default([]),
+  tags: z.array(z.string()).optional().default([]),
 });
 
 export async function POST(request: Request) {
@@ -213,7 +223,8 @@ export async function POST(request: Request) {
 
     const adminSupabase = createAdminClient();
     
-    const { data, error } = await adminSupabase
+    // Insert recipe
+    const { data: recipeData, error: recipeError } = await adminSupabase
       .from('recipes')
       .insert({
         user_id: user.id,
@@ -228,16 +239,132 @@ export async function POST(request: Request) {
       .select('id')
       .single();
 
-    if (error) {
-      console.error("Supabase insert error:", error);
+    if (recipeError) {
+      console.error("Supabase recipe insert error:", recipeError);
       return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
+
+    const recipeId = recipeData.id;
+
+    // Insert ingredients
+    if (parsed.data.ingredients && parsed.data.ingredients.length > 0) {
+      const ingredientInserts = [];
+      
+      for (const ingredient of parsed.data.ingredients) {
+        // First, ensure ingredient exists in ingredients table
+        const { data: existingIngredient } = await adminSupabase
+          .from('ingredients')
+          .select('id')
+          .eq('name', ingredient.name)
+          .single();
+
+        let ingredientId;
+        if (existingIngredient) {
+          ingredientId = existingIngredient.id;
+        } else {
+          const { data: newIngredient, error: ingredientError } = await adminSupabase
+            .from('ingredients')
+            .insert({ name: ingredient.name, default_unit: ingredient.unit || 'stuks' })
+            .select('id')
+            .single();
+          
+          if (ingredientError) {
+            console.error("Ingredient insert error:", ingredientError);
+            continue;
+          }
+          ingredientId = newIngredient.id;
+        }
+
+        // Insert recipe_ingredient
+        ingredientInserts.push({
+          recipe_id: recipeId,
+          ingredient_id: ingredientId,
+          amount: ingredient.amount ? parseFloat(ingredient.amount) : null,
+          unit: ingredient.unit || null,
+        });
+      }
+
+      if (ingredientInserts.length > 0) {
+        const { error: recipeIngredientError } = await adminSupabase
+          .from('recipe_ingredients')
+          .insert(ingredientInserts);
+
+        if (recipeIngredientError) {
+          console.error("Recipe ingredient insert error:", recipeIngredientError);
+        }
+      }
+    }
+
+    // Insert steps
+    if (parsed.data.steps && parsed.data.steps.length > 0) {
+      const stepInserts = parsed.data.steps.map((step, index) => ({
+        recipe_id: recipeId,
+        order_no: index + 1,
+        instruction: step.instruction,
+        timer_minutes: step.timerMinutes ? parseInt(step.timerMinutes) : null,
+        target_temp: null,
+      }));
+
+      const { error: stepError } = await adminSupabase
+        .from('steps')
+        .insert(stepInserts);
+
+      if (stepError) {
+        console.error("Step insert error:", stepError);
+      }
+    }
+
+    // Insert tags
+    if (parsed.data.tags && parsed.data.tags.length > 0) {
+      const tagInserts = [];
+      
+      for (const tagName of parsed.data.tags) {
+        // First, ensure tag exists in tags table
+        const { data: existingTag } = await adminSupabase
+          .from('tags')
+          .select('id')
+          .eq('name', tagName)
+          .single();
+
+        let tagId;
+        if (existingTag) {
+          tagId = existingTag.id;
+        } else {
+          const { data: newTag, error: tagError } = await adminSupabase
+            .from('tags')
+            .insert({ name: tagName })
+            .select('id')
+            .single();
+          
+          if (tagError) {
+            console.error("Tag insert error:", tagError);
+            continue;
+          }
+          tagId = newTag.id;
+        }
+
+        tagInserts.push({
+          recipe_id: recipeId,
+          tag_id: tagId,
+        });
+      }
+
+      if (tagInserts.length > 0) {
+        const { error: recipeTagError } = await adminSupabase
+          .from('recipe_tags')
+          .insert(tagInserts);
+
+        if (recipeTagError) {
+          console.error("Recipe tag insert error:", recipeTagError);
+        }
+      }
     }
 
     // Revalidate the recipes pages to show the new recipe
     revalidatePath("/recipes");
     revalidatePath("/");
 
-    return NextResponse.json({ id: data.id }, { status: 201 });
+    return NextResponse.json({ id: recipeId }, { status: 201 });
   } catch (err) {
     console.error("POST /api/recipes failed", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
