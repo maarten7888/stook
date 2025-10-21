@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
 import { updateProfile } from "./actions";
+import { testProfileUpdate } from "./test-action";
 import { toast } from "sonner";
 
 interface ProfileFormProps {
@@ -17,8 +18,9 @@ export function ProfileForm({ children }: ProfileFormProps) {
     setIsSubmitting(true);
     
     try {
-      await updateProfile(formData);
-      toast.success("Profiel succesvol opgeslagen!");
+      // Test eerst zonder database operaties
+      await testProfileUpdate(formData);
+      toast.success("Test succesvol!");
     } catch (error) {
       console.error("Profile update error:", error);
       toast.error(error instanceof Error ? error.message : "Er is een fout opgetreden");
