@@ -153,7 +153,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
           )}
           
           {/* Recipe Stats - Horizontal Layout */}
-          <Card className="bg-coals border-ash mb-8">
+          <Card className="bg-coals border-ash">
             <CardContent className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 {data.serves && (
@@ -206,6 +206,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               </CardContent>
             </Card>
           )}
+          
           {/* Ingredients */}
           {data.ingredients && data.ingredients.length > 0 && (
             <Card className="bg-coals border-ash">
