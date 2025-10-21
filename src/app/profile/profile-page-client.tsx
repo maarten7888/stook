@@ -43,15 +43,28 @@ interface Stats {
   reviews: number;
 }
 
-export function ProfilePageClient() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+interface ProfilePageClientProps {
+  initialProfile?: Profile | null;
+  initialStats?: Stats;
+}
+
+export function ProfilePageClient({ initialProfile, initialStats }: ProfilePageClientProps) {
+  const [profile, setProfile] = useState<Profile | null>(initialProfile || null);
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<Stats>({ recipes: 0, sessions: 0, reviews: 0 });
-  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<Stats>(initialStats || { recipes: 0, sessions: 0, reviews: 0 });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    fetchProfileData();
-  }, []);
+    // Alleen data ophalen als we geen initial data hebben
+    if (!initialProfile || !initialStats) {
+      fetchProfileData();
+    } else {
+      // Set user info from initial profile
+      if (initialProfile) {
+        setUser({ id: initialProfile.id, email: initialProfile.display_name + '@example.com' });
+      }
+    }
+  }, [initialProfile, initialStats]);
 
   const fetchProfileData = async () => {
     try {
@@ -62,6 +75,11 @@ export function ProfilePageClient() {
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setProfile(profileData);
+        
+        // Get user info from profile
+        if (profileData) {
+          setUser({ id: profileData.id, email: profileData.display_name + '@example.com' });
+        }
       }
 
       // Fetch stats
@@ -69,11 +87,6 @@ export function ProfilePageClient() {
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
-      }
-
-      // Get user info from profile or create a mock user object
-      if (profile) {
-        setUser({ id: profile.id, email: profile.display_name + '@example.com' });
       }
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -87,7 +100,7 @@ export function ProfilePageClient() {
     fetchProfileData();
   };
 
-  if (isLoading) {
+  if (isLoading && !profile) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-ash">Laden...</div>
