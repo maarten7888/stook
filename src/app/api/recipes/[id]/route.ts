@@ -72,7 +72,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       id: step.id as string,
       orderNo: step.order_no as number,
       instruction: step.instruction as string,
-      timerMinutes: step.timer_minutes as number | null,
+      timerMinutes: step.timer_minutes ? step.timer_minutes.toString() : "",
       targetTemp: step.target_temp as number | null,
     }));
     
@@ -99,7 +99,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       
       return {
         id: ri.id as string,
-        amount: ri.amount as number | null,
+        name: ingredientName,
+        amount: ri.amount ? ri.amount.toString() : "",
         unit: ri.unit as string | null,
         ingredientId: ingredientId,
         ingredientName: ingredientName
@@ -107,10 +108,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     });
     const photos = photosResult.data || [];
     const reviews = reviewsResult.data || [];
-    const tags = (tagsResult.data || []).map((rt: TagResponse) => ({
-      tagId: rt.tags?.[0]?.id,
-      tagName: rt.tags?.[0]?.name
-    }));
+    const tags = (tagsResult.data || []).map((rt: TagResponse) => rt.tags?.[0]?.name).filter(Boolean);
 
     return NextResponse.json({
       id: recipeData.id,
@@ -144,6 +142,16 @@ const UpdateSchema = z.object({
   cookMinutes: z.number().int().min(0).max(48 * 60).nullable().optional(),
   targetInternalTemp: z.number().int().min(0).max(200).nullable().optional(),
   visibility: z.enum(["private", "public"]).optional(),
+  ingredients: z.array(z.object({
+    name: z.string().min(1),
+    amount: z.string().optional(),
+    unit: z.string().optional(),
+  })).optional(),
+  steps: z.array(z.object({
+    instruction: z.string().min(1),
+    timerMinutes: z.string().optional(),
+  })).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -191,6 +199,147 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
     if (updateError) {
       console.error("Update error:", updateError);
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
+    }
+
+    // Update ingredients if provided
+    if (parsed.data.ingredients !== undefined) {
+      // Delete existing ingredients
+      await supabase
+        .from('recipe_ingredients')
+        .delete()
+        .eq('recipe_id', id);
+
+      // Insert new ingredients
+      if (parsed.data.ingredients.length > 0) {
+        const ingredientInserts = [];
+        
+        for (const ingredient of parsed.data.ingredients) {
+          // First, ensure ingredient exists in ingredients table
+          const { data: existingIngredient } = await supabase
+            .from('ingredients')
+            .select('id')
+            .eq('name', ingredient.name)
+            .single();
+
+          let ingredientId;
+          if (existingIngredient) {
+            ingredientId = existingIngredient.id;
+          } else {
+            const { data: newIngredient, error: ingredientError } = await supabase
+              .from('ingredients')
+              .insert({ name: ingredient.name, default_unit: ingredient.unit || 'stuks' })
+              .select('id')
+              .single();
+            
+            if (ingredientError) {
+              console.error("Ingredient insert error:", ingredientError);
+              continue;
+            }
+            ingredientId = newIngredient.id;
+          }
+
+          // Insert recipe_ingredient
+          ingredientInserts.push({
+            recipe_id: id,
+            ingredient_id: ingredientId,
+            amount: ingredient.amount ? parseFloat(ingredient.amount) : null,
+            unit: ingredient.unit || null,
+          });
+        }
+
+        if (ingredientInserts.length > 0) {
+          const { error: recipeIngredientError } = await supabase
+            .from('recipe_ingredients')
+            .insert(ingredientInserts);
+
+          if (recipeIngredientError) {
+            console.error("Recipe ingredient insert error:", recipeIngredientError);
+          }
+        }
+      }
+    }
+
+    // Update steps if provided
+    if (parsed.data.steps !== undefined) {
+      // Delete existing steps
+      await supabase
+        .from('steps')
+        .delete()
+        .eq('recipe_id', id);
+
+      // Insert new steps
+      if (parsed.data.steps.length > 0) {
+        const stepInserts = parsed.data.steps.map((step, index) => ({
+          recipe_id: id,
+          order_no: index + 1,
+          instruction: step.instruction,
+          timer_minutes: step.timerMinutes ? parseInt(step.timerMinutes) : null,
+          target_temp: null,
+        }));
+
+        const { error: stepError } = await supabase
+          .from('steps')
+          .insert(stepInserts);
+
+        if (stepError) {
+          console.error("Step insert error:", stepError);
+        }
+      }
+    }
+
+    // Update tags if provided
+    if (parsed.data.tags !== undefined) {
+      // Delete existing tags
+      await supabase
+        .from('recipe_tags')
+        .delete()
+        .eq('recipe_id', id);
+
+      // Insert new tags
+      if (parsed.data.tags.length > 0) {
+        const tagInserts = [];
+        
+        for (const tagName of parsed.data.tags) {
+          // First, ensure tag exists in tags table
+          const { data: existingTag } = await supabase
+            .from('tags')
+            .select('id')
+            .eq('name', tagName)
+            .single();
+
+          let tagId;
+          if (existingTag) {
+            tagId = existingTag.id;
+          } else {
+            const { data: newTag, error: tagError } = await supabase
+              .from('tags')
+              .insert({ name: tagName })
+              .select('id')
+              .single();
+            
+            if (tagError) {
+              console.error("Tag insert error:", tagError);
+              continue;
+            }
+            tagId = newTag.id;
+          }
+
+          tagInserts.push({
+            recipe_id: id,
+            tag_id: tagId,
+          });
+        }
+
+        if (tagInserts.length > 0) {
+          const { error: recipeTagError } = await supabase
+            .from('recipe_tags')
+            .insert(tagInserts);
+
+          if (recipeTagError) {
+            console.error("Recipe tag insert error:", recipeTagError);
+          }
+        }
+      }
     }
 
     // Revalidate the recipes pages
