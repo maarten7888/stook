@@ -98,18 +98,17 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="min-h-screen bg-charcoal">
-      {/* Header */}
-      <div className="bg-coals border-b border-ash/20">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
-                <Link href="/recipes">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Terug naar recepten</span>
-                </Link>
-              </Button>
-            </div>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Recipe Header - Single Column Layout */}
+        <div>
+          {/* Back button and owner actions */}
+          <div className="flex items-center justify-between mb-6">
+            <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
+              <Link href="/recipes">
+                <ArrowLeft className="h-5 w-5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Terug naar recepten</span>
+              </Link>
+            </Button>
             
             {isOwner && (
               <div className="flex items-center gap-3">
@@ -138,18 +137,34 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Recipe Header - Single Column Layout */}
-        <div>
           <h1 className="text-4xl font-heading font-bold text-ash mb-4">{data.title}</h1>
           
           {data.user?.displayName && (
-            <p className="text-smoke text-lg mb-4">
-              door {data.user.displayName}
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-smoke text-lg">
+                door {data.user.displayName}
+              </p>
+              {isOwner && (
+                <div className="flex items-center gap-2 sm:hidden">
+                  <Badge 
+                    variant="secondary" 
+                    className={`${data.visibility === 'public' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-orange-500/20 text-orange-400 border-orange-500/30'}`}
+                  >
+                    {data.visibility === 'public' ? (
+                      <Eye className="h-3 w-3" />
+                    ) : (
+                      <EyeOff className="h-3 w-3" />
+                    )}
+                  </Badge>
+                  <Button asChild size="sm" className="bg-ember hover:bg-ember/90">
+                    <Link href={`/recipes/${data.id}/edit`}>
+                      <Edit className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
           
           {/* Recipe Stats - Horizontal Layout */}
