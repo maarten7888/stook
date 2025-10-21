@@ -279,38 +279,44 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
             </Card>
           )}
 
-          {/* Meta Info */}
-          <Card className="bg-coals border-ash">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between text-sm text-smoke">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>Aangemaakt: {new Date(data.createdAt).toLocaleDateString('nl-NL')}</span>
+          {/* Meta Info - Only show if there's relevant info */}
+          {(data.createdAt || data.updatedAt || data.visibility) && (
+            <Card className="bg-coals border-ash">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between text-sm text-smoke">
+                  <div className="flex items-center gap-4">
+                    {data.createdAt && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Aangemaakt: {new Date(data.createdAt).toLocaleDateString('nl-NL')}</span>
+                      </div>
+                    )}
+                    {data.updatedAt && data.updatedAt !== data.createdAt && (
+                      <div className="flex items-center gap-1">
+                        <Edit className="h-4 w-4" />
+                        <span>Bijgewerkt: {new Date(data.updatedAt).toLocaleDateString('nl-NL')}</span>
+                      </div>
+                    )}
                   </div>
-                  {data.updatedAt !== data.createdAt && (
+                  {data.visibility && (
                     <div className="flex items-center gap-1">
-                      <Edit className="h-4 w-4" />
-                      <span>Bijgewerkt: {new Date(data.updatedAt).toLocaleDateString('nl-NL')}</span>
+                      {data.visibility === 'public' ? (
+                        <>
+                          <Eye className="h-4 w-4" />
+                          <span>Publiek recept</span>
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="h-4 w-4" />
+                          <span>Privé recept</span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
-                  {data.visibility === 'public' ? (
-                    <>
-                      <Eye className="h-4 w-4" />
-                      <span>Publiek recept</span>
-                    </>
-                  ) : (
-                    <>
-                      <EyeOff className="h-4 w-4" />
-                      <span>Privé recept</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
