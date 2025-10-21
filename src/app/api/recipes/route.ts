@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession, createAdminClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // Type for Supabase response with profiles join
@@ -42,18 +41,18 @@ export async function GET(request: Request) {
   }
 
   const { query: q, visibility } = parse.data;
-  const session = await getSession();
-  const userId = session?.user.id ?? null;
-
+  
   try {
+    // Get user session like in profile API
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userId = user?.id ?? null;
+
     // For public recipes, use Supabase directly for better compatibility
     if (visibility === "public") {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const publicSupabase = await createClient();
 
-      let query = supabase
+      let query = publicSupabase
         .from('recipes')
         .select(`
           id,
@@ -109,9 +108,9 @@ export async function GET(request: Request) {
     }
 
     // For private/all recipes, use Supabase Admin Client
-    const supabase = createAdminClient();
+    const adminSupabase = createAdminClient();
     
-    let query = supabase
+    let query = adminSupabase
       .from('recipes')
       .select(`
         id,
@@ -197,22 +196,27 @@ const CreateSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const json = await request.json().catch(() => null);
-  const parsed = CreateSchema.safeParse(json ?? {});
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
-  }
-
   try {
-    const supabase = createAdminClient();
+    // Get user session like in profile API
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    const { data, error } = await supabase
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const json = await request.json().catch(() => null);
+    const parsed = CreateSchema.safeParse(json ?? {});
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid payload", issues: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const adminSupabase = createAdminClient();
+    
+    const { data, error } = await adminSupabase
       .from('recipes')
       .insert({
-        user_id: session.user.id,
+        user_id: user.id,
         title: parsed.data.title,
         description: parsed.data.description ?? null,
         serves: parsed.data.serves ?? null,
@@ -239,5 +243,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
-
-
