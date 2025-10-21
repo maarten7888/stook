@@ -21,12 +21,17 @@ const updateProfileSchema = z.object({
 
 export async function updateProfile(formData: FormData) {
   try {
+    console.log("Starting profile update...");
+    
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.log("Auth error or no user:", authError);
       redirect("/login");
     }
+
+    console.log("User authenticated:", user.id);
 
     // Parse form data
     const rawData = {
@@ -40,13 +45,17 @@ export async function updateProfile(formData: FormData) {
       avatarUrl: formData.get("avatarUrl") as string,
     };
 
+    console.log("Raw form data:", rawData);
+
     // Validate data
     const validatedData = updateProfileSchema.parse(rawData);
+    console.log("Validated data:", validatedData);
 
     // Clean up empty strings
     const updateData = Object.fromEntries(
       Object.entries(validatedData).filter(([, value]) => value !== "")
     );
+    console.log("Update data:", updateData);
 
     // Check if profile exists
     const existingProfile = await db
@@ -55,8 +64,11 @@ export async function updateProfile(formData: FormData) {
       .where(eq(profiles.id, user.id))
       .limit(1);
 
+    console.log("Existing profile:", existingProfile.length > 0);
+
     if (existingProfile.length === 0) {
       // Create new profile
+      console.log("Creating new profile...");
       await db
         .insert(profiles)
         .values({
@@ -65,19 +77,24 @@ export async function updateProfile(formData: FormData) {
         });
     } else {
       // Update existing profile
+      console.log("Updating existing profile...");
       await db
         .update(profiles)
         .set(updateData)
         .where(eq(profiles.id, user.id));
     }
 
+    console.log("Profile update successful, revalidating...");
     // Revalidate the profile page
     revalidatePath("/profile");
+    
+    console.log("Profile update completed successfully");
     
   } catch (error) {
     console.error("Error updating profile:", error);
     
     if (error instanceof z.ZodError) {
+      console.error("Zod validation error:", error.issues);
       throw new Error("Validatiefout: " + error.issues.map(e => e.message).join(", "));
     }
     

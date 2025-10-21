@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, getUser } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,11 +14,10 @@ import {
   Star, 
   TrendingUp,
   Calendar,
-  Award,
-  Save
+  Award
 } from "lucide-react";
 import { headers } from "next/headers";
-import { updateProfile } from "./actions";
+import { ProfileForm } from "./profile-form";
 
 async function fetchUserProfile() {
   const headersList = await headers();
@@ -58,16 +56,12 @@ export default async function ProfilePage() {
   const stats = await fetchUserStats();
 
   return (
-    <form action={updateProfile} className="space-y-6">
+    <ProfileForm>
       <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
         <div>
           <h1 className="text-3xl font-heading font-bold text-ash">Profiel</h1>
           <p className="text-smoke mt-1">Beheer je account en bekijk je statistieken</p>
         </div>
-        <Button type="submit" className="bg-ember hover:bg-ember/90 flex items-center gap-2">
-          <Save className="h-4 w-4" />
-          Profiel opslaan
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -289,6 +283,6 @@ export default async function ProfilePage() {
           </Card>
         </div>
       </div>
-    </form>
+    </ProfileForm>
   );
 }
