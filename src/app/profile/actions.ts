@@ -38,7 +38,7 @@ export async function updateProfile(formData: FormData) {
     }
 
     // Bereid update data voor - alleen niet-lege velden
-    const updateData: any = {
+    const updateData: Partial<typeof profiles.$inferInsert> = {
       displayName: displayName.trim(),
     };
 

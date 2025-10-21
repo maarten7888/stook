@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { updateProfile } from "./actions";
 import { testProfileUpdate } from "./test-action";
 import { toast } from "sonner";
 
