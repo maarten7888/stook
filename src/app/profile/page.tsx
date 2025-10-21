@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { headers } from "next/headers";
 import { ProfileForm } from "./profile-form";
+import { DatabaseTest } from "./database-test";
 
 async function fetchUserProfile() {
   const headersList = await headers();
@@ -283,6 +284,9 @@ export default async function ProfilePage() {
           </Card>
         </div>
       </div>
+      
+      {/* Database Test - tijdelijk voor debugging */}
+      <DatabaseTest />
     </ProfileForm>
   );
 }
