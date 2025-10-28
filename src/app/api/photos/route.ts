@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { db } from "@/lib/db";
-import { photos, recipes, cookSessions } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const uploadPhotoSchema = z.object({
@@ -34,35 +31,38 @@ export async function POST(request: NextRequest) {
     const { recipeId: validRecipeId, cookSessionId: validCookSessionId, type: validType } = 
       uploadPhotoSchema.parse({ recipeId, cookSessionId, type });
 
+    // Use Admin Client for database operations
+    const adminSupabase = createAdminClient();
+
     // Verify access to recipe or session
     if (validRecipeId) {
-      const recipe = await db
-        .select()
-        .from(recipes)
-        .where(eq(recipes.id, validRecipeId))
-        .limit(1);
+      const { data: recipe, error: recipeError } = await adminSupabase
+        .from('recipes')
+        .select('user_id')
+        .eq('id', validRecipeId)
+        .single();
 
-      if (recipe.length === 0) {
+      if (recipeError || !recipe) {
         return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
       }
 
-      if (recipe[0].userId !== user.id) {
+      if (recipe.user_id !== user.id) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
 
     if (validCookSessionId) {
-      const session = await db
-        .select()
-        .from(cookSessions)
-        .where(eq(cookSessions.id, validCookSessionId))
-        .limit(1);
+      const { data: session, error: sessionError } = await adminSupabase
+        .from('cook_sessions')
+        .select('user_id')
+        .eq('id', validCookSessionId)
+        .single();
 
-      if (session.length === 0) {
+      if (sessionError || !session) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
       }
 
-      if (session[0].userId !== user.id) {
+      if (session.user_id !== user.id) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
@@ -106,16 +106,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 
-    // Save photo record to database
-    const [newPhoto] = await db
-      .insert(photos)
-      .values({
-        recipeId: validRecipeId || null,
-        cookSessionId: validCookSessionId || null,
+    // Save photo record to database using Supabase Admin Client
+    const { data: newPhoto, error: insertError } = await adminSupabase
+      .from('photos')
+      .insert({
+        recipe_id: validRecipeId || null,
+        cook_session_id: validCookSessionId || null,
         path: uploadData.path,
         type: validType,
       })
-      .returning();
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Database insert error:", insertError);
+      return NextResponse.json({ error: "Failed to save photo record" }, { status: 500 });
+    }
 
     // Generate signed URL for immediate use
     const { data: signedUrlData } = await supabase.storage
@@ -123,7 +129,10 @@ export async function POST(request: NextRequest) {
       .createSignedUrl(uploadData.path, 3600); // 1 hour expiry
 
     return NextResponse.json({
-      ...newPhoto,
+      id: newPhoto.id,
+      path: newPhoto.path,
+      type: newPhoto.type,
+      createdAt: newPhoto.created_at,
       signedUrl: signedUrlData?.signedUrl || null,
     });
   } catch (error) {
