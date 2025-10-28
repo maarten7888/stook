@@ -119,7 +119,7 @@ CREATE POLICY "Users can view photos for accessible recipes/sessions" ON photos
 -- Ownership is verified in the API layer before insert
 CREATE POLICY "Authenticated users can insert photos" ON photos
   FOR INSERT 
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Users can update photos for own recipes/sessions" ON photos
   FOR UPDATE USING (
