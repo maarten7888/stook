@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, ChefHat, Trash2 } from "lucide-react";
+import { PhotoUploader } from "@/components/photo-uploader";
 
 interface Ingredient {
   id: string;
@@ -67,6 +68,9 @@ export default function EditRecipePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
 
+  // Photos
+  const [photos, setPhotos] = useState<Array<{ id: string; url: string; path?: string; type: "prep" | "final" | "session" }>>([]);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -93,6 +97,19 @@ export default function EditRecipePage() {
         
         // Set tags
         setTags(data.tags || []);
+
+        // Fetch existing photos
+        if (active) {
+          try {
+            const photosRes = await fetch(`/api/recipes/${id}/photos`);
+            if (photosRes.ok) {
+              const { photos: existingPhotos } = await photosRes.json();
+              setPhotos(existingPhotos || []);
+            }
+          } catch (photoError) {
+            console.error("Error fetching photos:", photoError);
+          }
+        }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Fout");
       } finally {
@@ -500,6 +517,13 @@ export default function EditRecipePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Photos Upload */}
+          <PhotoUploader 
+            recipeId={id}
+            onPhotosChange={setPhotos}
+            existingPhotos={photos}
+          />
 
           {/* Submit */}
           <Card className="bg-coals border-ash">
