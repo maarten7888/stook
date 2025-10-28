@@ -37,6 +37,9 @@ export async function POST(request: NextRequest) {
 
     // Use Admin Client for database operations
     const adminSupabase = createAdminClient();
+    
+    // Debug: Check if we're using service role key
+    console.log("Admin client created, service role key exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     // Verify access to recipe or session
     if (validRecipeId) {
