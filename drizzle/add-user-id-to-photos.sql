@@ -1,24 +1,29 @@
 -- Add user_id column to photos table
 -- Run this in Supabase SQL Editor
 
--- Add the user_id column
-ALTER TABLE photos ADD COLUMN user_id uuid REFERENCES profiles(id) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000'::uuid;
+-- Step 1: Add the column as nullable first
+ALTER TABLE photos ADD COLUMN user_id uuid REFERENCES profiles(id);
 
--- Update existing photos to have the user_id from their recipe or session
+-- Step 2: Update existing photos to have the user_id from their recipe or session
 UPDATE photos SET user_id = (
   SELECT recipes.user_id 
   FROM recipes 
   WHERE recipes.id = photos.recipe_id
-) WHERE recipe_id IS NOT NULL;
+  LIMIT 1
+) WHERE recipe_id IS NOT NULL AND user_id IS NULL;
 
 UPDATE photos SET user_id = (
   SELECT cook_sessions.user_id 
   FROM cook_sessions 
   WHERE cook_sessions.id = photos.cook_session_id
-) WHERE cook_session_id IS NOT NULL;
+  LIMIT 1
+) WHERE cook_session_id IS NOT NULL AND user_id IS NULL;
 
--- Now make it non-null without default
-ALTER TABLE photos ALTER COLUMN user_id DROP DEFAULT;
+-- Step 3: Delete photos that still don't have a user_id (orphaned photos)
+DELETE FROM photos WHERE user_id IS NULL;
+
+-- Step 4: Now make it NOT NULL
+ALTER TABLE photos ALTER COLUMN user_id SET NOT NULL;
 
 -- Update RLS policy to use user_id
 DROP POLICY IF EXISTS "Authenticated users can insert photos" ON photos;
