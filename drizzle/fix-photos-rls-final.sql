@@ -1,7 +1,7 @@
 -- FINAL FIX: Drop ALL existing policies and recreate from scratch
 -- Run this in Supabase SQL Editor
 
--- Drop ALL existing policies
+-- First, drop ALL policies (including ones we just created)
 DROP POLICY IF EXISTS "Users can view photos for accessible recipes/sessions" ON photos;
 DROP POLICY IF EXISTS "Users can insert photos for own recipes/sessions" ON photos;
 DROP POLICY IF EXISTS "Authenticated users can insert photos" ON photos;
@@ -9,6 +9,10 @@ DROP POLICY IF EXISTS "Users can update photos for own recipes/sessions" ON phot
 DROP POLICY IF EXISTS "Users can delete photos for own recipes/sessions" ON photos;
 DROP POLICY IF EXISTS "Users can manage photos for own recipes/sessions" ON photos;
 DROP POLICY IF EXISTS "Users can insert their own photos" ON photos;
+DROP POLICY IF EXISTS "photos_select_policy" ON photos;
+DROP POLICY IF EXISTS "photos_insert_policy" ON photos;
+DROP POLICY IF EXISTS "photos_update_policy" ON photos;
+DROP POLICY IF EXISTS "photos_delete_policy" ON photos;
 
 -- Create clean policies from scratch
 
