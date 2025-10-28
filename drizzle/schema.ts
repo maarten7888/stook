@@ -59,6 +59,7 @@ export const steps = pgTable("steps", {
 // Photos table
 export const photos = pgTable("photos", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => profiles.id).notNull(),
   recipeId: uuid("recipe_id").references(() => recipes.id),
   cookSessionId: uuid("cook_session_id").references(() => cookSessions.id),
   path: text("path").notNull(),

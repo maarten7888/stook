@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
     const { data: newPhoto, error: insertError } = await supabase
       .from('photos')
       .insert({
+        user_id: user.id,
         recipe_id: validRecipeId || null,
         cook_session_id: validCookSessionId || null,
         path: uploadData.path,
