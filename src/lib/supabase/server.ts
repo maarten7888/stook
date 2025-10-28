@@ -47,6 +47,10 @@ export async function getUser() {
 
 // Admin client voor server-side operaties die service role key nodig hebben
 export function createAdminClient() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  }
+  
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -54,6 +58,14 @@ export function createAdminClient() {
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'stook-server'
+        }
       }
     }
   );

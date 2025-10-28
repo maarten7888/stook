@@ -114,6 +114,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Save photo record to database using Supabase Admin Client
+    console.log("Attempting to insert photo:", {
+      recipe_id: validRecipeId || null,
+      cook_session_id: validCookSessionId || null,
+      path: uploadData.path,
+      type: validType,
+    });
+
     const { data: newPhoto, error: insertError } = await adminSupabase
       .from('photos')
       .insert({
@@ -127,11 +134,16 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Database insert error:", insertError);
+      console.error("Error details:", JSON.stringify(insertError, null, 2));
       return NextResponse.json({ 
         error: "Failed to save photo record", 
-        details: insertError.message || "Unknown database error"
+        details: insertError.message || "Unknown database error",
+        code: insertError.code,
+        hint: insertError.hint
       }, { status: 500 });
     }
+
+    console.log("Photo inserted successfully:", newPhoto);
 
     // Generate signed URL for immediate use
     const { data: signedUrlData } = await supabase.storage
