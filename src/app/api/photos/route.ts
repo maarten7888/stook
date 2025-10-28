@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+import { createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const uploadPhotoSchema = z.object({
@@ -10,7 +11,22 @@ const uploadPhotoSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    // Create supabase client with request for route handlers
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll() {
+            // Not needed in route handlers - cookies are read-only
+          }
+        }
+      }
+    );
+
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
