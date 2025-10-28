@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -42,13 +41,11 @@ export function PhotoCarousel({ photos, className }: PhotoCarouselProps) {
       <div className="relative">
         {/* Main photo display */}
         <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-charcoal">
-          <Image
+          <img
             src={currentPhoto.url}
             alt={`Foto ${currentIndex + 1} van ${photos.length}`}
-            fill
-            className="object-contain cursor-pointer hover:opacity-90 transition-opacity"
+            className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => setShowLightbox(true)}
-            priority
           />
 
           {/* Navigation buttons */}
@@ -83,19 +80,17 @@ export function PhotoCarousel({ photos, className }: PhotoCarouselProps) {
         {photos.length > 1 && (
           <div className="grid grid-cols-4 gap-2 mt-4">
             {photos.map((photo, index) => (
-              <div
+                <div
                 key={photo.id}
                 className={`relative aspect-square rounded-md overflow-hidden cursor-pointer transition-all ${
                   index === currentIndex ? 'ring-2 ring-ember' : 'opacity-60 hover:opacity-100'
                 }`}
                 onClick={() => setCurrentIndex(index)}
               >
-                <Image
+                <img
                   src={photo.url}
                   alt={`Thumbnail ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="25vw"
+                  className="w-full h-full object-cover"
                 />
               </div>
             ))}
@@ -117,11 +112,9 @@ export function PhotoCarousel({ photos, className }: PhotoCarouselProps) {
             </Button>
 
             <div className="relative aspect-auto">
-              <Image
+              <img
                 src={currentPhoto.url}
                 alt="Foto detail"
-                width={1200}
-                height={800}
                 className="w-full h-auto max-h-[90vh] object-contain"
               />
             </div>

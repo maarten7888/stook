@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, X, Camera } from "lucide-react";
-import Image from "next/image";
 
 interface PhotoUploaderProps {
   recipeId: string | null;
@@ -138,12 +137,10 @@ export function PhotoUploader({ recipeId, onPhotosChange, existingPhotos = [], p
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {photos.map((photo) => (
               <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden bg-charcoal group">
-                <Image
+                <img
                   src={photo.url}
                   alt="Upload preview"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 50vw, 33vw"
+                  className="w-full h-full object-cover"
                 />
                 <button
                   onClick={() => handleRemovePhoto(photo.id)}
