@@ -103,7 +103,10 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      return NextResponse.json({ 
+        error: "Upload failed", 
+        details: uploadError.message || "Unknown upload error"
+      }, { status: 500 });
     }
 
     // Save photo record to database using Supabase Admin Client
@@ -120,7 +123,10 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Database insert error:", insertError);
-      return NextResponse.json({ error: "Failed to save photo record" }, { status: 500 });
+      return NextResponse.json({ 
+        error: "Failed to save photo record", 
+        details: insertError.message || "Unknown database error"
+      }, { status: 500 });
     }
 
     // Generate signed URL for immediate use
@@ -137,6 +143,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error uploading photo:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Internal server error", 
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }

@@ -69,8 +69,10 @@ export function PhotoUploader({ recipeId, onPhotosChange, existingPhotos = [], p
         });
 
         if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Upload failed:', errorData);
           URL.revokeObjectURL(url);
-          throw new Error('Upload mislukt');
+          throw new Error(`Upload mislukt: ${errorData.error || response.statusText}`);
         }
 
         const photoData = await response.json();
