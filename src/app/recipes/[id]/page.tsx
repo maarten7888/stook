@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { createClient, getSession } from "@/lib/supabase/server";
 import { Clock, Thermometer, ChefHat, Star, Edit, ArrowLeft, Users, Calendar, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { PhotoCarousel } from "@/components/photo-carousel";
 
 async function fetchRecipe(id: string) {
   try {
@@ -85,6 +86,24 @@ async function fetchRecipe(id: string) {
   }
 }
 
+async function fetchPhotos(recipeId: string) {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/recipes/${recipeId}/photos`, {
+      cache: 'no-store',
+    });
+    
+    if (!res.ok) {
+      return [];
+    }
+    
+    const { photos } = await res.json();
+    return photos || [];
+  } catch (error) {
+    console.error("Error fetching photos:", error);
+    return [];
+  }
+}
+
 export default async function RecipeDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   const data = await fetchRecipe(params.id);
@@ -95,6 +114,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
 
   const isOwner = session?.user.id === data.userId;
   const totalTime = (data.prepMinutes || 0) + (data.cookMinutes || 0);
+  const photos = await fetchPhotos(params.id);
 
   return (
     <div className="min-h-screen bg-charcoal">
@@ -192,6 +212,20 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
                 <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
               </CardContent>
             </Card>
+          )}
+
+          {/* Photos Carousel */}
+          {photos && photos.length > 0 && (
+            <div className="mt-8">
+              <Card className="bg-coals border-ash">
+                <CardHeader>
+                  <CardTitle className="text-xl text-ash">Foto&apos;s</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PhotoCarousel photos={photos.map((p: { url: string; id: string }) => ({ id: p.id, url: p.url }))} />
+                </CardContent>
+              </Card>
+            </div>
           )}
           
           {/* Ingredients */}

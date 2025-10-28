@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, ChefHat } from "lucide-react";
+import { PhotoUploader } from "@/components/photo-uploader";
 
 interface Ingredient {
   id: string;
@@ -30,6 +31,8 @@ export default function NewRecipePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recipeId, setRecipeId] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Array<{ id: string; url: string; path?: string; type: "prep" | "final" | "session" }>>([]);
 
   // Basic recipe info
   const [title, setTitle] = useState("");
@@ -132,7 +135,8 @@ export default function NewRecipePage() {
         setError(body?.error || "Mislukt");
       } else {
         const body = await res.json();
-        router.push(`/recipes/${body.id}`);
+        setRecipeId(body.id);
+        // Don't redirect yet - let user add photos first
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Onbekende fout");
@@ -420,7 +424,16 @@ export default function NewRecipePage() {
             </CardContent>
           </Card>
 
-          {/* Submit */}
+          {/* Photos Upload - Only show after recipe is created */}
+          {recipeId && (
+            <PhotoUploader 
+              recipeId={recipeId}
+              onPhotosChange={setPhotos}
+              existingPhotos={photos}
+            />
+          )}
+
+          {/* Submit / Continue */}
           <Card className="bg-coals border-ash">
             <CardContent className="p-6">
               {error && <div className="text-red-400 text-sm mb-4">{error}</div>}
@@ -430,8 +443,17 @@ export default function NewRecipePage() {
                   disabled={loading || !title.trim()}
                   className="bg-ember hover:bg-ember/90 flex-1"
                 >
-                  {loading ? "Aanmaken..." : "Recept Aanmaken"}
+                  {recipeId ? "Bijwerken" : loading ? "Aanmaken..." : "Recept Aanmaken"}
                 </Button>
+                {recipeId && (
+                  <Button
+                    type="button"
+                    onClick={() => router.push(`/recipes/${recipeId}`)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Bekijk Recept
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
