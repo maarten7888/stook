@@ -138,9 +138,6 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
   const isOwner = session?.user.id === data.userId;
   const totalTime = (data.prepMinutes || 0) + (data.cookMinutes || 0);
   const photos = await fetchPhotos(params.id);
-  
-  console.log("DEBUG - Photos fetched:", photos);
-  console.log("DEBUG - Photos length:", photos?.length);
 
   return (
     <div className="min-h-screen bg-charcoal">
@@ -228,6 +225,18 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
 
         {/* Single Column Layout for Description, Ingredients and Steps */}
         <div className="mt-8 space-y-8">
+          {/* Photos Carousel - Show BEFORE description */}
+          {photos && photos.length > 0 && (
+            <Card className="bg-coals border-ash">
+              <CardHeader>
+                <CardTitle className="text-xl text-ash">Foto&apos;s</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PhotoCarousel photos={photos.map((p: { url: string; id: string }) => ({ id: p.id, url: p.url }))} />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Description */}
           {data.description && (
             <Card className="bg-coals border-ash">
@@ -238,20 +247,6 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
                 <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
               </CardContent>
             </Card>
-          )}
-
-          {/* Photos Carousel */}
-          {photos && photos.length > 0 && (
-            <div className="mt-8">
-              <Card className="bg-coals border-ash">
-                <CardHeader>
-                  <CardTitle className="text-xl text-ash">Foto&apos;s</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PhotoCarousel photos={photos.map((p: { url: string; id: string }) => ({ id: p.id, url: p.url }))} />
-                </CardContent>
-              </Card>
-            </div>
           )}
           
           {/* Ingredients */}
