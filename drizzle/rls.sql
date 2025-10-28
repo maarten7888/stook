@@ -115,8 +115,36 @@ CREATE POLICY "Users can view photos for accessible recipes/sessions" ON photos
     )
   );
 
-CREATE POLICY "Users can manage photos for own recipes/sessions" ON photos
-  FOR ALL USING (
+CREATE POLICY "Users can insert photos for own recipes/sessions" ON photos
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM recipes 
+      WHERE recipes.id = photos.recipe_id 
+      AND recipes.user_id = auth.uid()
+    ) OR
+    EXISTS (
+      SELECT 1 FROM cook_sessions 
+      WHERE cook_sessions.id = photos.cook_session_id 
+      AND cook_sessions.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update photos for own recipes/sessions" ON photos
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM recipes 
+      WHERE recipes.id = photos.recipe_id 
+      AND recipes.user_id = auth.uid()
+    ) OR
+    EXISTS (
+      SELECT 1 FROM cook_sessions 
+      WHERE cook_sessions.id = photos.cook_session_id 
+      AND cook_sessions.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete photos for own recipes/sessions" ON photos
+  FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM recipes 
       WHERE recipes.id = photos.recipe_id 
