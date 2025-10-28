@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
       type: validType,
     });
 
+    // Insert photo - service role should bypass RLS
     const { data: newPhoto, error: insertError } = await adminSupabase
       .from('photos')
       .insert({
@@ -137,12 +138,13 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Database insert error:", insertError);
-      console.error("Error details:", JSON.stringify(insertError, null, 2));
+      console.error("Error code:", insertError.code);
+      console.error("Error message:", insertError.message);
       return NextResponse.json({ 
         error: "Failed to save photo record", 
         details: insertError.message || "Unknown database error",
         code: insertError.code,
-        hint: insertError.hint
+        hint: "Check if SUPABASE_SERVICE_ROLE_KEY is set in Vercel environment variables"
       }, { status: 500 });
     }
 
