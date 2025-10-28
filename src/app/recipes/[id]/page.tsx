@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient, getSession } from "@/lib/supabase/server";
-import { Clock, Thermometer, ChefHat, Star, Edit, ArrowLeft, Users, Calendar, Eye, EyeOff } from "lucide-react";
+import { Edit, ArrowLeft, Calendar, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { PhotoCarousel } from "@/components/photo-carousel";
 

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   try {
     // Get user session like in profile API
     const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id ?? null;
 
     // For public recipes, use Supabase directly for better compatibility
