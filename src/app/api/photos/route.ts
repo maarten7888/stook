@@ -3,8 +3,8 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const uploadPhotoSchema = z.object({
-  recipeId: z.string().uuid().optional(),
-  cookSessionId: z.string().uuid().optional(),
+  recipeId: z.string().uuid().nullable().optional(),
+  cookSessionId: z.string().uuid().nullable().optional(),
   type: z.enum(["prep", "final", "session"]),
 });
 
@@ -19,17 +19,21 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const recipeId = formData.get("recipeId") as string;
-    const cookSessionId = formData.get("cookSessionId") as string;
+    const recipeId = formData.get("recipeId") as string | null;
+    const cookSessionId = formData.get("cookSessionId") as string | null;
     const type = formData.get("type") as string;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Normalize null to undefined for Zod
+    const recipeIdValue = recipeId || undefined;
+    const cookSessionIdValue = cookSessionId || undefined;
+
     // Validate input
     const { recipeId: validRecipeId, cookSessionId: validCookSessionId, type: validType } = 
-      uploadPhotoSchema.parse({ recipeId, cookSessionId, type });
+      uploadPhotoSchema.parse({ recipeId: recipeIdValue, cookSessionId: cookSessionIdValue, type });
 
     // Use Admin Client for database operations
     const adminSupabase = createAdminClient();
