@@ -35,11 +35,8 @@ export async function POST(request: NextRequest) {
     const { recipeId: validRecipeId, cookSessionId: validCookSessionId, type: validType } = 
       uploadPhotoSchema.parse({ recipeId: recipeIdValue, cookSessionId: cookSessionIdValue, type });
 
-    // Use Admin Client for database operations
+    // Use Admin Client ONLY for verification (reads work fine)
     const adminSupabase = createAdminClient();
-    
-    // Debug: Check if we're using service role key
-    console.log("Admin client created, service role key exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     // Verify access to recipe or session
     if (validRecipeId) {
@@ -116,7 +113,8 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Save photo record to database using Supabase Admin Client
+    // Save photo record to database using REGULAR Supabase Client (not admin)
+    // This way RLS policies work correctly with the authenticated user context
     console.log("Attempting to insert photo:", {
       recipe_id: validRecipeId || null,
       cook_session_id: validCookSessionId || null,
@@ -124,8 +122,7 @@ export async function POST(request: NextRequest) {
       type: validType,
     });
 
-    // Insert photo - service role should bypass RLS
-    const { data: newPhoto, error: insertError } = await adminSupabase
+    const { data: newPhoto, error: insertError } = await supabase
       .from('photos')
       .insert({
         recipe_id: validRecipeId || null,
@@ -143,8 +140,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: "Failed to save photo record", 
         details: insertError.message || "Unknown database error",
-        code: insertError.code,
-        hint: "Check if SUPABASE_SERVICE_ROLE_KEY is set in Vercel environment variables"
+        code: insertError.code
       }, { status: 500 });
     }
 
