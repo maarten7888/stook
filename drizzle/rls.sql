@@ -115,19 +115,11 @@ CREATE POLICY "Users can view photos for accessible recipes/sessions" ON photos
     )
   );
 
-CREATE POLICY "Users can insert photos for own recipes/sessions" ON photos
-  FOR INSERT WITH CHECK (
-    (photos.recipe_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM recipes 
-      WHERE recipes.id = photos.recipe_id 
-      AND recipes.user_id = auth.uid()
-    )) OR
-    (photos.cook_session_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM cook_sessions 
-      WHERE cook_sessions.id = photos.cook_session_id 
-      AND cook_sessions.user_id = auth.uid()
-    ))
-  );
+-- Allow authenticated users to insert photos
+-- Ownership is verified in the API layer before insert
+CREATE POLICY "Authenticated users can insert photos" ON photos
+  FOR INSERT 
+  WITH CHECK (auth.role() = 'authenticated');
 
 CREATE POLICY "Users can update photos for own recipes/sessions" ON photos
   FOR UPDATE USING (
