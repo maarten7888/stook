@@ -232,7 +232,7 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
                 <CardTitle className="text-xl text-ash">Foto&apos;s</CardTitle>
               </CardHeader>
               <CardContent>
-                <PhotoCarousel photos={photos.map((p: { url: string; id: string }) => ({ id: p.id, url: p.url }))} />
+                <PhotoCarousel photos={photos.map((p) => ({ id: p.id, url: p.url || '' }))} />
               </CardContent>
             </Card>
           )}
