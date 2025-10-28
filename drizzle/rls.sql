@@ -117,16 +117,16 @@ CREATE POLICY "Users can view photos for accessible recipes/sessions" ON photos
 
 CREATE POLICY "Users can insert photos for own recipes/sessions" ON photos
   FOR INSERT WITH CHECK (
-    EXISTS (
+    (photos.recipe_id IS NOT NULL AND EXISTS (
       SELECT 1 FROM recipes 
       WHERE recipes.id = photos.recipe_id 
       AND recipes.user_id = auth.uid()
-    ) OR
-    EXISTS (
+    )) OR
+    (photos.cook_session_id IS NOT NULL AND EXISTS (
       SELECT 1 FROM cook_sessions 
       WHERE cook_sessions.id = photos.cook_session_id 
       AND cook_sessions.user_id = auth.uid()
-    )
+    ))
   );
 
 CREATE POLICY "Users can update photos for own recipes/sessions" ON photos
