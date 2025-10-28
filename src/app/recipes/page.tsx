@@ -57,31 +57,63 @@ async function fetchRecipes(visibility?: string, query?: string, userId?: string
       return { items: [] };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items = data?.map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description,
-      serves: row.serves,
-      prepMinutes: row.prep_minutes,
-      cookMinutes: row.cook_minutes,
-      targetInternalTemp: row.target_internal_temp,
-      visibility: row.visibility,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      userId: row.user_id,
-      user: {
-        displayName: (() => {
-          if (!row.profiles) return null;
-          if (Array.isArray(row.profiles)) {
-            return row.profiles[0]?.display_name || null;
-          }
-          return row.profiles.display_name || null;
-        })(),
-      },
-    })) || [];
+    // Fetch first photo for each recipe
+    const itemsWithPhotos = await Promise.all(
+      (data || []).map(async (row) => {
+        let imageUrl: string | undefined;
+        
+        try {
+          // Fetch first photo for this recipe
+          const { data: photos } = await supabase
+            .from('photos')
+            .select('path')
+            .eq('recipe_id', row.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-    return { items };
+          if (photos?.path) {
+            // Generate signed URL
+            const { data: signedUrlData } = await supabase.storage
+              .from('photos')
+              .createSignedUrl(photos.path, 3600); // 1 hour expiry
+
+            imageUrl = signedUrlData?.signedUrl || undefined;
+          }
+        } catch (photoError) {
+          // Silently fail if no photo or error fetching
+          console.debug(`No photo for recipe ${row.id}:`, photoError);
+        }
+
+        return {
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          serves: row.serves,
+          prepMinutes: row.prep_minutes,
+          cookMinutes: row.cook_minutes,
+          targetInternalTemp: row.target_internal_temp,
+          visibility: row.visibility,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          userId: row.user_id,
+          imageUrl,
+          user: {
+            displayName: (() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const profiles = row.profiles as any;
+              if (!profiles) return null;
+              if (Array.isArray(profiles)) {
+                return profiles[0]?.display_name || null;
+              }
+              return profiles.display_name || null;
+            })(),
+          },
+        };
+      })
+    );
+
+    return { items: itemsWithPhotos };
   } catch (error) {
     console.error("Error fetching recipes:", error);
     return { items: [] };
@@ -111,6 +143,7 @@ export default async function RecipesPage({
     prepMinutes?: number;
     cookMinutes?: number;
     targetInternalTemp?: number;
+    imageUrl?: string;
     user?: { displayName?: string };
     tags?: { tagName: string }[];
     reviews?: { rating: number }[];
@@ -200,6 +233,17 @@ export default async function RecipesPage({
                 )}
               </CardHeader>
               <CardContent className="pt-0 space-y-4">
+                {/* Recipe Thumbnail Image */}
+                {recipe.imageUrl && (
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden bg-charcoal">
+                    <img
+                      src={recipe.imageUrl}
+                      alt={recipe.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
                 <p className="text-smoke text-sm line-clamp-3">
                   {recipe.description || "Geen beschrijving beschikbaar."}
                 </p>
