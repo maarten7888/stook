@@ -88,16 +88,39 @@ async function fetchRecipe(id: string) {
 
 async function fetchPhotos(recipeId: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/recipes/${recipeId}/photos`, {
-      cache: 'no-store',
-    });
+    const supabase = await createClient();
     
-    if (!res.ok) {
+    // Fetch photos for this recipe
+    const { data: photos, error: photosError } = await supabase
+      .from('photos')
+      .select('*')
+      .eq('recipe_id', recipeId)
+      .order('created_at', { ascending: false });
+
+    if (photosError) {
+      console.error("Error fetching photos:", photosError);
       return [];
     }
-    
-    const { photos } = await res.json();
-    return photos || [];
+
+    if (!photos || photos.length === 0) {
+      return [];
+    }
+
+    // Generate signed URLs for each photo
+    const photosWithUrls = await Promise.all(
+      photos.map(async (photo) => {
+        const { data: signedUrlData } = await supabase.storage
+          .from('photos')
+          .createSignedUrl(photo.path, 3600); // 1 hour expiry
+
+        return {
+          id: photo.id,
+          url: signedUrlData?.signedUrl || null,
+        };
+      })
+    );
+
+    return photosWithUrls;
   } catch (error) {
     console.error("Error fetching photos:", error);
     return [];
@@ -115,6 +138,9 @@ export default async function RecipeDetailPage({ params }: { params: { id: strin
   const isOwner = session?.user.id === data.userId;
   const totalTime = (data.prepMinutes || 0) + (data.cookMinutes || 0);
   const photos = await fetchPhotos(params.id);
+  
+  console.log("DEBUG - Photos fetched:", photos);
+  console.log("DEBUG - Photos length:", photos?.length);
 
   return (
     <div className="min-h-screen bg-charcoal">
