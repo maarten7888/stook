@@ -68,7 +68,7 @@ DATAMODEL (Postgres + RLS)
 * **ingredients** (`id uuid pk`, `name text unique`, `default_unit text`)
 * **recipe_ingredients** (`id uuid pk`, `recipe_id uuid fk`, `ingredient_id uuid fk`, `amount numeric`, `unit text`)
 * **steps** (`id uuid pk`, `recipe_id uuid fk`, `order_no int`, `instruction text`, `timer_minutes int`, `target_temp int`)
-* **photos** (`id uuid pk`, `recipe_id uuid fk null`, `cook_session_id uuid fk null`, `path text`, `type text check in ('prep','final','session')`, `created_at`)
+* **photos** (`id uuid pk`, `user_id uuid fk -> profiles(id) not null`, `recipe_id uuid fk null`, `cook_session_id uuid fk null`, `path text`, `type text check in ('prep','final','session')`, `created_at`)
 * **cook_sessions**
 
   * `id uuid pk`, `recipe_id uuid fk`, `user_id uuid fk`, `started_at timestamptz`, `ended_at timestamptz null`, `notes text`, `rating int`, `conclusion text`, `adjustments jsonb`, `recipe_snapshot jsonb`
@@ -81,21 +81,22 @@ RLS POLICIES (kern)
 
 * **profiles**: users alleen eigen profiel `select/update`; optioneel public read op beperkte velden.
 * **recipes**: `select` wanneer `visibility='public'` of `user_id = auth.uid()`; `insert/update/delete` enkel `user_id = auth.uid()`.
-* **cook_sessions/photos/session_temps**: alleen owner (`user_id = auth.uid()` via join) of recipe public voor `select`.
+* **cook_sessions/photos/session_temps**: alleen owner (`user_id = auth.uid()`) of recipe public voor `select`. Voor `photos`: `insert/update/delete` vereist `user_id = auth.uid()`.
 * **reviews**: `insert` toegestaan als recipe public, `recipe.user_id != auth.uid()` en nog geen bestaande review; `update/delete` alleen eigen review.
 
 STORAGE BUCKETS
 
-* `photos`: standaard **private**; serveer via **signed URLs**. Optioneel aparte `public-photos` bucket voor finale shots.
-* Pad: `photos/${year}/${month}/${recipe_or_session}/${uuid}.jpg`.
+* `photos`: standaard **private**; serveer via **signed URLs**. RLS policies vereist voor upload: authenticated users kunnen uploaden naar `photos` bucket.
+* Pad: `photos/${year}/${month}/recipes/${recipe_id}/${uuid}.jpg` of `photos/${year}/${month}/sessions/${session_id}/${uuid}.jpg`.
 * Upload validatie: jpg/png/webp; max 8MB.
+* Signed URLs: 1 uur expiry tijd, genereren via `supabase.storage.from('photos').createSignedUrl(path, 3600)`.
 
 ROUTES / PAGINA’S (Next.js App Router)
 
 * `/` → feed (eigen + public recipes; server component + cache revalidate). [Gereed]
-* `/recipes` (lijst, filters op titel/tags) [Gereed]
+* `/recipes` (lijst met thumbnails, filters op titel/tags) [Gereed]
 * `/recipes/new` (create) [Gereed]
-* `/recipes/[id]` (detail: ingrediënten, stappen; reviews/sessies later) [Gereed, basis]
+* `/recipes/[id]` (detail: ingrediënten, stappen; foto's carousel boven beschrijving; reviews/sessies later) [Gereed]
 * `/recipes/[id]/edit` [Gereed]
 * `/sessions/[id]` (detail tabs: Notities · Foto’s · Temperatuur; afronden met rating/conclusie)
 * `/import` (URL → Preview → Import, met confidence scoring)
@@ -111,7 +112,8 @@ API (Route Handlers in `app/api/*`)
 * `GET /api/sessions/:id`, `PUT /api/sessions/:id/finish`
 * `POST /api/sessions/:id/temps`
 * `GET /api/sessions/:id/events?since=ISO`
-* `POST /api/photos` (multipart) → upload naar Supabase Storage + DB record
+* `POST /api/photos` (multipart) → upload naar Supabase Storage + DB record [Gereed]
+* `GET /api/recipes/:id/photos` → fetch foto's voor recept met signed URLs [Gereed]
 
 IMPORT (Web Scraping)
 
@@ -179,6 +181,7 @@ CODING NOTES
 * Nooit service‑role key in client bundel.
 * Altijd Drizzle als migratie‑systeem voor schema management.
 * Gebruik Supabase CLI voor lokale development en deployment.
+* **Photo uploads**: Gebruik `createClient()` (niet admin) voor Storage uploads en database inserts met RLS. Gebruik `<img>` tags (niet Next Image) voor Supabase signed URLs. Thumbnails fetch in `Promise.all()` voor performance.
 
 INITIAL PLAN (Sprint 0 → MVP)
 
@@ -234,7 +237,7 @@ INITIAL PLAN (Sprint 0 → MVP)
 7. UI Components & Forms
 
 * [x] Re-usable form components met Zod
-* [x] RecipeCard, RatingStars, TagChips, PhotoGrid, SessionTempChart (stub), Navbar
+* [x] RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart (stub), Navbar
 
 8. Testing & CI
 
@@ -275,7 +278,7 @@ CURRENT STATUS (December 2024)
 
 ✅ VOLTOOID:
 - Complete Next.js 15 + Supabase + Drizzle setup
-- Full database schema met RLS policies
+- Full database schema met RLS policies (inclusief photos met user_id kolom)
 - Complete authentication flow (login/register)
 - All API endpoints (recipes, sessions, reviews, photos, import, profile)
 - All pages en routes geïmplementeerd
@@ -289,9 +292,13 @@ CURRENT STATUS (December 2024)
 - Mobile navigation met hamburger menu
 - Navigation icons toegevoegd
 - Clean mobile-first layout
-- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, SessionTempChart, Navbar
+- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar
 - Professional desktop navigation layout met user dropdown
 - Mobile menu met juiste volgorde en logout functionaliteit
+- Photo upload functionaliteit (desktop file upload + mobile camera capture)
+- Photo carousel op recept detailpagina (boven beschrijving)
+- Recipe thumbnails op receptenpagina (tussen naam en beschrijving)
+- Storage bucket RLS policies geïmplementeerd
 
 🔄 IN PROGRESS:
 - Branch protection rules op main
