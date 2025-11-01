@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { db } from "@/lib/db";
-import { cookSessions, recipes } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const startSessionSchema = z.object({
@@ -21,43 +18,59 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { recipeId } = startSessionSchema.parse(body);
 
-    // Verify recipe exists and user has access
-    const recipe = await db
-      .select()
-      .from(recipes)
-      .where(eq(recipes.id, recipeId))
-      .limit(1);
+    // Use Supabase Admin Client for database operations
+    const adminSupabase = createAdminClient();
 
-    if (recipe.length === 0) {
+    // Verify recipe exists and user has access
+    const { data: recipe, error: recipeError } = await adminSupabase
+      .from('recipes')
+      .select('id, user_id, visibility, title, description, serves, prep_minutes, cook_minutes, target_internal_temp')
+      .eq('id', recipeId)
+      .single();
+
+    if (recipeError || !recipe) {
+      console.error("Error fetching recipe:", recipeError);
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
 
     // Check if user owns recipe or recipe is public
-    if (recipe[0].userId !== user.id && recipe[0].visibility !== "public") {
+    if (recipe.user_id !== user.id && recipe.visibility !== "public") {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Create new cook session
-    const [newSession] = await db
-      .insert(cookSessions)
-      .values({
-        recipeId,
-        userId: user.id,
-        startedAt: new Date(),
-        recipeSnapshot: {
-          title: recipe[0].title,
-          description: recipe[0].description,
-          serves: recipe[0].serves,
-          prepMinutes: recipe[0].prepMinutes,
-          cookMinutes: recipe[0].cookMinutes,
-          targetInternalTemp: recipe[0].targetInternalTemp,
+    // Create new cook session using Supabase Admin Client
+    const { data: newSession, error: sessionError } = await adminSupabase
+      .from('cook_sessions')
+      .insert({
+        recipe_id: recipeId,
+        user_id: user.id,
+        started_at: new Date().toISOString(),
+        recipe_snapshot: {
+          title: recipe.title,
+          description: recipe.description,
+          serves: recipe.serves,
+          prepMinutes: recipe.prep_minutes,
+          cookMinutes: recipe.cook_minutes,
+          targetInternalTemp: recipe.target_internal_temp,
         },
       })
-      .returning();
+      .select()
+      .single();
+
+    if (sessionError) {
+      console.error("Error creating session:", sessionError);
+      return NextResponse.json({ 
+        error: "Internal server error", 
+        details: sessionError.message 
+      }, { status: 500 });
+    }
 
     return NextResponse.json(newSession);
   } catch (error) {
     console.error("Error starting session:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }

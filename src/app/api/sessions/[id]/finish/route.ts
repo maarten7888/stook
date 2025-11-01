@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { db } from "@/lib/db";
-import { cookSessions } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const finishSessionSchema = z.object({
@@ -24,38 +21,45 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     const body = await request.json();
     const { notes, rating, conclusion, adjustments } = finishSessionSchema.parse(body);
+    const adminSupabase = createAdminClient();
 
     // Verify session exists and user owns it
-    const existingSession = await db
-      .select()
-      .from(cookSessions)
-      .where(eq(cookSessions.id, id))
-      .limit(1);
+    const { data: existingSession, error: sessionError } = await adminSupabase
+      .from('cook_sessions')
+      .select('id, user_id, ended_at, notes, rating, conclusion, adjustments')
+      .eq('id', id)
+      .single();
 
-    if (existingSession.length === 0) {
+    if (sessionError || !existingSession) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    if (existingSession[0].userId !== user.id) {
+    if (existingSession.user_id !== user.id) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    if (existingSession[0].endedAt) {
+    if (existingSession.ended_at) {
       return NextResponse.json({ error: "Session already finished" }, { status: 400 });
     }
 
     // Finish session
-    const [finishedSession] = await db
-      .update(cookSessions)
-      .set({
-        endedAt: new Date(),
-        notes: notes || existingSession[0].notes,
-        rating: rating || existingSession[0].rating,
-        conclusion: conclusion || existingSession[0].conclusion,
-        adjustments: adjustments || existingSession[0].adjustments,
+    const { data: finishedSession, error: updateError } = await adminSupabase
+      .from('cook_sessions')
+      .update({
+        ended_at: new Date().toISOString(),
+        notes: notes || existingSession.notes || null,
+        rating: rating || existingSession.rating || null,
+        conclusion: conclusion || existingSession.conclusion || null,
+        adjustments: adjustments || existingSession.adjustments || null,
       })
-      .where(eq(cookSessions.id, id))
-      .returning();
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Error finishing session:", updateError);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
 
     return NextResponse.json(finishedSession);
   } catch (error) {

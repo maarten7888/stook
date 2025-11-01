@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { db } from "@/lib/db";
-import { photos, cookSessions } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,37 +11,49 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { id } = await params;
+    const adminSupabase = createAdminClient();
 
     // Verify session exists and user has access
-    const session = await db
-      .select()
-      .from(cookSessions)
-      .where(eq(cookSessions.id, id))
-      .limit(1);
+    const { data: session, error: sessionError } = await adminSupabase
+      .from('cook_sessions')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
 
-    if (session.length === 0) {
+    if (sessionError || !session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    if (session[0].userId !== user.id) {
+    if (session.user_id !== user.id) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     // Get session photos
-    const sessionPhotos = await db
-      .select()
-      .from(photos)
-      .where(eq(photos.cookSessionId, id));
+    const { data: sessionPhotos, error: photosError } = await adminSupabase
+      .from('photos')
+      .select('*')
+      .eq('cook_session_id', id);
+
+    if (photosError) {
+      console.error("Error fetching photos:", photosError);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
 
     // Generate signed URLs for each photo
     const photosWithUrls = await Promise.all(
-      sessionPhotos.map(async (photo) => {
+      (sessionPhotos || []).map(async (photo) => {
         const { data: signedUrl } = await supabase.storage
           .from("photos")
           .createSignedUrl(photo.path, 3600); // 1 hour expiry
 
         return {
-          ...photo,
+          id: photo.id,
+          cookSessionId: photo.cook_session_id,
+          recipeId: photo.recipe_id,
+          userId: photo.user_id,
+          path: photo.path,
+          type: photo.type,
+          createdAt: photo.created_at,
           signedUrl: signedUrl?.signedUrl || null,
         };
       })
