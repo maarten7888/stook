@@ -7,10 +7,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.error("GET /api/sessions/[id] - Auth error:", authError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
+    console.log("GET /api/sessions/[id] - Request:", { sessionId: id, userId: user.id });
+    
     const adminSupabase = createAdminClient();
 
     // Get session first
@@ -20,13 +23,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .eq('id', id)
       .single();
 
+    console.log("GET /api/sessions/[id] - Session query result:", { 
+      found: !!session, 
+      error: sessionError?.message,
+      sessionUserId: session?.user_id,
+      requestUserId: user.id
+    });
+
     if (sessionError || !session) {
-      console.error("Error fetching session:", sessionError);
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      console.error("GET /api/sessions/[id] - Error fetching session:", {
+        error: sessionError,
+        code: sessionError?.code,
+        message: sessionError?.message,
+        details: sessionError?.details,
+        hint: sessionError?.hint,
+        sessionId: id
+      });
+      return NextResponse.json({ 
+        error: "Session not found",
+        details: sessionError?.message 
+      }, { status: 404 });
     }
 
     // Check access: user owns session
     if (session.user_id !== user.id) {
+      console.log("GET /api/sessions/[id] - User doesn't own session, checking if recipe is public");
       // Also check if recipe is public
       const { data: recipe, error: recipeError } = await adminSupabase
         .from('recipes')
@@ -35,6 +56,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         .single();
 
       if (recipeError || !recipe || recipe.visibility !== "public") {
+        console.error("GET /api/sessions/[id] - Access denied:", {
+          recipeError: recipeError?.message,
+          recipeVisibility: recipe?.visibility,
+          sessionUserId: session.user_id,
+          requestUserId: user.id
+        });
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }
@@ -47,7 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       .single();
 
     if (recipeError || !recipe) {
-      console.error("Error fetching recipe:", recipeError);
+      console.error("GET /api/sessions/[id] - Error fetching recipe:", recipeError);
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
 
@@ -62,7 +89,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const profileData = profileError ? { id: session.user_id, display_name: null } : profile;
 
     // Transform to match expected format
-    return NextResponse.json({
+    const response = {
       id: session.id,
       recipeId: session.recipe_id,
       userId: session.user_id,
@@ -87,10 +114,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         id: profileData?.id || session.user_id,
         displayName: profileData?.display_name || null,
       },
-    });
+    };
+
+    console.log("GET /api/sessions/[id] - Success, returning session data");
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("Error fetching session:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("GET /api/sessions/[id] - Unexpected error:", error);
+    return NextResponse.json({ 
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 500 });
   }
 }
 

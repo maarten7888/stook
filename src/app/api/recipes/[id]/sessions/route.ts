@@ -12,11 +12,14 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.error("POST /api/recipes/[id]/sessions - Auth error:", authError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const { recipeId } = startSessionSchema.parse(body);
+    
+    console.log("POST /api/recipes/[id]/sessions - Creating session:", { recipeId, userId: user.id });
 
     // Use Supabase Admin Client for database operations
     const adminSupabase = createAdminClient();
@@ -29,12 +32,17 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (recipeError || !recipe) {
-      console.error("Error fetching recipe:", recipeError);
+      console.error("POST /api/recipes/[id]/sessions - Error fetching recipe:", recipeError);
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
 
     // Check if user owns recipe or recipe is public
     if (recipe.user_id !== user.id && recipe.visibility !== "public") {
+      console.error("POST /api/recipes/[id]/sessions - Access denied:", {
+        recipeUserId: recipe.user_id,
+        requestUserId: user.id,
+        visibility: recipe.visibility
+      });
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
@@ -58,16 +66,28 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (sessionError) {
-      console.error("Error creating session:", sessionError);
+      console.error("POST /api/recipes/[id]/sessions - Error creating session:", {
+        error: sessionError,
+        code: sessionError.code,
+        message: sessionError.message,
+        details: sessionError.details,
+        hint: sessionError.hint
+      });
       return NextResponse.json({ 
         error: "Internal server error", 
         details: sessionError.message 
       }, { status: 500 });
     }
 
+    console.log("POST /api/recipes/[id]/sessions - Session created successfully:", {
+      sessionId: newSession.id,
+      recipeId: newSession.recipe_id,
+      userId: newSession.user_id
+    });
+
     return NextResponse.json(newSession);
   } catch (error) {
-    console.error("Error starting session:", error);
+    console.error("POST /api/recipes/[id]/sessions - Unexpected error:", error);
     return NextResponse.json({ 
       error: "Internal server error",
       details: error instanceof Error ? error.message : "Unknown error"
