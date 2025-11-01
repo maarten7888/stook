@@ -253,146 +253,154 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         {/* Mobile: Single column with flex order - Description → Recipe Info → Ingredients → Steps → Reviews → Tags */}
         {/* Desktop: Two columns grid (2/3 left, 1/3 right) */}
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-8">
-          {/* Description - Mobile: Order 1, Desktop: Left column */}
-          {data.description && (
-            <Card className="bg-coals border-ash order-1 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-xl text-ash">Beschrijving</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Recipe Info Card - Mobile: Order 2 (after Description), Desktop: Right column */}
-          <Card className="bg-coals border-ash order-2 lg:col-span-1 lg:order-1">
-            <CardHeader>
-              <CardTitle className="text-xl text-ash">Recept Info</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-smoke">Porties</span>
-                  <span className="text-ember font-semibold">{data.serves || '-'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-smoke">Voorbereiding</span>
-                  <span className="text-ember font-semibold">{data.prepMinutes ? `${data.prepMinutes} min` : '-'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-smoke">Bereiding</span>
-                  <span className="text-ember font-semibold">{data.cookMinutes ? `${data.cookMinutes} min` : '-'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-smoke">Doel temperatuur</span>
-                  <span className="text-ember font-semibold">{data.targetInternalTemp ? `${data.targetInternalTemp}°C` : '-'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Left Column - Main Content */}
+          {/* Mobile: Items use flex order, Desktop: col-span-2 groups them together */}
+          <div className="flex flex-col lg:col-span-2 space-y-8 order-1 lg:order-1">
+            {/* Description - Mobile: Order 1 */}
+            {data.description && (
+              <Card className="bg-coals border-ash order-1">
+                <CardHeader>
+                  <CardTitle className="text-xl text-ash">Beschrijving</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-smoke text-lg leading-relaxed">{data.description}</p>
+                </CardContent>
+              </Card>
+            )}
             
-          {/* Ingredients - Mobile: Order 3, Desktop: Left column */}
-          {data.ingredients && data.ingredients.length > 0 && (
-            <Card className="bg-coals border-ash order-3 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {data.ingredients.map((ingredient) => (
-                    <div key={ingredient.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                      <span className="text-ash font-medium">
-                        {ingredient.ingredientName}
-                      </span>
-                      <span className="text-ember font-semibold">
-                        {ingredient.amount && ingredient.unit ? `${ingredient.amount} ${ingredient.unit}` : ingredient.amount || 'Naar smaak'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Steps - Mobile: Order 4, Desktop: Left column */}
-          {data.steps && data.steps.length > 0 && (
-            <Card className="bg-coals border-ash order-4 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-xl text-ash">Bereidingswijze</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {data.steps.map((step, index) => (
-                    <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20">
-                      <div className="flex-shrink-0 w-8 h-8 bg-ember rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">{step.orderNo || index + 1}</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-ash leading-relaxed">{step.instruction}</p>
-                        {step.timerMinutes && (
-                          <div className="mt-2 flex items-center gap-1 text-ember text-sm font-medium">
-                            <Clock className="h-4 w-4" />
-                            <span>{step.timerMinutes} min</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Reviews - Only for public recipes - Mobile: Order 5 (after Steps), Desktop: Right column */}
-          {data.visibility === 'public' && (
-            <Card className="bg-coals border-ash order-5 lg:col-span-1 lg:order-2">
-              <CardHeader>
-                <CardTitle className="text-xl text-ash">Reviews</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {reviews && reviews.length > 0 ? (
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-smoke font-medium">{review.userName}</span>
-                          <RatingStars rating={review.rating} size="sm" />
-                        </div>
-                        {review.comment && (
-                          <p className="text-smoke text-sm leading-relaxed">{review.comment}</p>
-                        )}
+            {/* Ingredients - Mobile: Order 3 */}
+            {data.ingredients && data.ingredients.length > 0 && (
+              <Card className="bg-coals border-ash order-3">
+                <CardHeader>
+                  <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {data.ingredients.map((ingredient) => (
+                      <div key={ingredient.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
+                        <span className="text-ash font-medium">
+                          {ingredient.ingredientName}
+                        </span>
+                        <span className="text-ember font-semibold">
+                          {ingredient.amount && ingredient.unit ? `${ingredient.amount} ${ingredient.unit}` : ingredient.amount || 'Naar smaak'}
+                        </span>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-smoke text-sm">Nog geen reviews</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Tags - Mobile: Order 6 (after Reviews), Desktop: Right column */}
-          {data.tags && data.tags.length > 0 && (
-            <Card className="bg-coals border-ash order-6 lg:col-span-1 lg:order-3">
+            {/* Steps - Mobile: Order 4 */}
+            {data.steps && data.steps.length > 0 && (
+              <Card className="bg-coals border-ash order-4">
+                <CardHeader>
+                  <CardTitle className="text-xl text-ash">Bereidingswijze</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {data.steps.map((step, index) => (
+                      <div key={step.id} className="flex gap-4 p-4 bg-charcoal/50 rounded-lg border border-ash/20">
+                        <div className="flex-shrink-0 w-8 h-8 bg-ember rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">{step.orderNo || index + 1}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-ash leading-relaxed">{step.instruction}</p>
+                          {step.timerMinutes && (
+                            <div className="mt-2 flex items-center gap-1 text-ember text-sm font-medium">
+                              <Clock className="h-4 w-4" />
+                              <span>{step.timerMinutes} min</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Recipe Info, Tags, Reviews */}
+          {/* Mobile: Items use flex order, Desktop: col-span-1 groups them together */}
+          <div className="flex flex-col lg:col-span-1 space-y-8 order-2 lg:order-2">
+            {/* Recipe Info Card - Mobile: Order 2 (after Description) */}
+            <Card className="bg-coals border-ash order-2">
               <CardHeader>
-                <CardTitle className="text-xl text-ash">Tags</CardTitle>
+                <CardTitle className="text-xl text-ash">Recept Info</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {data.tags.map((tag, index) => (
-                    <Badge
-                      key={index}
-                      variant="secondary"
-                      className="bg-ember/20 text-ember border-ember/30"
-                    >
-                      {tag.tagName}
-                    </Badge>
-                  ))}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-smoke">Porties</span>
+                    <span className="text-ember font-semibold">{data.serves || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-smoke">Voorbereiding</span>
+                    <span className="text-ember font-semibold">{data.prepMinutes ? `${data.prepMinutes} min` : '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-smoke">Bereiding</span>
+                    <span className="text-ember font-semibold">{data.cookMinutes ? `${data.cookMinutes} min` : '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-smoke">Doel temperatuur</span>
+                    <span className="text-ember font-semibold">{data.targetInternalTemp ? `${data.targetInternalTemp}°C` : '-'}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          )}
+
+            {/* Tags - Mobile: Order 6 (after Reviews) */}
+            {data.tags && data.tags.length > 0 && (
+              <Card className="bg-coals border-ash order-6">
+                <CardHeader>
+                  <CardTitle className="text-xl text-ash">Tags</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {data.tags.map((tag, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="bg-ember/20 text-ember border-ember/30"
+                      >
+                        {tag.tagName}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Reviews - Only for public recipes - Mobile: Order 5 (after Steps) */}
+            {data.visibility === 'public' && (
+              <Card className="bg-coals border-ash order-5">
+                <CardHeader>
+                  <CardTitle className="text-xl text-ash">Reviews</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {reviews && reviews.length > 0 ? (
+                    <div className="space-y-4">
+                      {reviews.map((review) => (
+                        <div key={review.id} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-smoke font-medium">{review.userName}</span>
+                            <RatingStars rating={review.rating} size="sm" />
+                          </div>
+                          {review.comment && (
+                            <p className="text-smoke text-sm leading-relaxed">{review.comment}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-smoke text-sm">Nog geen reviews</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
