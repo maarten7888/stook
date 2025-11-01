@@ -22,7 +22,6 @@ export default function RegisterPage() {
 
   // Debug Supabase configuratie
   useEffect(() => {
-    const supabase = createClient();
     const debug = `
       Supabase URL: ${process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET'}
       Current Origin: ${window.location.origin}

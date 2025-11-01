@@ -7,6 +7,7 @@ import { Edit, ArrowLeft, Eye, EyeOff, Clock } from "lucide-react";
 import Link from "next/link";
 import { PhotoCarousel } from "@/components/photo-carousel";
 import { RatingStars } from "@/components/rating-stars";
+import { StartSessionButton } from "@/components/start-session-button";
 
 async function fetchRecipe(id: string) {
   try {
@@ -190,14 +191,18 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Recipe Header - Full Width */}
         <div className="mb-8">
-          {/* Back button */}
-          <div className="mb-6">
+          {/* Back button + Start Session button (mobile: same line) */}
+          <div className="mb-6 flex items-center justify-between">
             <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
               <Link href="/recipes">
                 <ArrowLeft className="h-5 w-5 sm:h-4 sm:w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Terug naar recepten</span>
               </Link>
             </Button>
+            {/* Start Sessie button - Mobile: visible here, Desktop: hidden */}
+            <div className="lg:hidden">
+              <StartSessionButton recipeId={data.id} />
+            </div>
           </div>
 
           <h1 className="text-4xl font-heading font-bold text-ash mb-4">{data.title}</h1>
@@ -324,6 +329,13 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           {/* Right Column - Recipe Info, Tags, Reviews */}
           {/* Mobile: Items use flex order, Desktop: col-span-1 groups them together */}
           <div className="flex flex-col lg:col-span-1 space-y-8 order-2 lg:order-2">
+            {/* Start Sessie button - Desktop: above Recipe Info, right aligned */}
+            <div className="hidden lg:block order-1">
+              <div className="flex justify-end">
+                <StartSessionButton recipeId={data.id} />
+              </div>
+            </div>
+
             {/* Recipe Info Card - Mobile: Order 2 (after Description) */}
             <Card className="bg-coals border-ash order-2">
               <CardHeader>
