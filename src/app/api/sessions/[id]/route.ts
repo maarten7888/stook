@@ -13,35 +13,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const adminSupabase = createAdminClient();
 
-    // Get session with recipe and user info
+    // Get session first
     const { data: session, error: sessionError } = await adminSupabase
       .from('cook_sessions')
-      .select(`
-        id,
-        recipe_id,
-        user_id,
-        started_at,
-        ended_at,
-        notes,
-        rating,
-        conclusion,
-        adjustments,
-        recipe_snapshot,
-        recipes!inner(
-          id,
-          title,
-          description,
-          visibility,
-          serves,
-          prep_minutes,
-          cook_minutes,
-          target_internal_temp
-        ),
-        profiles!inner(
-          id,
-          display_name
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -50,16 +25,43 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Check access: user owns session or recipe is public
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recipe = session.recipes as any;
-    if (session.user_id !== user.id && recipe.visibility !== "public") {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    // Check access: user owns session
+    if (session.user_id !== user.id) {
+      // Also check if recipe is public
+      const { data: recipe, error: recipeError } = await adminSupabase
+        .from('recipes')
+        .select('visibility')
+        .eq('id', session.recipe_id)
+        .single();
+
+      if (recipeError || !recipe || recipe.visibility !== "public") {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
     }
 
+    // Get recipe data
+    const { data: recipe, error: recipeError } = await adminSupabase
+      .from('recipes')
+      .select('id, title, description, visibility, serves, prep_minutes, cook_minutes, target_internal_temp')
+      .eq('id', session.recipe_id)
+      .single();
+
+    if (recipeError || !recipe) {
+      console.error("Error fetching recipe:", recipeError);
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+    }
+
+    // Get profile data
+    const { data: profile, error: profileError } = await adminSupabase
+      .from('profiles')
+      .select('id, display_name')
+      .eq('id', session.user_id)
+      .single();
+
+    // Profile is optional, so don't fail if it doesn't exist
+    const profileData = profileError ? { id: session.user_id, display_name: null } : profile;
+
     // Transform to match expected format
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const profile = session.profiles as any;
     return NextResponse.json({
       id: session.id,
       recipeId: session.recipe_id,
@@ -82,8 +84,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         targetInternalTemp: recipe.target_internal_temp,
       },
       user: {
-        id: profile.id,
-        displayName: profile.display_name,
+        id: profileData?.id || session.user_id,
+        displayName: profileData?.display_name || null,
       },
     });
   } catch (error) {
