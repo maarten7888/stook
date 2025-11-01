@@ -3,10 +3,10 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const finishSessionSchema = z.object({
-  notes: z.string().optional(),
-  rating: z.number().int().min(1).max(5).optional(),
-  conclusion: z.string().optional(),
-  adjustments: z.any().optional(),
+  notes: z.string().optional().nullable(),
+  rating: z.number().int().min(1).max(5).optional().nullable(),
+  conclusion: z.string().optional().nullable(),
+  adjustments: z.any().optional().nullable(),
 });
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

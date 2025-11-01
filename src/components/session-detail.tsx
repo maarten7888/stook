@@ -139,13 +139,17 @@ export default function SessionDetail({ sessionData, temps, photos }: SessionDet
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          notes,
-          conclusion,
-          rating: currentRating,
+          notes: notes || undefined,
+          conclusion: conclusion || undefined,
+          rating: currentRating > 0 ? currentRating : undefined,
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to finish session");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error finishing session:", errorData);
+        throw new Error(errorData.error || "Failed to finish session");
+      }
       
       toast.success("Sessie beëindigd!");
       // Reload page to show updated session
