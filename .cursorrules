@@ -91,36 +91,51 @@ STORAGE BUCKETS
 * Upload validatie: jpg/png/webp; max 8MB.
 * Signed URLs: 1 uur expiry tijd, genereren via `supabase.storage.from('photos').createSignedUrl(path, 3600)`.
 
-ROUTES / PAGINA’S (Next.js App Router)
+ROUTES / PAGINA'S (Next.js App Router)
 
-* `/` → feed (eigen + public recipes; server component + cache revalidate). [Gereed]
+* `/` → homepage (feed + Quick Stats + Recente Activiteit)
+  * **Quick Stats**: Aantal recepten (totaal + deze maand), sessies (totaal + deze week), gemiddelde rating
+  * **Recente Activiteit**: Laatste 5 activiteiten (recepten + sessies), gesorteerd op datum met time ago labels
+  * Feed met eigen + public recipes (server component + cache revalidate). [Gereed]
 * `/recipes` (lijst met thumbnails, filters op titel/tags) [Gereed]
 * `/recipes/new` (create) [Gereed]
 * `/recipes/[id]` (detail: twee-kolommen layout)
   * **Desktop (lg+)**: Grid layout met 3 kolommen
     * **Linker kolom (col-span-2, 2/3 breedte)**: Beschrijving, Ingrediënten (twee-kolommen grid binnen card), Bereidingswijze
-    * **Rechter kolom (col-span-1, 1/3 breedte)**: Recept Info (porties, voorbereiding, bereiding, doel temperatuur), Tags, Reviews (alleen voor publieke recepten)
+    * **Rechter kolom (col-span-1, 1/3 breedte)**: "Start Sessie" knop (rechts uitgelijnd), Recept Info (porties, voorbereiding, bereiding, doel temperatuur), Tags, Reviews (alleen voor publieke recepten)
   * **Mobile**: Flexbox layout met order classes voor optimale content flow
+    * "Start Sessie" knop rechts uitgelijnd boven titel (zelfde hoogte als terug pijltje)
     * Volgorde: Beschrijving → Recept Info → Ingrediënten → Bereidingswijze → Reviews → Tags
   * Foto's carousel boven beide kolommen (full width)
   * [Gereed]
 * `/recipes/[id]/edit` [Gereed]
-* `/sessions/[id]` (detail tabs: Notities · Foto’s · Temperatuur; afronden met rating/conclusie)
-* `/import` (URL → Preview → Import, met confidence scoring)
-* `/profile` (preferences, stats)
-* `/login`, `/register`
+* `/sessions` (lijst van alle gebruikersessies met status, duur, rating, temp count, photo count) [Gereed]
+* `/sessions/[id]` (detail: twee-kolommen layout, auto-save functionaliteit)
+  * **Desktop (lg+)**: Grid layout met 2 kolommen
+    * **Linker kolom**: Session Status Card (status, duur, temp count), Notities Card (textarea met auto-save), Temperatuurverloop Card (chronologische lijst + form), Foto's Card (grid + upload)
+    * **Rechter kolom**: Recept Info Card (met link naar volledig recept), Evaluatie Card (rating stars + conclusie textarea, beide auto-save), "Sessie beëindigen" knop
+  * **Mobile**: Single column layout met logische content flow
+    * Order: Session Status → Notities → Recept Info → Evaluatie → Temperatuurverloop → Foto's
+  * Auto-save: Notities, conclusie en rating worden automatisch opgeslagen na 2 seconden debounce
+  * [Gereed]
+* `/import` (URL → Preview → Import, met confidence scoring) [Gereed]
+* `/profile` (preferences, statistieken: recepten count, sessies count, gemiddelde rating) [Gereed]
+* `/login`, `/register` [Gereed]
 
 API (Route Handlers in `app/api/*`)
 
 * `GET /api/recipes[?query=&tag=]`, `GET /api/recipes/:id` [Gereed]
 * `POST /api/recipes` (authed), `PUT /api/recipes/:id`, `DELETE /api/recipes/:id` [Gereed]
 * `POST /api/recipes/:id/reviews`, `GET /api/recipes/:id/reviews` [Gereed]
-* `POST /api/recipes/:id/sessions`
-* `GET /api/sessions/:id`, `PUT /api/sessions/:id/finish`
-* `POST /api/sessions/:id/temps`
-* `GET /api/sessions/:id/events?since=ISO`
+* `POST /api/recipes/:id/sessions` (start nieuwe sessie) [Gereed]
+* `GET /api/sessions` (lijst van gebruikersessies) [Gereed]
+* `GET /api/sessions/:id` (detail met access control), `PUT /api/sessions/:id` (update notes/rating/conclusion) [Gereed]
+* `POST /api/sessions/:id/finish` (beëindig sessie met notes/rating/conclusion) [Gereed]
+* `GET /api/sessions/:id/temps`, `POST /api/sessions/:id/temps` (temperature readings) [Gereed]
+* `GET /api/sessions/:id/photos` (foto's voor sessie met signed URLs) [Gereed]
 * `POST /api/photos` (multipart) → upload naar Supabase Storage + DB record [Gereed]
 * `GET /api/recipes/:id/photos` → fetch foto's voor recept met signed URLs [Gereed]
+* `GET /api/profile/stats` (statistieken: recepten count, sessies count, gemiddelde rating) [Gereed]
 
 IMPORT (Web Scraping)
 
@@ -194,12 +209,16 @@ VOLGENDE VERBETERINGEN
 CODING NOTES
 
 * Houd server code strikt server‑side.
-* Valideer met **Zod**.
+* Valideer met **Zod** (gebruik `.nullable()` waar nodig voor database compatibiliteit).
 * Gebruik **revalidateTag/revalidatePath** na mutaties.
 * Nooit service‑role key in client bundel.
 * Altijd Drizzle als migratie‑systeem voor schema management.
 * Gebruik Supabase CLI voor lokale development en deployment.
 * **Photo uploads**: Gebruik `createClient()` (niet admin) voor Storage uploads en database inserts met RLS. Gebruik `<img>` tags (niet Next Image) voor Supabase signed URLs. Thumbnails fetch in `Promise.all()` voor performance.
+* **Auto-save**: Gebruik `useEffect` met `setTimeout` voor debouncing (bijv. 2 seconden). Clear timeout in cleanup functie.
+* **Data fetching in server components**: Gebruik altijd direct Supabase Admin Client i.p.v. `fetch()` naar interne API routes (fetch passeert geen cookies in server components).
+* **Error handling**: Uitgebreide `console.error` logging met error codes, messages, details en hints voor debugging.
+* **Schema validatie**: Rating velden kunnen 0 zijn in component state; stuur alleen waarde > 0 mee naar API (anders undefined).
 
 INITIAL PLAN (Sprint 0 → MVP)
 
@@ -310,7 +329,7 @@ CURRENT STATUS (December 2024)
 - Mobile navigation met hamburger menu
 - Navigation icons toegevoegd
 - Clean mobile-first layout
-- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar
+- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar, StartSessionButton
 - Professional desktop navigation layout met user dropdown
 - Mobile menu met juiste volgorde en logout functionaliteit
 - Photo upload functionaliteit (desktop file upload + mobile camera capture)
@@ -320,6 +339,17 @@ CURRENT STATUS (December 2024)
 - Recipe detail page two-column layout (desktop: 2/3 left, 1/3 right; mobile: single column met flex order)
 - Recipe detail page: Reviews sectie toegevoegd (alleen voor publieke recepten)
 - Recipe detail page mobile order: Beschrijving → Recept Info → Ingrediënten → Bereidingswijze → Reviews → Tags
+- Recipe detail page: "Start Sessie" knop toegevoegd (rechts uitgelijnd op desktop boven Recept Info, op mobile boven titel)
+- Sessions functionaliteit volledig geïmplementeerd:
+  * Session detail pagina met twee-kolommen layout (desktop) en single column (mobile)
+  * Auto-save functionaliteit voor notities, conclusie en rating (2 seconden debounce)
+  * Temperatuurverloop met chronologische weergave en formulier
+  * Foto's upload en weergave per sessie
+  * Session finish endpoint met uitgebreide error handling
+- Homepage: Quick Stats sectie met echte statistieken (recepten totaal/maand, sessies totaal/week, gemiddelde rating)
+- Homepage: Recente Activiteit sectie met laatste 5 activiteiten (recepten + sessies), time ago labels, iconen en links
+- Profile page: Statistieken sectie toont nu correct aantal recepten, sessies en gemiddelde rating
+- Sessions list pagina met status, duur, rating, temp count en photo count
 
 🔄 IN PROGRESS:
 - Branch protection rules op main
