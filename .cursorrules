@@ -96,7 +96,14 @@ ROUTES / PAGINA’S (Next.js App Router)
 * `/` → feed (eigen + public recipes; server component + cache revalidate). [Gereed]
 * `/recipes` (lijst met thumbnails, filters op titel/tags) [Gereed]
 * `/recipes/new` (create) [Gereed]
-* `/recipes/[id]` (detail: twee-kolommen layout - linker kolom: beschrijving, ingrediënten (2-kol grid), bereidingswijze; rechter kolom: recept info, tags, reviews; foto's carousel boven; mobile: single column met custom order) [Gereed]
+* `/recipes/[id]` (detail: twee-kolommen layout)
+  * **Desktop (lg+)**: Grid layout met 3 kolommen
+    * **Linker kolom (col-span-2, 2/3 breedte)**: Beschrijving, Ingrediënten (twee-kolommen grid binnen card), Bereidingswijze
+    * **Rechter kolom (col-span-1, 1/3 breedte)**: Recept Info (porties, voorbereiding, bereiding, doel temperatuur), Tags, Reviews (alleen voor publieke recepten)
+  * **Mobile**: Flexbox layout met order classes voor optimale content flow
+    * Volgorde: Beschrijving → Recept Info → Ingrediënten → Bereidingswijze → Reviews → Tags
+  * Foto's carousel boven beide kolommen (full width)
+  * [Gereed]
 * `/recipes/[id]/edit` [Gereed]
 * `/sessions/[id]` (detail tabs: Notities · Foto’s · Temperatuur; afronden met rating/conclusie)
 * `/import` (URL → Preview → Import, met confidence scoring)
@@ -127,8 +134,17 @@ UI & STYLING
 * shadcn/ui voor formulieren, modals, tabs; lucide‑icons.
 * Consistente navigatie: logo + hoofdnavigatie + CTA's (Nieuw Recept, Importeren, Mijn Sessies).
 * Responsive: mobile‑first grids; accessibility: focus states.
-* Recipe detail page: Twee-kolommen layout op desktop (2/3 + 1/3), single column op mobile met flexbox order classes voor optimale content flow.
-* Ingrediënten: twee-kolommen grid op desktop (md+), single column op mobile voor betere leesbaarheid.
+* Recipe detail page layout:
+  * **Desktop (lg+)**: Grid layout met 3 kolommen
+    * Linker kolom (col-span-2, 2/3): Beschrijving, Ingrediënten, Bereidingswijze
+    * Rechter kolom (col-span-1, 1/3): Recept Info, Tags, Reviews
+    * Duidelijke visuele scheiding tussen linker- en rechterkolom
+  * **Mobile**: Flexbox met order classes
+    * Single column layout met logische content flow
+    * Order: Beschrijving → Recept Info → Ingrediënten → Bereidingswijze → Reviews → Tags
+* Ingrediënten: twee-kolommen grid binnen card op desktop (md:grid-cols-2), single column op mobile (grid-cols-1) voor betere leesbaarheid.
+* Bereidingswijze: Oranje genummerde cirkels met klokicoon en oranje tijd weergave.
+* Recept Info: Verticale lijst met labels en oranje waarden (porties, voorbereiding, bereiding, doel temperatuur).
 
 QUALITY BAR / DONE
 
