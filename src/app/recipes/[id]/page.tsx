@@ -265,14 +265,14 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
               </Card>
             )}
             
-            {/* Ingredients - Two Column Grid */}
+            {/* Ingredients - Single Column on Mobile, Two Columns on Desktop */}
             {data.ingredients && data.ingredients.length > 0 && (
               <Card className="bg-coals border-ash">
                 <CardHeader>
                   <CardTitle className="text-xl text-ash">Ingrediënten</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {data.ingredients.map((ingredient) => (
                       <div key={ingredient.id} className="flex justify-between items-center py-3 px-4 bg-charcoal/50 rounded-lg border border-ash/20">
                         <span className="text-ash font-medium">
