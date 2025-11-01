@@ -12,27 +12,10 @@ export async function GET() {
 
     const adminSupabase = createAdminClient();
 
-    // Get all sessions for the user with recipe info
+    // Get all sessions for the user (without JOIN)
     const { data: sessions, error: sessionsError } = await adminSupabase
       .from('cook_sessions')
-      .select(`
-        id,
-        recipe_id,
-        user_id,
-        started_at,
-        ended_at,
-        notes,
-        rating,
-        conclusion,
-        adjustments,
-        recipe_snapshot,
-        recipes!inner(
-          id,
-          title,
-          description,
-          visibility
-        )
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .order('started_at', { ascending: false });
 
@@ -41,9 +24,13 @@ export async function GET() {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
-    // Get counts for temps and photos for each session
+    if (!sessions || sessions.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    // Get counts for temps and photos for each session, and fetch recipe data
     const sessionsWithCounts = await Promise.all(
-      (sessions || []).map(async (session) => {
+      sessions.map(async (session) => {
         // Get temp count
         const { count: tempCount } = await adminSupabase
           .from('session_temps')
@@ -56,9 +43,13 @@ export async function GET() {
           .select('*', { count: 'exact', head: true })
           .eq('cook_session_id', session.id);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const recipe = session.recipes as any;
-        
+        // Get recipe data
+        const { data: recipe } = await adminSupabase
+          .from('recipes')
+          .select('id, title, description, visibility')
+          .eq('id', session.recipe_id)
+          .single();
+
         return {
           id: session.id,
           recipeId: session.recipe_id,
@@ -70,12 +61,12 @@ export async function GET() {
           conclusion: session.conclusion,
           adjustments: session.adjustments,
           recipeSnapshot: session.recipe_snapshot,
-          recipe: {
+          recipe: recipe ? {
             id: recipe.id,
             title: recipe.title,
             description: recipe.description,
             visibility: recipe.visibility,
-          },
+          } : null,
           tempCount: tempCount || 0,
           photoCount: photoCount || 0,
         };

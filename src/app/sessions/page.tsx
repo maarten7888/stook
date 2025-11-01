@@ -1,31 +1,88 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/supabase/server";
+import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, Thermometer, Star, Camera, Plus } from "lucide-react";
 import Link from "next/link";
-import { headers } from "next/headers";
 
-async function fetchUserSessions() {
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = headersList.get("x-forwarded-proto") || "http";
-  const baseUrl = `${protocol}://${host}`;
-  
-  const res = await fetch(`${baseUrl}/api/sessions`, {
-    cache: "no-store",
-  });
-  
-  if (!res.ok) return [];
-  return res.json();
+async function fetchUserSessions(userId: string) {
+  try {
+    const adminSupabase = createAdminClient();
+
+    // Get all sessions for the user
+    const { data: sessions, error: sessionsError } = await adminSupabase
+      .from('cook_sessions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('started_at', { ascending: false });
+
+    if (sessionsError) {
+      console.error("Error fetching sessions:", sessionsError);
+      return [];
+    }
+
+    if (!sessions || sessions.length === 0) {
+      return [];
+    }
+
+    // Get counts for temps and photos for each session, and fetch recipe data
+    const sessionsWithCounts = await Promise.all(
+      sessions.map(async (session) => {
+        // Get temp count
+        const { count: tempCount } = await adminSupabase
+          .from('session_temps')
+          .select('*', { count: 'exact', head: true })
+          .eq('cook_session_id', session.id);
+
+        // Get photo count
+        const { count: photoCount } = await adminSupabase
+          .from('photos')
+          .select('*', { count: 'exact', head: true })
+          .eq('cook_session_id', session.id);
+
+        // Get recipe data (optional, can use snapshot if recipe is deleted)
+        const { data: recipe } = await adminSupabase
+          .from('recipes')
+          .select('id, title, description, visibility')
+          .eq('id', session.recipe_id)
+          .single();
+
+        return {
+          id: session.id,
+          recipeId: session.recipe_id,
+          userId: session.user_id,
+          startedAt: session.started_at,
+          endedAt: session.ended_at,
+          notes: session.notes,
+          rating: session.rating,
+          conclusion: session.conclusion,
+          adjustments: session.adjustments,
+          recipeSnapshot: session.recipe_snapshot,
+          recipe: recipe ? {
+            id: recipe.id,
+            title: recipe.title,
+            description: recipe.description,
+            visibility: recipe.visibility,
+          } : null,
+          tempCount: tempCount || 0,
+          photoCount: photoCount || 0,
+        };
+      })
+    );
+
+    return sessionsWithCounts;
+  } catch (error) {
+    console.error("Error in fetchUserSessions:", error);
+    return [];
+  }
 }
 
 export default async function SessionsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const sessions = await fetchUserSessions();
+  const sessions = await fetchUserSessions(session.user.id);
 
   return (
     <div className="space-y-6">
@@ -71,7 +128,7 @@ export default async function SessionsPage() {
           {sessions.map((session: {
             id: string;
             recipeSnapshot?: { title: string };
-            recipe?: { title: string };
+            recipe?: { title: string } | null;
             endedAt?: string;
             startedAt: string;
             rating?: number;
@@ -84,13 +141,15 @@ export default async function SessionsPage() {
               ? Math.round((new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / (1000 * 60))
               : Math.round((Date.now() - new Date(session.startedAt).getTime()) / (1000 * 60));
 
+            const title = session.recipeSnapshot?.title || session.recipe?.title || "Onbekend recept";
+
             return (
               <Card key={session.id} className="bg-coals border-ash hover:border-ember/50 transition-colors">
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
                     <div className="space-y-2">
                       <CardTitle className="text-ash">
-                        {session.recipeSnapshot?.title || session.recipe?.title}
+                        {title}
                       </CardTitle>
                       <div className="flex items-center gap-4 text-sm text-smoke">
                         <div className="flex items-center gap-1">
