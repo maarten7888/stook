@@ -1,26 +1,192 @@
-import { getSession } from "@/lib/supabase/server";
+import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Camera, Clock, ArrowRight, Star } from "lucide-react";
+import { BookOpen, Camera, Clock, ArrowRight, Star, Thermometer } from "lucide-react";
 import Link from "next/link";
-import { headers } from "next/headers";
+
+async function fetchUserStats(userId: string) {
+  try {
+    const adminSupabase = createAdminClient();
+
+    // Get counts
+    const [recipeCountResult, sessionCountResult, avgRatingResult] = await Promise.all([
+      adminSupabase
+        .from('recipes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      adminSupabase
+        .from('cook_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      adminSupabase
+        .from('cook_sessions')
+        .select('rating')
+        .eq('user_id', userId)
+        .not('rating', 'is', null),
+    ]);
+
+    const recipeCount = recipeCountResult.count || 0;
+    const sessionCount = sessionCountResult.count || 0;
+
+    // Calculate average rating
+    const ratings = avgRatingResult.data || [];
+    const avgRating = ratings.length > 0
+      ? (ratings.reduce((sum, s) => sum + (s.rating || 0), 0) / ratings.length).toFixed(1)
+      : null;
+
+    // Get counts for this month/week
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisWeek = new Date(now);
+    thisWeek.setDate(thisWeek.getDate() - 7);
+
+    const [thisMonthRecipes, thisWeekSessions] = await Promise.all([
+      adminSupabase
+        .from('recipes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', thisMonth.toISOString()),
+      adminSupabase
+        .from('cook_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('started_at', thisWeek.toISOString()),
+    ]);
+
+    return {
+      recipes: recipeCount,
+      sessions: sessionCount,
+      avgRating,
+      recipesThisMonth: thisMonthRecipes.count || 0,
+      sessionsThisWeek: thisWeekSessions.count || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching user stats:", error);
+    return {
+      recipes: 0,
+      sessions: 0,
+      avgRating: null,
+      recipesThisMonth: 0,
+      sessionsThisWeek: 0,
+    };
+  }
+}
+
+async function fetchRecentActivity(userId: string) {
+  try {
+    const adminSupabase = createAdminClient();
+
+    // Get recent sessions (last 5)
+    const { data: recentSessions } = await adminSupabase
+      .from('cook_sessions')
+      .select('id, recipe_id, started_at, ended_at, recipe_snapshot')
+      .eq('user_id', userId)
+      .order('started_at', { ascending: false })
+      .limit(5);
+
+    // Get recent recipes (last 5)
+    const { data: recentRecipes } = await adminSupabase
+      .from('recipes')
+      .select('id, title, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Combine and sort by date
+    const activities: Array<{
+      type: 'recipe' | 'session';
+      id: string;
+      title: string;
+      date: string;
+      link: string;
+      icon: typeof BookOpen | typeof Thermometer;
+    }> = [];
+
+    if (recentSessions) {
+      recentSessions.forEach(session => {
+        const title = (session.recipe_snapshot as { title?: string })?.title || 'Kooksessie';
+        activities.push({
+          type: 'session',
+          id: session.id,
+          title,
+          date: session.started_at,
+          link: `/sessions/${session.id}`,
+          icon: Thermometer,
+        });
+      });
+    }
+
+    if (recentRecipes) {
+      recentRecipes.forEach(recipe => {
+        activities.push({
+          type: 'recipe',
+          id: recipe.id,
+          title: recipe.title,
+          date: recipe.created_at,
+          link: `/recipes/${recipe.id}`,
+          icon: BookOpen,
+        });
+      });
+    }
+
+    // Sort by date (newest first) and take top 5
+    activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return activities.slice(0, 5);
+  } catch (error) {
+    console.error("Error fetching recent activity:", error);
+    return [];
+  }
+}
+
+async function fetchFeed(userId: string) {
+  try {
+    const adminSupabase = createAdminClient();
+
+    // Get own recipes + public recipes
+    const { data: ownRecipes } = await adminSupabase
+      .from('recipes')
+      .select('id, title, description, visibility, user_id, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const { data: publicRecipes } = await adminSupabase
+      .from('recipes')
+      .select('id, title, description, visibility, user_id, created_at')
+      .eq('visibility', 'public')
+      .neq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // Combine and sort
+    const allRecipes = [...(ownRecipes || []), ...(publicRecipes || [])];
+    allRecipes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return {
+      items: allRecipes.slice(0, 6).map(recipe => ({
+        id: recipe.id,
+        title: recipe.title,
+        description: recipe.description,
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching feed:", error);
+    return { items: [] };
+  }
+}
 
 export default async function RootPage() {
   const session = await getSession();
   
   if (session) {
     // User is logged in, show the app content with layout
-    async function fetchFeed() {
-      const headersList = await headers();
-      const host = headersList.get("host") || "localhost:3000";
-      const protocol = headersList.get("x-forwarded-proto") || "http";
-      const baseUrl = `${protocol}://${host}`;
-      const res = await fetch(`${baseUrl}/api/recipes`, { cache: "no-store" });
-      if (!res.ok) return { items: [] };
-      return res.json();
-    }
+    const userId = session.user.id;
 
-    const data = await fetchFeed();
+    const [data, stats, recentActivity] = await Promise.all([
+      fetchFeed(userId),
+      fetchUserStats(userId),
+      fetchRecentActivity(userId),
+    ]);
 
     type RecipeListItem = {
       id: string;
@@ -64,9 +230,9 @@ export default async function RootPage() {
               <BookOpen className="h-4 w-4 text-ember" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-ash">0</div>
+              <div className="text-2xl font-bold text-ash">{stats.recipes}</div>
               <p className="text-xs text-smoke">
-                +0 deze maand
+                +{stats.recipesThisMonth} deze maand
               </p>
             </CardContent>
           </Card>
@@ -79,9 +245,9 @@ export default async function RootPage() {
               <Clock className="h-4 w-4 text-ember" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-ash">0</div>
+              <div className="text-2xl font-bold text-ash">{stats.sessions}</div>
               <p className="text-xs text-smoke">
-                +0 deze week
+                +{stats.sessionsThisWeek} deze week
               </p>
             </CardContent>
           </Card>
@@ -94,9 +260,11 @@ export default async function RootPage() {
               <Star className="h-4 w-4 text-ember" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-ash">—</div>
+              <div className="text-2xl font-bold text-ash">
+                {stats.avgRating || '—'}
+              </div>
               <p className="text-xs text-smoke">
-                Nog geen beoordelingen
+                {stats.avgRating ? `${stats.avgRating} van 5 sterren` : 'Nog geen beoordelingen'}
               </p>
             </CardContent>
           </Card>
@@ -132,45 +300,68 @@ export default async function RootPage() {
           <h2 className="text-2xl font-heading font-bold text-ash">
             Recente Activiteit
           </h2>
-          <Card className="bg-coals border-ash">
-            <CardContent className="p-6">
-              <div className="text-center text-smoke">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 text-ember/50" />
-                <p className="text-lg mb-2">Nog geen activiteit</p>
-                <p className="text-sm">
-                  Begin met het maken van je eerste recept of importeer er een!
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {recentActivity.length === 0 ? (
+            <Card className="bg-coals border-ash">
+              <CardContent className="p-6">
+                <div className="text-center text-smoke">
+                  <BookOpen className="h-12 w-12 mx-auto mb-4 text-ember/50" />
+                  <p className="text-lg mb-2">Nog geen activiteit</p>
+                  <p className="text-sm">
+                    Begin met het maken van je eerste recept of start een kooksessie!
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((activity) => {
+                const Icon = activity.icon;
+                const date = new Date(activity.date);
+                const timeAgo = getTimeAgo(date);
+
+                return (
+                  <Card key={`${activity.type}-${activity.id}`} className="bg-coals border-ash hover:border-ember/50 transition-colors">
+                    <CardContent className="p-4">
+                      <Link href={activity.link} className="flex items-center gap-4 group">
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                          activity.type === 'recipe' ? 'bg-ember/20' : 'bg-blue-500/20'
+                        }`}>
+                          <Icon className={`h-5 w-5 ${
+                            activity.type === 'recipe' ? 'text-ember' : 'text-blue-400'
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-ash font-medium group-hover:text-ember transition-colors truncate">
+                            {activity.type === 'recipe' ? 'Recept aangemaakt' : 'Sessie gestart'}
+                          </p>
+                          <p className="text-smoke text-sm truncate">{activity.title}</p>
+                        </div>
+                        <div className="flex-shrink-0 text-xs text-smoke">
+                          {timeAgo}
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-smoke group-hover:text-ember transition-colors flex-shrink-0" />
+                      </Link>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   // Marketing page content for non-authenticated users
-  async function fetchPublicRecipes() {
-    const headersList = await headers();
-    const host = headersList.get("host") || "localhost:3000";
-    const protocol = headersList.get("x-forwarded-proto") || "http";
-    const baseUrl = `${protocol}://${host}`;
-    
-    try {
-      const res = await fetch(`${baseUrl}/api/recipes?visibility=public`, { 
-        cache: "no-store"
-      });
-      if (!res.ok) {
-        console.error('API error:', res.status, res.statusText);
-        return { items: [] };
-      }
-      return await res.json();
-    } catch (error) {
-      console.error('Error fetching public recipes:', error);
-      return { items: [] };
-    }
-  }
+  const adminSupabase = createAdminClient();
+  const { data: publicRecipes } = await adminSupabase
+    .from('recipes')
+    .select('id, title, description, visibility, user_id')
+    .eq('visibility', 'public')
+    .order('created_at', { ascending: false })
+    .limit(6);
 
-  const { items: recipes } = await fetchPublicRecipes();
+  const recipes = publicRecipes || [];
 
   return (
     <div className="max-w-7xl mx-auto space-y-12">
@@ -256,15 +447,12 @@ export default async function RootPage() {
           
           {recipes.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recipes.map((recipe: { id: string; title: string; description?: string; user?: { displayName?: string } }) => (
+              {recipes.map((recipe: { id: string; title: string; description?: string; user_id?: string }) => (
                 <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-colors group">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors">
                       {recipe.title}
                     </CardTitle>
-                    <p className="text-smoke text-sm">
-                      door {recipe.user?.displayName || "Anoniem"}
-                    </p>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-smoke text-sm mb-4 line-clamp-3">
@@ -293,4 +481,19 @@ export default async function RootPage() {
       </section>
     </div>
   );
+}
+
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'Zojuist';
+  if (diffMins < 60) return `${diffMins} min geleden`;
+  if (diffHours < 24) return `${diffHours} uur geleden`;
+  if (diffDays < 7) return `${diffDays} dag${diffDays > 1 ? 'en' : ''} geleden`;
+  
+  return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
 }
