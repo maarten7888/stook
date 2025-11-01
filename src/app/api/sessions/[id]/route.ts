@@ -133,7 +133,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.rating !== undefined) updateData.rating = body.rating;
     if (body.conclusion !== undefined) updateData.conclusion = body.conclusion;
     if (body.adjustments !== undefined) updateData.adjustments = body.adjustments;
-    if (body.endedAt !== undefined) updateData.ended_at = body.endedAt ? new Date(body.endedAt).toISOString() : null;
+    if (body.endedAt !== undefined) {
+      updateData.ended_at = body.endedAt ? new Date(body.endedAt).toISOString() : undefined;
+    }
 
     // Update session
     const { data: updatedSession, error: updateError } = await adminSupabase
