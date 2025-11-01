@@ -199,10 +199,12 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                 <span className="hidden sm:inline">Terug naar recepten</span>
               </Link>
             </Button>
-            {/* Start Sessie button - Mobile: visible here, Desktop: hidden */}
-            <div className="lg:hidden">
-              <StartSessionButton recipeId={data.id} />
-            </div>
+            {/* Start Sessie button - Mobile: visible here, Desktop: hidden - Only show if logged in */}
+            {session && (
+              <div className="lg:hidden">
+                <StartSessionButton recipeId={data.id} />
+              </div>
+            )}
           </div>
 
           <h1 className="text-4xl font-heading font-bold text-ash mb-4">{data.title}</h1>
@@ -329,12 +331,14 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           {/* Right Column - Recipe Info, Tags, Reviews */}
           {/* Mobile: Items use flex order, Desktop: col-span-1 groups them together */}
           <div className="flex flex-col lg:col-span-1 space-y-8 order-2 lg:order-2">
-            {/* Start Sessie button - Desktop: above Recipe Info, right aligned */}
-            <div className="hidden lg:block order-1">
-              <div className="flex justify-end">
-                <StartSessionButton recipeId={data.id} />
+            {/* Start Sessie button - Desktop: above Recipe Info, right aligned - Only show if logged in */}
+            {session && (
+              <div className="hidden lg:block order-1">
+                <div className="flex justify-end">
+                  <StartSessionButton recipeId={data.id} />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Recipe Info Card - Mobile: Order 2 (after Description) */}
             <Card className="bg-coals border-ash order-2">
