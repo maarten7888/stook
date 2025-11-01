@@ -96,7 +96,7 @@ ROUTES / PAGINA’S (Next.js App Router)
 * `/` → feed (eigen + public recipes; server component + cache revalidate). [Gereed]
 * `/recipes` (lijst met thumbnails, filters op titel/tags) [Gereed]
 * `/recipes/new` (create) [Gereed]
-* `/recipes/[id]` (detail: ingrediënten, stappen; foto's carousel boven beschrijving; reviews/sessies later) [Gereed]
+* `/recipes/[id]` (detail: twee-kolommen layout - linker kolom: beschrijving, ingrediënten (2-kol grid), bereidingswijze; rechter kolom: recept info, tags, reviews; foto's carousel boven; mobile: single column met custom order) [Gereed]
 * `/recipes/[id]/edit` [Gereed]
 * `/sessions/[id]` (detail tabs: Notities · Foto’s · Temperatuur; afronden met rating/conclusie)
 * `/import` (URL → Preview → Import, met confidence scoring)
@@ -107,7 +107,7 @@ API (Route Handlers in `app/api/*`)
 
 * `GET /api/recipes[?query=&tag=]`, `GET /api/recipes/:id` [Gereed]
 * `POST /api/recipes` (authed), `PUT /api/recipes/:id`, `DELETE /api/recipes/:id` [Gereed]
-* `POST /api/recipes/:id/reviews`, `GET /api/recipes/:id/reviews`
+* `POST /api/recipes/:id/reviews`, `GET /api/recipes/:id/reviews` [Gereed]
 * `POST /api/recipes/:id/sessions`
 * `GET /api/sessions/:id`, `PUT /api/sessions/:id/finish`
 * `POST /api/sessions/:id/temps`
@@ -125,8 +125,10 @@ UI & STYLING
 
 * Tailwind met custom kleurentokens (charcoal/coals/ash/smoke/ember).
 * shadcn/ui voor formulieren, modals, tabs; lucide‑icons.
-* Consistente navigatie: logo + hoofdnavigatie + CTA’s (Nieuw Recept, Importeren, Mijn Sessies).
+* Consistente navigatie: logo + hoofdnavigatie + CTA's (Nieuw Recept, Importeren, Mijn Sessies).
 * Responsive: mobile‑first grids; accessibility: focus states.
+* Recipe detail page: Twee-kolommen layout op desktop (2/3 + 1/3), single column op mobile met flexbox order classes voor optimale content flow.
+* Ingrediënten: twee-kolommen grid op desktop (md+), single column op mobile voor betere leesbaarheid.
 
 QUALITY BAR / DONE
 
@@ -299,6 +301,9 @@ CURRENT STATUS (December 2024)
 - Photo carousel op recept detailpagina (boven beschrijving)
 - Recipe thumbnails op receptenpagina (tussen naam en beschrijving)
 - Storage bucket RLS policies geïmplementeerd
+- Recipe detail page two-column layout (desktop: 2/3 left, 1/3 right; mobile: single column met flex order)
+- Recipe detail page: Reviews sectie toegevoegd (alleen voor publieke recepten)
+- Recipe detail page mobile order: Beschrijving → Recept Info → Ingrediënten → Bereidingswijze → Reviews → Tags
 
 🔄 IN PROGRESS:
 - Branch protection rules op main
