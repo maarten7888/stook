@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PhotoCarousel } from "@/components/photo-carousel";
 import { RatingStars } from "@/components/rating-stars";
 import { StartSessionButton } from "@/components/start-session-button";
+import { FavoriteButton } from "@/components/favorite-button";
 
 async function fetchRecipe(id: string) {
   try {
@@ -199,9 +200,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                 <span className="hidden sm:inline">Terug naar recepten</span>
               </Link>
             </Button>
-            {/* Start Sessie button - Mobile: visible here, Desktop: hidden - Only show if logged in */}
+            {/* Start Sessie button + Favorite button - Mobile: visible here, Desktop: hidden - Only show if logged in */}
             {session && (
-              <div className="lg:hidden">
+              <div className="lg:hidden flex items-center gap-2">
+                <FavoriteButton recipeId={data.id} />
                 <StartSessionButton recipeId={data.id} />
               </div>
             )}
@@ -331,10 +333,11 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           {/* Right Column - Recipe Info, Tags, Reviews */}
           {/* Mobile: Items use flex order, Desktop: col-span-1 groups them together */}
           <div className="flex flex-col lg:col-span-1 space-y-8 order-2 lg:order-2">
-            {/* Start Sessie button - Desktop: above Recipe Info, right aligned - Only show if logged in */}
+            {/* Start Sessie button + Favorite button - Desktop: above Recipe Info, right aligned - Only show if logged in */}
             {session && (
               <div className="hidden lg:block order-1">
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-2">
+                  <FavoriteButton recipeId={data.id} />
                   <StartSessionButton recipeId={data.id} />
                 </div>
               </div>
