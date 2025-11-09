@@ -76,6 +76,7 @@ DATAMODEL (Postgres + RLS)
 * **reviews** (`id uuid pk`, `recipe_id uuid fk`, `user_id uuid fk`, `rating int check 1<=rating<=5`, `comment text`, `created_at`, unique `(recipe_id,user_id)`)
 * **tags** (`id uuid pk`, `name text unique`)
 * **recipe_tags** (`id uuid pk`, `recipe_id uuid fk`, `tag_id uuid fk`, unique `(recipe_id, tag_id)`)
+* **recipe_favorites** (`id uuid pk`, `user_id uuid fk -> profiles(id)`, `recipe_id uuid fk -> recipes(id)`, `created_at timestamptz`, unique `(user_id, recipe_id)`)
 
 RLS POLICIES (kern)
 
@@ -83,6 +84,7 @@ RLS POLICIES (kern)
 * **recipes**: `select` wanneer `visibility='public'` of `user_id = auth.uid()`; `insert/update/delete` enkel `user_id = auth.uid()`.
 * **cook_sessions/photos/session_temps**: alleen owner (`user_id = auth.uid()`) of recipe public voor `select`. Voor `photos`: `insert/update/delete` vereist `user_id = auth.uid()`.
 * **reviews**: `insert` toegestaan als recipe public, `recipe.user_id != auth.uid()` en nog geen bestaande review; `update/delete` alleen eigen review.
+* **recipe_favorites**: `select/insert/delete` alleen eigen favorieten (`user_id = auth.uid()`).
 
 STORAGE BUCKETS
 
@@ -93,8 +95,9 @@ STORAGE BUCKETS
 
 ROUTES / PAGINA'S (Next.js App Router)
 
-* `/` → homepage (feed + Quick Stats + Recente Activiteit)
+* `/` → homepage (feed + Quick Stats + Favorieten + Recente Activiteit)
   * **Quick Stats**: Aantal recepten (totaal + deze maand), sessies (totaal + deze week), gemiddelde rating
+  * **Favorieten**: Laatste 6 favoriete recepten (tussen Feed en Recente Activiteit)
   * **Recente Activiteit**: Laatste 5 activiteiten (recepten + sessies), gesorteerd op datum met time ago labels
   * Feed met eigen + public recipes (server component + cache revalidate). [Gereed]
 * `/recipes` (lijst met thumbnails, filters op titel/tags) [Gereed]
@@ -102,9 +105,9 @@ ROUTES / PAGINA'S (Next.js App Router)
 * `/recipes/[id]` (detail: twee-kolommen layout)
   * **Desktop (lg+)**: Grid layout met 3 kolommen
     * **Linker kolom (col-span-2, 2/3 breedte)**: Beschrijving, Ingrediënten (twee-kolommen grid binnen card), Bereidingswijze
-    * **Rechter kolom (col-span-1, 1/3 breedte)**: "Start Sessie" knop (rechts uitgelijnd), Recept Info (porties, voorbereiding, bereiding, doel temperatuur), Tags, Reviews (alleen voor publieke recepten)
+    * **Rechter kolom (col-span-1, 1/3 breedte)**: FavoriteButton (hartje) + "Start Sessie" knop (rechts uitgelijnd), Recept Info (porties, voorbereiding, bereiding, doel temperatuur), Tags, Reviews (alleen voor publieke recepten)
   * **Mobile**: Flexbox layout met order classes voor optimale content flow
-    * "Start Sessie" knop rechts uitgelijnd boven titel (zelfde hoogte als terug pijltje)
+    * FavoriteButton + "Start Sessie" knop rechts uitgelijnd boven titel (links naast elkaar)
     * Volgorde: Beschrijving → Recept Info → Ingrediënten → Bereidingswijze → Reviews → Tags
   * Foto's carousel boven beide kolommen (full width)
   * [Gereed]
@@ -136,6 +139,8 @@ API (Route Handlers in `app/api/*`)
 * `POST /api/photos` (multipart) → upload naar Supabase Storage + DB record [Gereed]
 * `GET /api/recipes/:id/photos` → fetch foto's voor recept met signed URLs [Gereed]
 * `GET /api/profile/stats` (statistieken: recepten count, sessies count, gemiddelde rating) [Gereed]
+* `POST /api/recipes/:id/favorite` (voeg recept toe aan favorieten), `DELETE /api/recipes/:id/favorite` (verwijder uit favorieten) [Gereed]
+* `GET /api/recipes/favorites` (haal favoriete recepten op) [Gereed]
 
 IMPORT (Web Scraping)
 
@@ -201,7 +206,7 @@ EERSTE TAKEN (TE DOEN – TRANSITIE)
 
 VOLGENDE VERBETERINGEN
 
-* Favorites/follows, zoeken (pg_trgm/Meilisearch).
+* Follows, zoeken (pg_trgm/Meilisearch).
 * Thumbnails bij upload (Supabase Function/edge job).
 * Monitoring (Sentry/Logflare).
 * PWA manifest/service worker.
@@ -219,6 +224,8 @@ CODING NOTES
 * **Data fetching in server components**: Gebruik altijd direct Supabase Admin Client i.p.v. `fetch()` naar interne API routes (fetch passeert geen cookies in server components).
 * **Error handling**: Uitgebreide `console.error` logging met error codes, messages, details en hints voor debugging.
 * **Schema validatie**: Rating velden kunnen 0 zijn in component state; stuur alleen waarde > 0 mee naar API (anders undefined).
+* **JOIN queries met RLS**: Vermijd JOINs in Supabase queries wanneer RLS policies actief zijn. Gebruik in plaats daarvan aparte queries (zoals `fetchFeed` en `fetchFavorites`): eerst de junction tabel ophalen, dan de gerelateerde data apart met `.in()` en combineren met een Map voor lookup.
+* **Favorites feature**: FavoriteButton component toont hartje icoon op recept detailpagina. Gebruik `cache: 'no-store'` voor fresh data. Revalidate homepage na toevoegen/verwijderen favoriet.
 
 INITIAL PLAN (Sprint 0 → MVP)
 
@@ -329,7 +336,7 @@ CURRENT STATUS (December 2024)
 - Mobile navigation met hamburger menu
 - Navigation icons toegevoegd
 - Clean mobile-first layout
-- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar, StartSessionButton
+- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar, StartSessionButton, FavoriteButton
 - Professional desktop navigation layout met user dropdown
 - Mobile menu met juiste volgorde en logout functionaliteit
 - Photo upload functionaliteit (desktop file upload + mobile camera capture)
@@ -350,16 +357,23 @@ CURRENT STATUS (December 2024)
 - Homepage: Recente Activiteit sectie met laatste 5 activiteiten (recepten + sessies), time ago labels, iconen en links
 - Profile page: Statistieken sectie toont nu correct aantal recepten, sessies en gemiddelde rating
 - Sessions list pagina met status, duur, rating, temp count en photo count
+- Favorites feature volledig geïmplementeerd:
+  * Database schema: recipe_favorites tabel met unique constraint
+  * RLS policies: users kunnen alleen eigen favorieten beheren
+  * API endpoints: POST/DELETE /api/recipes/[id]/favorite, GET /api/recipes/favorites
+  * FavoriteButton component: hartje icoon op recept detailpagina (links naast Start Sessie knop)
+  * Homepage: Favorieten sectie tussen Feed en Recente Activiteit
+  * Geen JOINs gebruikt - aparte queries zoals fetchFeed patroon
 
 🔄 IN PROGRESS:
 - Branch protection rules op main
-- Advanced features (favorites, search, notifications)
+- Advanced features (search, notifications)
 - PWA manifest en service worker
 - Real-time updates (Supabase Realtime)
 
 📋 VOLGENDE STAPPEN:
 1. Branch protection rules op main
-2. Advanced features (favorites, search, notifications)
+2. Advanced features (search, notifications)
 3. PWA manifest en service worker
 4. Real-time updates (Supabase Realtime)
 5. Performance optimizations en monitoring
