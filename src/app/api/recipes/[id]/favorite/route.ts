@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -77,6 +78,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
+    // Revalidate homepage to show updated favorites
+    revalidatePath("/");
+
     return NextResponse.json(favorite);
   } catch (error) {
     console.error("POST /api/recipes/[id]/favorite - Unexpected error:", error);
@@ -114,6 +118,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       });
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
+
+    // Revalidate homepage to show updated favorites
+    revalidatePath("/");
 
     return NextResponse.json({ success: true });
   } catch (error) {

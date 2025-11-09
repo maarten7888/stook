@@ -19,15 +19,39 @@ export function FavoriteButton({ recipeId, className }: FavoriteButtonProps) {
   useEffect(() => {
     const checkFavorite = async () => {
       try {
-        const response = await fetch(`/api/recipes/favorites`);
+        // Check if this specific recipe is favorited by checking favorites list
+        const response = await fetch(`/api/recipes/favorites`, {
+          cache: 'no-store', // Always fetch fresh data
+        });
+        
         if (!response.ok) {
-          throw new Error("Failed to fetch favorites");
+          // If unauthorized, user is not logged in, so not favorite
+          if (response.status === 401) {
+            setIsFavorite(false);
+            setIsLoading(false);
+            return;
+          }
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Error fetching favorites:", {
+            status: response.status,
+            error: errorData
+          });
+          setIsFavorite(false);
+          setIsLoading(false);
+          return;
         }
+        
         const data = await response.json();
-        const isFav = data.recipes?.some((r: { id: string }) => r.id === recipeId) || false;
+        console.log("Favorites data:", { recipes: data.recipes, recipeId });
+        
+        // Check if this recipe is in the favorites list
+        const isFav = Array.isArray(data.recipes) && data.recipes.some((r: { id: string }) => r.id === recipeId);
+        console.log("Is favorite:", isFav);
         setIsFavorite(isFav);
       } catch (error) {
         console.error("Error checking favorite:", error);
+        // On error, assume not favorite
+        setIsFavorite(false);
       } finally {
         setIsLoading(false);
       }
@@ -40,32 +64,41 @@ export function FavoriteButton({ recipeId, className }: FavoriteButtonProps) {
     if (isToggling) return;
 
     setIsToggling(true);
+    const previousState = isFavorite; // Store previous state for rollback
+    
+    // Optimistic update
+    setIsFavorite(!isFavorite);
+    
     try {
-      if (isFavorite) {
+      if (previousState) {
         // Remove from favorites
         const response = await fetch(`/api/recipes/${recipeId}/favorite`, {
           method: "DELETE",
+          cache: 'no-store',
         });
 
         if (!response.ok) {
           const error = await response.json();
+          // Rollback on error
+          setIsFavorite(previousState);
           throw new Error(error.error || "Fout bij verwijderen favoriet");
         }
 
-        setIsFavorite(false);
         toast.success("Verwijderd uit favorieten");
       } else {
         // Add to favorites
         const response = await fetch(`/api/recipes/${recipeId}/favorite`, {
           method: "POST",
+          cache: 'no-store',
         });
 
         if (!response.ok) {
           const error = await response.json();
+          // Rollback on error
+          setIsFavorite(previousState);
           throw new Error(error.error || "Fout bij toevoegen favoriet");
         }
 
-        setIsFavorite(true);
         toast.success("Toegevoegd aan favorieten");
       }
     } catch (error) {
