@@ -12,22 +12,10 @@ export async function GET() {
 
     const adminSupabase = createAdminClient();
 
-    // Get favorites with recipe details
+    // Get favorites (without JOIN to avoid RLS issues)
     const { data: favorites, error: favoritesError } = await adminSupabase
       .from('recipe_favorites')
-      .select(`
-        id,
-        created_at,
-        recipe_id,
-        recipes (
-          id,
-          title,
-          description,
-          visibility,
-          user_id,
-          created_at
-        )
-      `)
+      .select('id, created_at, recipe_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
@@ -43,20 +31,42 @@ export async function GET() {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
-    // Transform data to flatten recipe details
-    // Note: Supabase returns arrays for joined relations, even for one-to-one
-    type FavoriteWithRecipe = {
+    console.log("Raw favorites data:", JSON.stringify(favorites, null, 2));
+
+    // Get recipe details separately for each favorite
+    const recipeIds = (favorites || []).map((fav: { recipe_id: string }) => fav.recipe_id);
+    
+    if (recipeIds.length === 0) {
+      return NextResponse.json({ recipes: [] });
+    }
+
+    // Fetch all recipes at once
+    const { data: recipesData, error: recipesError } = await adminSupabase
+      .from('recipes')
+      .select('id, title, description, visibility, user_id, created_at')
+      .in('id', recipeIds);
+
+    if (recipesError) {
+      console.error("GET /api/recipes/favorites - Error fetching recipes:", {
+        error: recipesError,
+        code: recipesError?.code,
+        message: recipesError?.message
+      });
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+
+    console.log("Recipes data:", JSON.stringify(recipesData, null, 2));
+
+    // Create a map of recipe_id -> recipe for quick lookup
+    const recipesMap = new Map(
+      (recipesData || []).map((recipe: { id: string; title: string; description: string | null; visibility: string; user_id: string; created_at: string }) => [recipe.id, recipe])
+    );
+
+    // Transform data to combine favorites with recipe details
+    type Favorite = {
       id: string;
       created_at: string;
       recipe_id: string;
-      recipes: {
-        id: string;
-        title: string;
-        description: string | null;
-        visibility: string;
-        user_id: string;
-        created_at: string;
-      }[] | null;
     };
 
     type RecipeListItem = {
@@ -69,18 +79,43 @@ export async function GET() {
       favoritedAt: string;
     };
 
-    const recipes: RecipeListItem[] = (favorites || []).map((fav: FavoriteWithRecipe) => {
-      const recipe = fav.recipes?.[0]; // Get first (and only) recipe from array
+    const recipes: RecipeListItem[] = (favorites || []).map((fav: Favorite) => {
+      const recipe = recipesMap.get(fav.recipe_id);
+      
+      // Log for debugging
+      console.log("Processing favorite:", {
+        favorite_id: fav.id,
+        recipe_id: fav.recipe_id,
+        recipe_found: !!recipe,
+        recipe: recipe
+      });
+      
+      if (!recipe) {
+        console.warn("Recipe not found for favorite:", fav.recipe_id);
+        return null;
+      }
+      
       return {
         id: fav.recipe_id,
-        title: recipe?.title || '',
-        description: recipe?.description || null,
-        visibility: recipe?.visibility || 'private',
-        userId: recipe?.user_id || null,
-        createdAt: recipe?.created_at || null,
+        title: recipe.title || '',
+        description: recipe.description || null,
+        visibility: recipe.visibility || 'private',
+        userId: recipe.user_id || null,
+        createdAt: recipe.created_at || null,
         favoritedAt: fav.created_at,
       };
-    }).filter((recipe: RecipeListItem) => recipe.title); // Filter out any invalid recipes
+    }).filter((recipe: RecipeListItem | null): recipe is RecipeListItem => {
+      if (!recipe) {
+        return false;
+      }
+      // Don't filter out recipes without title - just log them
+      if (!recipe.title) {
+        console.warn("Recipe without title filtered out:", recipe);
+      }
+      return !!recipe.title;
+    }); // Filter out any invalid recipes
+
+    console.log("Returning recipes:", recipes.map(r => ({ id: r.id, title: r.title })));
 
     return NextResponse.json({ recipes });
   } catch (error) {
