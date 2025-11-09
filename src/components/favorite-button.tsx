@@ -42,12 +42,20 @@ export function FavoriteButton({ recipeId, className }: FavoriteButtonProps) {
         }
         
         const data = await response.json();
-        console.log("Favorites data:", { recipes: data.recipes, recipeId });
+        console.log("Favorites data:", data);
+        console.log("Recipe ID to check:", recipeId);
+        console.log("Recipes array:", data.recipes);
         
         // Check if this recipe is in the favorites list
-        const isFav = Array.isArray(data.recipes) && data.recipes.some((r: { id: string }) => r.id === recipeId);
-        console.log("Is favorite:", isFav);
-        setIsFavorite(isFav);
+        if (Array.isArray(data.recipes)) {
+          console.log("Recipe IDs in favorites:", data.recipes.map((r: { id: string }) => r.id));
+          const isFav = data.recipes.some((r: { id: string }) => r.id === recipeId);
+          console.log("Is favorite:", isFav, "Recipe ID:", recipeId, "Type:", typeof recipeId);
+          setIsFavorite(isFav);
+        } else {
+          console.warn("Recipes is not an array:", data.recipes);
+          setIsFavorite(false);
+        }
       } catch (error) {
         console.error("Error checking favorite:", error);
         // On error, assume not favorite
@@ -87,6 +95,7 @@ export function FavoriteButton({ recipeId, className }: FavoriteButtonProps) {
         toast.success("Verwijderd uit favorieten");
       } else {
         // Add to favorites
+        console.log("Adding favorite for recipe:", recipeId);
         const response = await fetch(`/api/recipes/${recipeId}/favorite`, {
           method: "POST",
           cache: 'no-store',
@@ -94,12 +103,33 @@ export function FavoriteButton({ recipeId, className }: FavoriteButtonProps) {
 
         if (!response.ok) {
           const error = await response.json();
+          console.error("Error adding favorite:", { status: response.status, error });
           // Rollback on error
           setIsFavorite(previousState);
           throw new Error(error.error || "Fout bij toevoegen favoriet");
         }
 
+        const result = await response.json();
+        console.log("Favorite added successfully:", result);
         toast.success("Toegevoegd aan favorieten");
+        
+        // Re-check favorites after a short delay to ensure state is updated
+        setTimeout(() => {
+          const recheck = async () => {
+            try {
+              const checkResponse = await fetch(`/api/recipes/favorites`, { cache: 'no-store' });
+              if (checkResponse.ok) {
+                const checkData = await checkResponse.json();
+                const isFav = Array.isArray(checkData.recipes) && checkData.recipes.some((r: { id: string }) => r.id === recipeId);
+                console.log("Re-check after add - Is favorite:", isFav);
+                setIsFavorite(isFav);
+              }
+            } catch (e) {
+              console.error("Error re-checking favorite:", e);
+            }
+          };
+          recheck();
+        }, 500);
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
