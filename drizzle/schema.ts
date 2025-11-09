@@ -114,11 +114,20 @@ export const recipeTags = pgTable("recipe_tags", {
   tagId: uuid("tag_id").references(() => tags.id).notNull(),
 });
 
+// Recipe favorites junction table
+export const recipeFavorites = pgTable("recipe_favorites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => profiles.id).notNull(),
+  recipeId: uuid("recipe_id").references(() => recipes.id).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   recipes: many(recipes),
   cookSessions: many(cookSessions),
   reviews: many(reviews),
+  favorites: many(recipeFavorites),
 }));
 
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
@@ -132,6 +141,7 @@ export const recipesRelations = relations(recipes, ({ one, many }) => ({
   cookSessions: many(cookSessions),
   reviews: many(reviews),
   tags: many(recipeTags),
+  favorites: many(recipeFavorites),
 }));
 
 export const ingredientsRelations = relations(ingredients, ({ many }) => ({
@@ -210,5 +220,16 @@ export const recipeTagsRelations = relations(recipeTags, ({ one }) => ({
   tag: one(tags, {
     fields: [recipeTags.tagId],
     references: [tags.id],
+  }),
+}));
+
+export const recipeFavoritesRelations = relations(recipeFavorites, ({ one }) => ({
+  user: one(profiles, {
+    fields: [recipeFavorites.userId],
+    references: [profiles.id],
+  }),
+  recipe: one(recipes, {
+    fields: [recipeFavorites.recipeId],
+    references: [recipes.id],
   }),
 }));

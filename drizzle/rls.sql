@@ -254,3 +254,15 @@ CREATE POLICY "Users can manage recipe tags for own recipes" ON recipe_tags
       AND recipes.user_id = auth.uid()
     )
   );
+
+-- Recipe favorites policies
+ALTER TABLE recipe_favorites ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own favorites" ON recipe_favorites
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert own favorites" ON recipe_favorites
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete own favorites" ON recipe_favorites
+  FOR DELETE USING (user_id = auth.uid());

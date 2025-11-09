@@ -1,7 +1,7 @@
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Camera, Clock, ArrowRight, Star, Thermometer } from "lucide-react";
+import { BookOpen, Camera, Clock, ArrowRight, Star, Thermometer, Heart } from "lucide-react";
 import Link from "next/link";
 
 async function fetchUserStats(userId: string) {
@@ -69,6 +69,49 @@ async function fetchUserStats(userId: string) {
       recipesThisMonth: 0,
       sessionsThisWeek: 0,
     };
+  }
+}
+
+async function fetchFavorites(userId: string) {
+  try {
+    const adminSupabase = createAdminClient();
+
+    // Get favorites with recipe details
+    const { data: favorites, error: favoritesError } = await adminSupabase
+      .from('recipe_favorites')
+      .select(`
+        id,
+        created_at,
+        recipe_id,
+        recipes (
+          id,
+          title,
+          description,
+          visibility,
+          user_id,
+          created_at
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(6);
+
+    if (favoritesError) {
+      console.error("Error fetching favorites:", favoritesError);
+      return [];
+    }
+
+    // Transform data to flatten recipe details
+    const recipes = (favorites || []).map((fav: any) => ({
+      id: fav.recipe_id,
+      title: fav.recipes?.title || '',
+      description: fav.recipes?.description || null,
+    })).filter((recipe: any) => recipe.title); // Filter out any invalid recipes
+
+    return recipes;
+  } catch (error) {
+    console.error("Error fetching favorites:", error);
+    return [];
   }
 }
 
@@ -182,9 +225,10 @@ export default async function RootPage() {
     // User is logged in, show the app content with layout
     const userId = session.user.id;
 
-    const [data, stats, recentActivity] = await Promise.all([
+    const [data, stats, favorites, recentActivity] = await Promise.all([
       fetchFeed(userId),
       fetchUserStats(userId),
+      fetchFavorites(userId),
       fetchRecentActivity(userId),
     ]);
 
@@ -287,6 +331,34 @@ export default async function RootPage() {
                     <Link href={`/recipes/${r.id}`} className="block">
                       <h3 className="text-lg font-heading text-ash mb-1">{r.title}</h3>
                       <p className="text-sm text-smoke line-clamp-2">{r.description ?? ""}</p>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Favorites */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-heading font-bold text-ash">Mijn Favorieten</h2>
+          {favorites.length === 0 ? (
+            <Card className="bg-coals border-ash">
+              <CardContent className="p-6 text-smoke">
+                Nog geen favorieten. Voeg recepten toe aan je favorieten.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {favorites.map((recipe: { id: string; title: string; description: string | null }) => (
+                <Card key={recipe.id} className="bg-coals border-ash">
+                  <CardContent className="p-4">
+                    <Link href={`/recipes/${recipe.id}`} className="block">
+                      <div className="flex items-start gap-2 mb-1">
+                        <Heart className="h-4 w-4 text-ember flex-shrink-0 mt-1" />
+                        <h3 className="text-lg font-heading text-ash flex-1">{recipe.title}</h3>
+                      </div>
+                      <p className="text-sm text-smoke line-clamp-2">{recipe.description ?? ""}</p>
                     </Link>
                   </CardContent>
                 </Card>
