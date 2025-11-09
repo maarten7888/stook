@@ -76,22 +76,10 @@ async function fetchFavorites(userId: string) {
   try {
     const adminSupabase = createAdminClient();
 
-    // Get favorites with recipe details
+    // Get favorites (without JOIN to avoid RLS issues)
     const { data: favorites, error: favoritesError } = await adminSupabase
       .from('recipe_favorites')
-      .select(`
-        id,
-        created_at,
-        recipe_id,
-        recipes (
-          id,
-          title,
-          description,
-          visibility,
-          user_id,
-          created_at
-        )
-      `)
+      .select('id, created_at, recipe_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(6);
@@ -101,38 +89,43 @@ async function fetchFavorites(userId: string) {
       return [];
     }
 
-    // Transform data to flatten recipe details
-    // Note: Supabase returns arrays for joined relations, even for one-to-one
-    type FavoriteWithRecipe = {
-      id: string;
-      created_at: string;
-      recipe_id: string;
-      recipes: {
-        id: string;
-        title: string;
-        description: string | null;
-        visibility: string;
-        user_id: string;
-        created_at: string;
-      }[] | null;
-    };
+    if (!favorites || favorites.length === 0) {
+      return [];
+    }
 
-    type FavoriteRecipe = {
-      id: string;
-      title: string;
-      description: string | null;
-    };
+    // Get recipe IDs
+    const recipeIds = favorites.map((fav: { recipe_id: string }) => fav.recipe_id);
 
-    const recipes: FavoriteRecipe[] = (favorites || []).map((fav: FavoriteWithRecipe) => {
-      const recipe = fav.recipes?.[0]; // Get first (and only) recipe from array
-      return {
-        id: fav.recipe_id,
-        title: recipe?.title || '',
-        description: recipe?.description || null,
-      };
-    }).filter((recipe: FavoriteRecipe) => recipe.title); // Filter out any invalid recipes
+    // Fetch recipes separately (same pattern as fetchFeed)
+    const { data: recipesData, error: recipesError } = await adminSupabase
+      .from('recipes')
+      .select('id, title, description')
+      .in('id', recipeIds);
 
-    return recipes;
+    if (recipesError) {
+      console.error("Error fetching favorite recipes:", recipesError);
+      return [];
+    }
+
+    // Create a map for quick lookup
+    const recipesMap = new Map(
+      (recipesData || []).map((recipe: { id: string; title: string; description: string | null }) => [recipe.id, recipe])
+    );
+
+    // Combine favorites with recipe details, preserving order
+    const favoriteRecipes = favorites
+      .map((fav: { recipe_id: string }) => {
+        const recipe = recipesMap.get(fav.recipe_id);
+        if (!recipe) return null;
+        return {
+          id: fav.recipe_id,
+          title: recipe.title,
+          description: recipe.description,
+        };
+      })
+      .filter((recipe): recipe is { id: string; title: string; description: string | null } => recipe !== null);
+
+    return favoriteRecipes;
   } catch (error) {
     console.error("Error fetching favorites:", error);
     return [];
