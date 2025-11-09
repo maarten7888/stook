@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -44,15 +44,43 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data to flatten recipe details
-    const recipes = (favorites || []).map((fav: any) => ({
-      id: fav.recipe_id,
-      title: fav.recipes?.title || '',
-      description: fav.recipes?.description || null,
-      visibility: fav.recipes?.visibility || 'private',
-      userId: fav.recipes?.user_id || null,
-      createdAt: fav.recipes?.created_at || null,
-      favoritedAt: fav.created_at,
-    })).filter((recipe: any) => recipe.title); // Filter out any invalid recipes
+    // Note: Supabase returns arrays for joined relations, even for one-to-one
+    type FavoriteWithRecipe = {
+      id: string;
+      created_at: string;
+      recipe_id: string;
+      recipes: {
+        id: string;
+        title: string;
+        description: string | null;
+        visibility: string;
+        user_id: string;
+        created_at: string;
+      }[] | null;
+    };
+
+    type RecipeListItem = {
+      id: string;
+      title: string;
+      description: string | null;
+      visibility: string;
+      userId: string | null;
+      createdAt: string | null;
+      favoritedAt: string;
+    };
+
+    const recipes: RecipeListItem[] = (favorites || []).map((fav: FavoriteWithRecipe) => {
+      const recipe = fav.recipes?.[0]; // Get first (and only) recipe from array
+      return {
+        id: fav.recipe_id,
+        title: recipe?.title || '',
+        description: recipe?.description || null,
+        visibility: recipe?.visibility || 'private',
+        userId: recipe?.user_id || null,
+        createdAt: recipe?.created_at || null,
+        favoritedAt: fav.created_at,
+      };
+    }).filter((recipe: RecipeListItem) => recipe.title); // Filter out any invalid recipes
 
     return NextResponse.json({ recipes });
   } catch (error) {

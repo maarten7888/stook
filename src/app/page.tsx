@@ -102,11 +102,35 @@ async function fetchFavorites(userId: string) {
     }
 
     // Transform data to flatten recipe details
-    const recipes = (favorites || []).map((fav: any) => ({
-      id: fav.recipe_id,
-      title: fav.recipes?.title || '',
-      description: fav.recipes?.description || null,
-    })).filter((recipe: any) => recipe.title); // Filter out any invalid recipes
+    // Note: Supabase returns arrays for joined relations, even for one-to-one
+    type FavoriteWithRecipe = {
+      id: string;
+      created_at: string;
+      recipe_id: string;
+      recipes: {
+        id: string;
+        title: string;
+        description: string | null;
+        visibility: string;
+        user_id: string;
+        created_at: string;
+      }[] | null;
+    };
+
+    type FavoriteRecipe = {
+      id: string;
+      title: string;
+      description: string | null;
+    };
+
+    const recipes: FavoriteRecipe[] = (favorites || []).map((fav: FavoriteWithRecipe) => {
+      const recipe = fav.recipes?.[0]; // Get first (and only) recipe from array
+      return {
+        id: fav.recipe_id,
+        title: recipe?.title || '',
+        description: recipe?.description || null,
+      };
+    }).filter((recipe: FavoriteRecipe) => recipe.title); // Filter out any invalid recipes
 
     return recipes;
   } catch (error) {
