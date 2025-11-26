@@ -156,7 +156,7 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
 
   if (loading) {
     return (
-      <Button disabled className={className}>
+      <Button disabled className={`bg-ember/50 text-white ${className || ""}`}>
         Laden...
       </Button>
     );
@@ -164,7 +164,11 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
 
   if (status === 'friends') {
     return (
-      <Button disabled variant="outline" className={className}>
+      <Button 
+        disabled 
+        variant="outline" 
+        className={`border-ash text-ash ${className || ""}`}
+      >
         <UserCheck className="h-4 w-4 mr-2" />
         Vrienden
       </Button>
@@ -177,7 +181,7 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
         onClick={handleCancelRequest} 
         disabled={actionLoading}
         variant="outline" 
-        className={className}
+        className={`border-ash text-ash hover:bg-coals ${className || ""}`}
       >
         <Clock className="h-4 w-4 mr-2" />
         {actionLoading ? "Annuleren..." : "Verzoek verzonden"}
@@ -191,7 +195,7 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
         <Button 
           onClick={handleAcceptRequest} 
           disabled={actionLoading}
-          className={className}
+          className={`bg-ember hover:bg-ember/90 text-white ${className || ""}`}
         >
           <Check className="h-4 w-4 mr-2" />
           Accepteren
@@ -200,7 +204,7 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
           onClick={handleDeclineRequest} 
           disabled={actionLoading}
           variant="outline"
-          className={className}
+          className={`border-ash text-ash hover:bg-coals ${className || ""}`}
         >
           <X className="h-4 w-4 mr-2" />
           Weigeren
@@ -213,7 +217,7 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
     <Button 
       onClick={handleSendRequest} 
       disabled={actionLoading}
-      className={className}
+      className={`bg-ember hover:bg-ember/90 text-white ${className || ""}`}
     >
       <UserPlus className="h-4 w-4 mr-2" />
       {actionLoading ? "Verzenden..." : "Vriend toevoegen"}
