@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { Menu, X, Plus, Download, ChefHat, User, LogOut, ChevronDown, Home } from "lucide-react";
+import { Menu, X, Plus, Download, ChefHat, User, LogOut, ChevronDown, Home, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -128,6 +128,12 @@ export function Navbar({ user, className }: NavbarProps) {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link href="/favorites" className="flex items-center text-smoke hover:text-white">
+                        <Heart className="mr-2 h-4 w-4" />
+                        <span>Favorieten</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <form action="/auth/logout" method="post" className="w-full">
                         <button type="submit" className="flex items-center w-full text-left text-smoke hover:text-white">
                           <LogOut className="mr-2 h-4 w-4" />
@@ -235,6 +241,15 @@ export function Navbar({ user, className }: NavbarProps) {
                   >
                     <ChefHat className="h-4 w-4" />
                     Mijn Sessies
+                  </Link>
+                  
+                  <Link
+                    href="/favorites"
+                    className="block px-3 py-2 text-smoke hover:text-white hover:bg-ash/20 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Heart className="h-4 w-4" />
+                    Favorieten
                   </Link>
                   
                   {/* Divider */}

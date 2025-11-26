@@ -17,6 +17,10 @@ ALTER TABLE recipe_favorites ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
 
+-- Allow public read of limited profile fields (for recipe authors, reviews, etc.)
+CREATE POLICY "Anyone can view public profile info" ON profiles
+  FOR SELECT USING (true);
+
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
