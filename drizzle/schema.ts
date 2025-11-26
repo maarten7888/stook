@@ -1,5 +1,6 @@
-import { pgTable, uuid, text, integer, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, numeric, timestamp, jsonb, unique, check } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 // Profiles table (mirror of Supabase auth.users)
 export const profiles = pgTable("profiles", {
@@ -130,6 +131,30 @@ export const recipeFavorites = pgTable("recipe_favorites", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Friend requests table
+export const friendRequests = pgTable("friend_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  requesterId: uuid("requester_id").references(() => profiles.id).notNull(),
+  receiverId: uuid("receiver_id").references(() => profiles.id).notNull(),
+  status: text("status", { enum: ["pending", "accepted", "declined", "cancelled"] }).default("pending").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  unq: unique().on(t.requesterId, t.receiverId),
+  checkNotSelf: check('requester_not_receiver', sql`"requester_id" != "receiver_id"`),
+}));
+
+// Friendships table (bidirectional)
+export const friendships = pgTable("friendships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => profiles.id).notNull(),
+  friendId: uuid("friend_id").references(() => profiles.id).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  unq: unique().on(t.userId, t.friendId),
+  checkNotSelf: check('user_not_friend', sql`"user_id" != "friend_id"`),
+}));
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   recipes: many(recipes),
@@ -138,6 +163,10 @@ export const profilesRelations = relations(profiles, ({ many }) => ({
   followers: many(userFollows, { relationName: "followers" }),
   following: many(userFollows, { relationName: "following" }),
   favorites: many(recipeFavorites),
+  sentFriendRequests: many(friendRequests, { relationName: "requester" }),
+  receivedFriendRequests: many(friendRequests, { relationName: "receiver" }),
+  friendships: many(friendships, { relationName: "user" }),
+  friends: many(friendships, { relationName: "friend" }),
 }));
 
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
@@ -254,5 +283,31 @@ export const recipeFavoritesRelations = relations(recipeFavorites, ({ one }) => 
   recipe: one(recipes, {
     fields: [recipeFavorites.recipeId],
     references: [recipes.id],
+  }),
+}));
+
+export const friendRequestsRelations = relations(friendRequests, ({ one }) => ({
+  requester: one(profiles, {
+    fields: [friendRequests.requesterId],
+    references: [profiles.id],
+    relationName: "requester",
+  }),
+  receiver: one(profiles, {
+    fields: [friendRequests.receiverId],
+    references: [profiles.id],
+    relationName: "receiver",
+  }),
+}));
+
+export const friendshipsRelations = relations(friendships, ({ one }) => ({
+  user: one(profiles, {
+    fields: [friendships.userId],
+    references: [profiles.id],
+    relationName: "user",
+  }),
+  friend: one(profiles, {
+    fields: [friendships.friendId],
+    references: [profiles.id],
+    relationName: "friend",
   }),
 }));

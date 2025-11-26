@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RecipeCard } from "@/components/recipe-card";
 import { FollowButton } from "@/components/follow-button";
+import { FriendRequestButton } from "@/components/friend-request-button";
 import { MapPin, ChefHat, Award } from "lucide-react";
 import Link from "next/link";
 
@@ -57,6 +58,12 @@ async function fetchUserStats(userId: string) {
       .select('*', { count: 'exact', head: true })
       .eq('follower_id', userId);
 
+    // Get friends count
+    const { count: friendsCount } = await adminSupabase
+      .from('friendships')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     // Get average rating
     const { data: publicRecipes } = await adminSupabase
       .from('recipes')
@@ -85,6 +92,7 @@ async function fetchUserStats(userId: string) {
       sessions: sessionCount || 0,
       followers: followerCount || 0,
       following: followingCount || 0,
+      friends: friendsCount || 0,
       avgRating: avgRating ? parseFloat(avgRating) : null,
     };
   } catch (error) {
@@ -94,6 +102,7 @@ async function fetchUserStats(userId: string) {
       sessions: 0,
       followers: 0,
       following: 0,
+      friends: 0,
       avgRating: null,
     };
   }
@@ -192,7 +201,10 @@ export default async function UserProfilePage({
                   {profile.display_name || "Gebruiker"}
                 </h1>
                 {!isOwnProfile && session && (
-                  <FollowButton userId={id} />
+                  <div className="flex gap-2">
+                    <FriendRequestButton userId={id} />
+                    <FollowButton userId={id} />
+                  </div>
                 )}
               </div>
               {profile.bio && (
@@ -224,7 +236,7 @@ export default async function UserProfilePage({
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card className="bg-coals border-ash">
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-ash">{stats.recipes}</div>
@@ -247,6 +259,12 @@ export default async function UserProfilePage({
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-ash">{stats.following}</div>
             <div className="text-xs text-smoke mt-1">Volgend</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-coals border-ash">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-ash">{stats.friends}</div>
+            <div className="text-xs text-smoke mt-1">Vrienden</div>
           </CardContent>
         </Card>
         <Card className="bg-coals border-ash">

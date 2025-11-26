@@ -12,6 +12,8 @@ ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friend_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles
@@ -20,6 +22,16 @@ CREATE POLICY "Users can view own profile" ON profiles
 -- Allow public read of limited profile fields (for recipe authors, reviews, etc.)
 CREATE POLICY "Anyone can view public profile info" ON profiles
   FOR SELECT USING (true);
+
+-- Friends can view full profile
+CREATE POLICY "Friends can view full profile" ON profiles
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM friendships
+      WHERE (friendships.user_id = auth.uid() AND friendships.friend_id = profiles.id)
+         OR (friendships.friend_id = auth.uid() AND friendships.user_id = profiles.id)
+    )
+  );
 
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
@@ -121,6 +133,19 @@ CREATE POLICY "Users can view photos for accessible recipes/sessions" ON photos
     )
   );
 
+-- Friends can view photos from friend's sessions
+CREATE POLICY "Friends can view photos from friend's sessions" ON photos
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM cook_sessions
+      JOIN friendships ON (
+        (friendships.user_id = auth.uid() AND friendships.friend_id = cook_sessions.user_id)
+        OR (friendships.friend_id = auth.uid() AND friendships.user_id = cook_sessions.user_id)
+      )
+      WHERE cook_sessions.id = photos.cook_session_id
+    )
+  );
+
 -- Allow authenticated users to insert photos
 -- Ownership is verified in the API layer before insert
 CREATE POLICY "Authenticated users can insert photos" ON photos
@@ -166,6 +191,16 @@ CREATE POLICY "Users can view own cook sessions or public recipe sessions" ON co
     )
   );
 
+-- Friends can view private sessions
+CREATE POLICY "Friends can view private sessions" ON cook_sessions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM friendships
+      WHERE (friendships.user_id = auth.uid() AND friendships.friend_id = cook_sessions.user_id)
+         OR (friendships.friend_id = auth.uid() AND friendships.user_id = cook_sessions.user_id)
+    )
+  );
+
 CREATE POLICY "Users can manage own cook sessions" ON cook_sessions
   FOR ALL USING (user_id = auth.uid());
 
@@ -183,6 +218,19 @@ CREATE POLICY "Users can view temps for accessible sessions" ON session_temps
           AND recipes.visibility = 'public'
         )
       )
+    )
+  );
+
+-- Friends can view temps from friend's sessions
+CREATE POLICY "Friends can view temps from friend's sessions" ON session_temps
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM cook_sessions
+      JOIN friendships ON (
+        (friendships.user_id = auth.uid() AND friendships.friend_id = cook_sessions.user_id)
+        OR (friendships.friend_id = auth.uid() AND friendships.user_id = cook_sessions.user_id)
+      )
+      WHERE cook_sessions.id = session_temps.cook_session_id
     )
   );
 
@@ -298,3 +346,29 @@ CREATE POLICY "Users can create own favorites" ON recipe_favorites
 
 CREATE POLICY "Users can delete own favorites" ON recipe_favorites
   FOR DELETE USING (user_id = auth.uid());
+
+-- Friend requests policies
+CREATE POLICY "Users can view own friend requests" ON friend_requests
+  FOR SELECT USING (requester_id = auth.uid() OR receiver_id = auth.uid());
+
+CREATE POLICY "Users can create friend requests" ON friend_requests
+  FOR INSERT WITH CHECK (
+    requester_id = auth.uid() 
+    AND requester_id != receiver_id
+  );
+
+CREATE POLICY "Users can update received friend requests" ON friend_requests
+  FOR UPDATE USING (receiver_id = auth.uid());
+
+CREATE POLICY "Users can cancel own sent requests" ON friend_requests
+  FOR UPDATE USING (requester_id = auth.uid() AND status = 'pending');
+
+-- Friendships policies
+CREATE POLICY "Users can view own friendships" ON friendships
+  FOR SELECT USING (user_id = auth.uid() OR friend_id = auth.uid());
+
+CREATE POLICY "Anyone can view friendship count (for public profiles)" ON friendships
+  FOR SELECT USING (true);
+
+-- Note: Friendships are created via API/server actions after accepting friend request
+-- No direct INSERT policy needed as we use service role key in API

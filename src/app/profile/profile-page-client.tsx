@@ -18,6 +18,7 @@ import {
   Award
 } from "lucide-react";
 import { ProfileForm } from "./profile-form";
+import { FriendsList } from "@/components/friends-list";
 
 interface Profile {
   id: string;
@@ -318,6 +319,8 @@ export function ProfilePageClient({ initialProfile, initialStats }: ProfilePageC
               )}
             </CardContent>
           </Card>
+
+          <FriendsList userId={profile?.id || ""} />
         </div>
       </div>
     </ProfileForm>
