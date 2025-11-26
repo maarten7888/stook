@@ -452,14 +452,6 @@ export default function NewRecipePage() {
                     Bekijk Recept
                   </Button>
                 )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/recipes")}
-                  className="border-ash text-smoke hover:bg-ash/10"
-                >
-                  Annuleren
-                </Button>
               </div>
             </CardContent>
           </Card>

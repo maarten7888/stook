@@ -533,14 +533,6 @@ export default function EditRecipePage() {
                 >
                   {saving ? "Opslaan..." : "Wijzigingen Opslaan"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push(`/recipes/${id}`)}
-                  className="border-ash text-smoke hover:bg-ash/10"
-                >
-                  Annuleren
-                </Button>
               </div>
             </CardContent>
           </Card>
