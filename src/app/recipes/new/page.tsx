@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, ChefHat } from "lucide-react";
+import { Plus, X, ChefHat, ArrowLeft } from "lucide-react";
 import { PhotoUploader } from "@/components/photo-uploader";
 
 interface Ingredient {
@@ -147,21 +147,19 @@ export default function NewRecipePage() {
 
   return (
     <div className="min-h-screen bg-charcoal">
-      {/* Header */}
-      <div className="bg-coals border-b border-ash/20">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-heading font-bold text-ash">Nieuw Recept</h1>
-            <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
-              <Link href="/recipes">
-                Annuleren
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Back button */}
+        <div className="mb-6">
+          <Button asChild variant="ghost" size="sm" className="text-smoke hover:text-ash">
+            <Link href="/recipes">
+              <ArrowLeft className="h-5 w-5 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Terug naar recepten</span>
+            </Link>
+          </Button>
+        </div>
+
+        {/* Page Title */}
+        <h1 className="text-4xl font-heading font-bold text-ash mb-8">Nieuw Recept</h1>
         <form onSubmit={onSubmit} className="space-y-8">
           {/* Basic Info */}
           <Card className="bg-coals border-ash">
@@ -457,7 +455,7 @@ export default function NewRecipePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.back()}
+                  onClick={() => router.push("/recipes")}
                   className="border-ash text-smoke hover:bg-ash/10"
                 >
                   Annuleren
