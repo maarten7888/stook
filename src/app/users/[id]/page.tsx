@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RecipeCard } from "@/components/recipe-card";
 import { FollowButton } from "@/components/follow-button";
 import { FriendRequestButton } from "@/components/friend-request-button";
-import { MapPin, ChefHat, Award } from "lucide-react";
+import { MapPin, ChefHat, Award, BookOpen, Clock, Users, UserCheck, Star } from "lucide-react";
 import Link from "next/link";
 
 async function fetchUserProfile(userId: string) {
@@ -196,14 +196,14 @@ export default async function UserProfilePage({
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <h1 className="text-3xl font-heading font-bold text-ash">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-heading font-bold text-ash">
                   {profile.display_name || "Gebruiker"}
                 </h1>
                 {!isOwnProfile && session && (
-                  <div className="flex gap-2">
-                    <FriendRequestButton userId={id} />
-                    <FollowButton userId={id} />
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <FriendRequestButton userId={id} className="flex-1 sm:flex-none text-sm" />
+                    <FollowButton userId={id} className="flex-1 sm:flex-none text-sm" />
                   </div>
                 )}
               </div>
@@ -235,47 +235,45 @@ export default async function UserProfilePage({
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-ash">{stats.recipes}</div>
-            <div className="text-xs text-smoke mt-1">Recepten</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-ash">{stats.sessions}</div>
-            <div className="text-xs text-smoke mt-1">Sessies</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-ash">{stats.followers}</div>
-            <div className="text-xs text-smoke mt-1">Volgers</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-ash">{stats.following}</div>
-            <div className="text-xs text-smoke mt-1">Volgend</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-ash">{stats.friends}</div>
-            <div className="text-xs text-smoke mt-1">Vrienden</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-coals border-ash">
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-ash">
-              {stats.avgRating || '—'}
+      {/* Stats - Compact with icons */}
+      <Card className="bg-coals border-ash">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-ember shrink-0" />
+              <span className="text-smoke text-sm">Recepten</span>
+              <span className="text-ash font-bold">{stats.recipes}</span>
             </div>
-            <div className="text-xs text-smoke mt-1">Rating</div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-ember shrink-0" />
+              <span className="text-smoke text-sm">Sessies</span>
+              <span className="text-ash font-bold">{stats.sessions}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-ember shrink-0" />
+              <span className="text-smoke text-sm">Volgers</span>
+              <span className="text-ash font-bold">{stats.followers}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-ember shrink-0" />
+              <span className="text-smoke text-sm">Volgend</span>
+              <span className="text-ash font-bold">{stats.following}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-ember shrink-0" />
+              <span className="text-smoke text-sm">Vrienden</span>
+              <span className="text-ash font-bold">{stats.friends}</span>
+            </div>
+            {stats.avgRating && (
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-ember shrink-0" />
+                <span className="text-smoke text-sm">Rating</span>
+                <span className="text-ash font-bold">{stats.avgRating}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Followers/Following Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

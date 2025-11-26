@@ -156,7 +156,11 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
 
   if (loading) {
     return (
-      <Button disabled className={`bg-ember/50 text-white ${className || ""}`}>
+      <Button 
+        disabled 
+        size="sm"
+        className={`bg-ember/50 text-white w-full sm:w-auto ${className || ""}`}
+      >
         Laden...
       </Button>
     );
@@ -167,10 +171,11 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
       <Button 
         disabled 
         variant="outline" 
-        className={`border-ash text-ash ${className || ""}`}
+        size="sm"
+        className={`border-ash text-ash w-full sm:w-auto ${className || ""}`}
       >
-        <UserCheck className="h-4 w-4 mr-2" />
-        Vrienden
+        <UserCheck className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">Vrienden</span>
       </Button>
     );
   }
@@ -181,33 +186,37 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
         onClick={handleCancelRequest} 
         disabled={actionLoading}
         variant="outline" 
-        className={`border-ash text-ash hover:bg-coals ${className || ""}`}
+        size="sm"
+        className={`border-ash text-ash hover:bg-coals w-full sm:w-auto ${className || ""}`}
       >
-        <Clock className="h-4 w-4 mr-2" />
-        {actionLoading ? "Annuleren..." : "Verzoek verzonden"}
+        <Clock className="h-4 w-4 sm:mr-2" />
+        <span className="hidden sm:inline">{actionLoading ? "Annuleren..." : "Verzoek verzonden"}</span>
+        <span className="sm:hidden">{actionLoading ? "..." : "Verzonden"}</span>
       </Button>
     );
   }
 
   if (status === 'request_received') {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <Button 
           onClick={handleAcceptRequest} 
           disabled={actionLoading}
-          className={`bg-ember hover:bg-ember/90 text-white ${className || ""}`}
+          size="sm"
+          className={`bg-ember hover:bg-ember/90 text-white w-full sm:w-auto ${className || ""}`}
         >
-          <Check className="h-4 w-4 mr-2" />
-          Accepteren
+          <Check className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Accepteren</span>
         </Button>
         <Button 
           onClick={handleDeclineRequest} 
           disabled={actionLoading}
           variant="outline"
-          className={`border-ash text-ash hover:bg-coals ${className || ""}`}
+          size="sm"
+          className={`border-ash text-ash hover:bg-coals w-full sm:w-auto ${className || ""}`}
         >
-          <X className="h-4 w-4 mr-2" />
-          Weigeren
+          <X className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Weigeren</span>
         </Button>
       </div>
     );
@@ -217,10 +226,12 @@ export function FriendRequestButton({ userId, className }: FriendRequestButtonPr
     <Button 
       onClick={handleSendRequest} 
       disabled={actionLoading}
-      className={`bg-ember hover:bg-ember/90 text-white ${className || ""}`}
+      size="sm"
+      className={`bg-ember hover:bg-ember/90 text-white w-full sm:w-auto ${className || ""}`}
     >
-      <UserPlus className="h-4 w-4 mr-2" />
-      {actionLoading ? "Verzenden..." : "Vriend toevoegen"}
+      <UserPlus className="h-4 w-4 sm:mr-2" />
+      <span className="hidden sm:inline">{actionLoading ? "Verzenden..." : "Vriend toevoegen"}</span>
+      <span className="sm:hidden">{actionLoading ? "..." : "Toevoegen"}</span>
     </Button>
   );
 }

@@ -92,10 +92,11 @@ export function FollowButton({ userId, className }: FollowButtonProps) {
       <Button
         disabled
         variant="outline"
-        className={`border-ash text-ash ${className}`}
+        size="sm"
+        className={`border-ash text-ash w-full sm:w-auto ${className}`}
       >
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-        Laden...
+        <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+        <span className="hidden sm:inline">Laden...</span>
       </Button>
     );
   }
@@ -109,26 +110,28 @@ export function FollowButton({ userId, className }: FollowButtonProps) {
       onClick={handleToggleFollow}
       disabled={isToggling}
       variant={isFollowing ? "outline" : "default"}
+      size="sm"
       className={
         isFollowing
-          ? `border-ash text-ash hover:bg-coals ${className}`
-          : `bg-ember hover:bg-ember/90 ${className}`
+          ? `border-ash text-ash hover:bg-coals w-full sm:w-auto ${className}`
+          : `bg-ember hover:bg-ember/90 w-full sm:w-auto ${className}`
       }
     >
       {isToggling ? (
         <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          {isFollowing ? "Ontvolgen..." : "Volgen..."}
+          <Loader2 className="h-4 w-4 sm:mr-2 animate-spin" />
+          <span className="hidden sm:inline">{isFollowing ? "Ontvolgen..." : "Volgen..."}</span>
+          <span className="sm:hidden">...</span>
         </>
       ) : isFollowing ? (
         <>
-          <UserMinus className="h-4 w-4 mr-2" />
-          Ontvolgen
+          <UserMinus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Ontvolgen</span>
         </>
       ) : (
         <>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Volgen
+          <UserPlus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Volgen</span>
         </>
       )}
     </Button>
