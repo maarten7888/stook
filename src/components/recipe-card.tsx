@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Users, Thermometer, Eye, EyeOff } from "lucide-react";
+import { Clock, Users, Thermometer, Eye, EyeOff, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ interface RecipeCardProps {
   updatedAt: string;
   authorName?: string;
   authorId?: string;
+  isFollowed?: boolean;
   tags?: Array<{ id: string; name: string }>;
   rating?: number;
   reviewCount?: number;
@@ -35,6 +36,7 @@ export function RecipeCard({
   createdAt,
   authorName,
   authorId,
+  isFollowed,
   tags = [],
   rating,
   reviewCount,
@@ -110,13 +112,16 @@ export function RecipeCard({
 
         {/* Footer info */}
         <div className="flex items-center justify-between text-xs text-smoke pt-2 border-t border-ash">
-          <div>
+          <div className="flex items-center gap-2">
             {authorName && authorId ? (
               <Link 
                 href={`/users/${authorId}`}
-                className="hover:text-ember transition-colors"
+                className="hover:text-ember transition-colors flex items-center gap-1"
               >
                 door {authorName}
+                {isFollowed && (
+                  <UserCheck className="h-3 w-3 text-ember" aria-label="Gevolgd" />
+                )}
               </Link>
             ) : authorName ? (
               <span>door {authorName}</span>

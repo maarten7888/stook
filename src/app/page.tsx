@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, Camera, Clock, ArrowRight, Star, Thermometer } from "lucide-react";
 import Link from "next/link";
+import { HomeFeed } from "@/components/home-feed";
+import { UserSuggestions } from "@/components/user-suggestions";
 
 async function fetchUserStats(userId: string) {
   try {
@@ -138,42 +140,6 @@ async function fetchRecentActivity(userId: string) {
   }
 }
 
-async function fetchFeed(userId: string) {
-  try {
-    const adminSupabase = createAdminClient();
-
-    // Get own recipes + public recipes
-    const { data: ownRecipes } = await adminSupabase
-      .from('recipes')
-      .select('id, title, description, visibility, user_id, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    const { data: publicRecipes } = await adminSupabase
-      .from('recipes')
-      .select('id, title, description, visibility, user_id, created_at')
-      .eq('visibility', 'public')
-      .neq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    // Combine and sort
-    const allRecipes = [...(ownRecipes || []), ...(publicRecipes || [])];
-    allRecipes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    return {
-      items: allRecipes.slice(0, 6).map(recipe => ({
-        id: recipe.id,
-        title: recipe.title,
-        description: recipe.description,
-      })),
-    };
-  } catch (error) {
-    console.error("Error fetching feed:", error);
-    return { items: [] };
-  }
-}
 
 export default async function RootPage() {
   const session = await getSession();
@@ -182,17 +148,10 @@ export default async function RootPage() {
     // User is logged in, show the app content with layout
     const userId = session.user.id;
 
-    const [data, stats, recentActivity] = await Promise.all([
-      fetchFeed(userId),
+    const [stats, recentActivity] = await Promise.all([
       fetchUserStats(userId),
       fetchRecentActivity(userId),
     ]);
-
-    type RecipeListItem = {
-      id: string;
-      title: string;
-      description: string | null;
-    };
 
     return (
       <div className="space-y-6 sm:space-y-8">
@@ -270,29 +229,17 @@ export default async function RootPage() {
           </Card>
         </div>
 
-        {/* Feed */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-heading font-bold text-ash">Feed</h2>
-          {data.items.length === 0 ? (
-            <Card className="bg-coals border-ash">
-              <CardContent className="p-6 text-smoke">
-                Nog geen recepten. Begin met een nieuw recept of importeer er een.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.items.slice(0, 6).map((r: RecipeListItem) => (
-                <Card key={r.id} className="bg-coals border-ash">
-                  <CardContent className="p-4">
-                    <Link href={`/recipes/${r.id}`} className="block">
-                      <h3 className="text-lg font-heading text-ash mb-1">{r.title}</h3>
-                      <p className="text-sm text-smoke line-clamp-2">{r.description ?? ""}</p>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Feed */}
+          <div className="lg:col-span-2">
+            <HomeFeed />
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <UserSuggestions />
+          </div>
         </div>
 
         {/* Recent Activity */}
