@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { FriendRequestsBadge } from "@/components/friend-requests-badge";
 
 interface NavbarProps {
   user?: {
@@ -101,6 +102,7 @@ export function Navbar({ user, className }: NavbarProps) {
                       <Link href="/profile" className="flex items-center text-smoke hover:text-white">
                         <User className="mr-2 h-4 w-4" />
                         <span>Profiel</span>
+                        <FriendRequestsBadge />
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -213,7 +215,8 @@ export function Navbar({ user, className }: NavbarProps) {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <User className="h-4 w-4" />
-                    Profiel
+                    <span>Profiel</span>
+                    <FriendRequestsBadge />
                   </Link>
                   
                   <Link
