@@ -76,13 +76,21 @@ DATAMODEL (Postgres + RLS)
 * **reviews** (`id uuid pk`, `recipe_id uuid fk`, `user_id uuid fk`, `rating int check 1<=rating<=5`, `comment text`, `created_at`, unique `(recipe_id,user_id)`)
 * **tags** (`id uuid pk`, `name text unique`)
 * **recipe_tags** (`id uuid pk`, `recipe_id uuid fk`, `tag_id uuid fk`, unique `(recipe_id, tag_id)`)
+* **user_follows** (`id uuid pk`, `follower_id uuid fk -> profiles(id)`, `following_id uuid fk -> profiles(id)`, `created_at timestamptz`, unique `(follower_id, following_id)`, check `follower_id != following_id`)
+* **recipe_favorites** (`id uuid pk`, `user_id uuid fk -> profiles(id)`, `recipe_id uuid fk -> recipes(id)`, `created_at timestamptz`, unique `(user_id, recipe_id)`)
+* **friend_requests** (`id uuid pk`, `requester_id uuid fk -> profiles(id)`, `receiver_id uuid fk -> profiles(id)`, `status text check in ('pending','accepted','declined','cancelled') default 'pending'`, `created_at timestamptz`, `updated_at timestamptz`, unique `(requester_id, receiver_id)`, check `requester_id != receiver_id`)
+* **friendships** (`id uuid pk`, `user_id uuid fk -> profiles(id)`, `friend_id uuid fk -> profiles(id)`, `created_at timestamptz`, unique `(user_id, friend_id)`, check `user_id != friend_id`)
 
 RLS POLICIES (kern)
 
-* **profiles**: users alleen eigen profiel `select/update`; optioneel public read op beperkte velden.
+* **profiles**: users alleen eigen profiel `select/update`; public read op beperkte velden (display_name); vrienden kunnen volledige profiel bekijken.
 * **recipes**: `select` wanneer `visibility='public'` of `user_id = auth.uid()`; `insert/update/delete` enkel `user_id = auth.uid()`.
-* **cook_sessions/photos/session_temps**: alleen owner (`user_id = auth.uid()`) of recipe public voor `select`. Voor `photos`: `insert/update/delete` vereist `user_id = auth.uid()`.
+* **cook_sessions/photos/session_temps**: alleen owner (`user_id = auth.uid()`), vrienden, of recipe public voor `select`. Voor `photos`: `insert/update/delete` vereist `user_id = auth.uid()`.
 * **reviews**: `insert` toegestaan als recipe public, `recipe.user_id != auth.uid()` en nog geen bestaande review; `update/delete` alleen eigen review.
+* **user_follows**: users kunnen eigen follows bekijken; anyone kan follow counts bekijken (voor public profiles).
+* **recipe_favorites**: users kunnen eigen favorites bekijken; users kunnen favorites bekijken voor toegankelijke recepten.
+* **friend_requests**: users kunnen eigen requests bekijken (als requester of receiver); users kunnen requests sturen/updaten; receivers kunnen accepteren/weigeren.
+* **friendships**: users kunnen eigen friendships bekijken; anyone kan friendship count bekijken (voor public profiles); friendships worden aangemaakt via API na acceptatie.
 
 STORAGE BUCKETS
 
@@ -119,7 +127,11 @@ ROUTES / PAGINA'S (Next.js App Router)
   * Auto-save: Notities, conclusie en rating worden automatisch opgeslagen na 2 seconden debounce
   * [Gereed]
 * `/import` (URL → Preview → Import, met confidence scoring) [Gereed]
-* `/profile` (preferences, statistieken: recepten count, sessies count, gemiddelde rating) [Gereed]
+* `/profile` (preferences, statistieken: recepten count, sessies count, gemiddelde rating, vriendverzoeken, vriendenlijst) [Gereed]
+* `/users/[id]` (publiek profiel: stats met iconen, vrienden count, publieke recepten, follow/friend buttons) [Gereed]
+* `/users/[id]/followers` (lijst volgers) [Gereed]
+* `/users/[id]/following` (lijst gevolgde gebruikers) [Gereed]
+* `/favorites` (eigen favoriete recepten) [Gereed]
 * `/login`, `/register` [Gereed]
 
 API (Route Handlers in `app/api/*`)
@@ -136,6 +148,27 @@ API (Route Handlers in `app/api/*`)
 * `POST /api/photos` (multipart) → upload naar Supabase Storage + DB record [Gereed]
 * `GET /api/recipes/:id/photos` → fetch foto's voor recept met signed URLs [Gereed]
 * `GET /api/profile/stats` (statistieken: recepten count, sessies count, gemiddelde rating) [Gereed]
+* `GET /api/feed[?filter=all|following|own]` (feed met filtering) [Gereed]
+* `GET /api/users/suggestions[?limit=5]` (user suggestions) [Gereed]
+* `GET /api/users/[id]` (publiek profiel) [Gereed]
+* `GET /api/users/[id]/stats` (publieke stats: recepten, sessies, volgers, volgend, vrienden, rating) [Gereed]
+* `GET /api/users/[id]/recipes` (publieke recepten van gebruiker) [Gereed]
+* `GET /api/users/[id]/followers`, `GET /api/users/[id]/following` (volg lijsten) [Gereed]
+* `POST /api/users/[id]/follow`, `DELETE /api/users/[id]/follow` (follow/unfollow) [Gereed]
+* `GET /api/users/[id]/follow-status` (check follow status) [Gereed]
+* `GET /api/users/[id]/friends/count` (publiek vrienden count) [Gereed]
+* `POST /api/recipes/[id]/favorite`, `DELETE /api/recipes/[id]/favorite` (favorite/unfavorite) [Gereed]
+* `GET /api/recipes/[id]/favorite-status` (check favorite status) [Gereed]
+* `GET /api/users/me/favorites` (eigen favoriete recepten) [Gereed]
+* `POST /api/friends/requests` (vriendverzoek sturen) [Gereed]
+* `GET /api/friends/requests[?type=received|sent|all]` (vriendverzoeken ophalen) [Gereed]
+* `POST /api/friends/requests/[id]/accept` (vriendverzoek accepteren) [Gereed]
+* `POST /api/friends/requests/[id]/decline` (vriendverzoek weigeren) [Gereed]
+* `DELETE /api/friends/requests/[id]` (vriendverzoek annuleren) [Gereed]
+* `GET /api/friends/requests/count` (aantal openstaande verzoeken) [Gereed]
+* `GET /api/friends` (eigen vriendenlijst) [Gereed]
+* `DELETE /api/friends[?friendId=...]` (vriendschap beëindigen) [Gereed]
+* `GET /api/friends/status/[id]` (vriendschapsstatus checken) [Gereed]
 
 IMPORT (Web Scraping)
 
@@ -149,6 +182,9 @@ UI & STYLING
 * shadcn/ui voor formulieren, modals, tabs; lucide‑icons.
 * Consistente navigatie: logo + hoofdnavigatie + CTA's (Nieuw Recept, Importeren, Mijn Sessies).
 * Responsive: mobile‑first grids; accessibility: focus states.
+* **Stats weergave**: Gebruik compacte layout met iconen en getallen in één card (niet meerdere aparte cards). Voorbeeld: `<div className="flex flex-wrap items-center gap-4"><div className="flex items-center gap-2"><Icon /><span>Label</span><span className="font-bold">Count</span></div></div>`.
+* **Responsive buttons**: Op mobiel `w-full sm:w-auto`, `size="sm"`, verberg tekst op mobiel met `hidden sm:inline`, toon alleen iconen of korte tekst. Desktop: volledige tekst.
+* **Button styling**: Primary buttons: `bg-ember hover:bg-ember/90 text-white`. Outline buttons: `border-ash text-ash hover:bg-coals`. Disabled: `border-ash text-ash`.
 * Recipe detail page layout:
   * **Desktop (lg+)**: Grid layout met 3 kolommen
     * Linker kolom (col-span-2, 2/3): Beschrijving, Ingrediënten, Bereidingswijze
@@ -219,6 +255,10 @@ CODING NOTES
 * **Data fetching in server components**: Gebruik altijd direct Supabase Admin Client i.p.v. `fetch()` naar interne API routes (fetch passeert geen cookies in server components).
 * **Error handling**: Uitgebreide `console.error` logging met error codes, messages, details en hints voor debugging.
 * **Schema validatie**: Rating velden kunnen 0 zijn in component state; stuur alleen waarde > 0 mee naar API (anders undefined).
+* **Social features**: Gebruik Supabase Admin Client voor alle social queries. Vrienden checks via `friendships` tabel. Follow checks via `user_follows` tabel. Favorite checks via `recipe_favorites` tabel.
+* **Vriendentoegang**: RLS policies controleren vriendentoegang automatisch. Vrienden kunnen volledige profielen en private sessies bekijken. Gebruik `EXISTS` queries met `friendships` join voor vrienden checks in policies.
+* **Stats weergave**: Gebruik compacte layout met iconen en getallen in één card. Niet meerdere aparte cards per stat. Responsive: flex-wrap op mobiel, horizontaal op desktop.
+* **Button patterns**: Responsive buttons gebruiken `size="sm"`, `w-full sm:w-auto` voor mobile-first, `hidden sm:inline` voor tekst die alleen op desktop zichtbaar is. Styling: primary `bg-ember hover:bg-ember/90 text-white`, outline `border-ash text-ash hover:bg-coals`.
 
 INITIAL PLAN (Sprint 0 → MVP)
 
@@ -329,7 +369,7 @@ CURRENT STATUS (December 2024)
 - Mobile navigation met hamburger menu
 - Navigation icons toegevoegd
 - Clean mobile-first layout
-- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar, StartSessionButton
+- All UI Components: RecipeCard, RatingStars, TagChips, PhotoGrid, PhotoCarousel, PhotoUploader, SessionTempChart, Navbar, StartSessionButton, FollowButton, FavoriteButton, FriendRequestButton, UserCard, UserList, FriendsList, FriendRequestsList, FriendRequestsBadge, FeedFilters, HomeFeed, UserSuggestions, FollowButton, FavoriteButton, FriendRequestButton, UserCard, UserList, FriendsList, FriendRequestsList, FriendRequestsBadge, FeedFilters, HomeFeed, UserSuggestions
 - Professional desktop navigation layout met user dropdown
 - Mobile menu met juiste volgorde en logout functionaliteit
 - Photo upload functionaliteit (desktop file upload + mobile camera capture)
@@ -348,21 +388,35 @@ CURRENT STATUS (December 2024)
   * Session finish endpoint met uitgebreide error handling
 - Homepage: Quick Stats sectie met echte statistieken (recepten totaal/maand, sessies totaal/week, gemiddelde rating)
 - Homepage: Recente Activiteit sectie met laatste 5 activiteiten (recepten + sessies), time ago labels, iconen en links
+- Homepage: Feed met filtering (Alles, Gevolgde, Eigen) en user suggestions sidebar
 - Profile page: Statistieken sectie toont nu correct aantal recepten, sessies en gemiddelde rating
+- Profile page: Vriendverzoeken overzicht en vriendenlijst toegevoegd
 - Sessions list pagina met status, duur, rating, temp count en photo count
+- **Social Features**:
+  * Follow systeem (volgen/ontvolgen gebruikers)
+  * Favorites systeem (recepten favorieten)
+  * Friends systeem (vriendverzoeken, vriendschappen, volledige toegang voor vrienden)
+  * Publieke profielpagina's met stats, recepten, follow/friend buttons
+  * Feed filtering (Alles, Gevolgde, Eigen)
+  * User suggestions op homepage
+  * Vriendverzoeken badge in navbar
+- **UI Verbeteringen**:
+  * Compacte stats weergave met iconen en getallen (geen aparte cards)
+  * Responsive buttons met mobile-first approach (w-full sm:w-auto, size="sm")
+  * Mobiel-vriendelijke profielpagina's
+  * RecipeCard met "Gevolgd" badge voor gevolgde gebruikers
 
 🔄 IN PROGRESS:
 - Branch protection rules op main
-- Advanced features (favorites, search, notifications)
 - PWA manifest en service worker
 - Real-time updates (Supabase Realtime)
 
 📋 VOLGENDE STAPPEN:
 1. Branch protection rules op main
-2. Advanced features (favorites, search, notifications)
-3. PWA manifest en service worker
-4. Real-time updates (Supabase Realtime)
-5. Performance optimizations en monitoring
+2. PWA manifest en service worker
+3. Real-time updates (Supabase Realtime)
+4. Performance optimizations en monitoring
+5. Zoeken functionaliteit (pg_trgm/Meilisearch)
 
 SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
 
