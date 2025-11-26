@@ -45,10 +45,10 @@ export function RecipeCard({
   const totalTime = (prepMinutes || 0) + (cookMinutes || 0);
   
   return (
-    <Card className={cn("group hover:shadow-md transition-shadow", className)}>
+    <Card className={cn("bg-coals border-ash group hover:border-ember/50 transition-colors", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg font-outfit leading-tight group-hover:text-ember transition-colors">
+          <CardTitle className="text-lg font-heading leading-tight text-ash group-hover:text-ember transition-colors">
             <Link href={`/recipes/${id}`} className="hover:underline">
               {title}
             </Link>
