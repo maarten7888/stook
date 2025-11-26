@@ -144,6 +144,7 @@ export default async function RecipesPage({
     cookMinutes?: number;
     targetInternalTemp?: number;
     imageUrl?: string;
+    userId?: string;
     user?: { displayName?: string };
     tags?: { tagName: string }[];
     reviews?: { rating: number }[];
@@ -226,9 +227,15 @@ export default async function RecipesPage({
                     </div>
                   )}
                 </div>
-                {recipe.user?.displayName && (
+                {recipe.user?.displayName && recipe.userId && (
                   <p className="text-smoke text-sm">
-                    door {recipe.user.displayName}
+                    door{" "}
+                    <Link 
+                      href={`/users/${recipe.userId}`}
+                      className="hover:text-ember transition-colors"
+                    >
+                      {recipe.user.displayName}
+                    </Link>
                   </p>
                 )}
               </CardHeader>

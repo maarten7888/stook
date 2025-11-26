@@ -16,6 +16,7 @@ interface RecipeCardProps {
   createdAt: string;
   updatedAt: string;
   authorName?: string;
+  authorId?: string;
   tags?: Array<{ id: string; name: string }>;
   rating?: number;
   reviewCount?: number;
@@ -33,6 +34,7 @@ export function RecipeCard({
   visibility,
   createdAt,
   authorName,
+  authorId,
   tags = [],
   rating,
   reviewCount,
@@ -109,9 +111,16 @@ export function RecipeCard({
         {/* Footer info */}
         <div className="flex items-center justify-between text-xs text-smoke pt-2 border-t border-ash">
           <div>
-            {authorName && (
+            {authorName && authorId ? (
+              <Link 
+                href={`/users/${authorId}`}
+                className="hover:text-ember transition-colors"
+              >
+                door {authorName}
+              </Link>
+            ) : authorName ? (
               <span>door {authorName}</span>
-            )}
+            ) : null}
           </div>
           
           <div className="flex items-center gap-2">

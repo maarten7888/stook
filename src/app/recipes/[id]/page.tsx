@@ -145,7 +145,7 @@ async function fetchReviews(recipeId: string, isPublic: boolean) {
         rating,
         comment,
         created_at,
-        profiles(display_name)
+        profiles(id, display_name)
       `)
       .eq('recipe_id', recipeId)
       .order('created_at', { ascending: false });
@@ -164,6 +164,8 @@ async function fetchReviews(recipeId: string, isPublic: boolean) {
       rating: review.rating,
       comment: review.comment || '',
       createdAt: review.created_at,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      userId: (review.profiles as any)?.id || null,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       userName: (review.profiles as any)?.display_name || 'Review Gebruiker',
     }));
@@ -212,7 +214,13 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           {data.user?.displayName && (
             <div className="flex items-center justify-between mb-4">
               <p className="text-smoke text-lg">
-                door {data.user.displayName}
+                door{" "}
+                <Link 
+                  href={`/users/${data.userId}`}
+                  className="hover:text-ember transition-colors"
+                >
+                  {data.user.displayName}
+                </Link>
               </p>
               {isOwner && (
                 <div className="flex items-center gap-2">
@@ -401,7 +409,16 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
                       {reviews.map((review) => (
                         <div key={review.id} className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-smoke font-medium">{review.userName}</span>
+                            {review.userId ? (
+                              <Link 
+                                href={`/users/${review.userId}`}
+                                className="text-smoke font-medium hover:text-ember transition-colors"
+                              >
+                                {review.userName}
+                              </Link>
+                            ) : (
+                              <span className="text-smoke font-medium">{review.userName}</span>
+                            )}
                             <RatingStars rating={review.rating} size="sm" />
                           </div>
                           {review.comment && (
