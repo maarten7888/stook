@@ -237,38 +237,38 @@ export default async function UserProfilePage({
 
       {/* Stats - Compact with icons */}
       <Card className="bg-coals border-ash">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 md:gap-8">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-ember shrink-0" />
-              <span className="text-smoke text-sm">Recepten</span>
-              <span className="text-ash font-bold">{stats.recipes}</span>
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 text-ember shrink-0" />
+              <span className="text-smoke text-sm sm:text-base">Recepten</span>
+              <span className="text-ash font-bold text-base sm:text-lg">{stats.recipes}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-ember shrink-0" />
-              <span className="text-smoke text-sm">Sessies</span>
-              <span className="text-ash font-bold">{stats.sessions}</span>
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-ember shrink-0" />
+              <span className="text-smoke text-sm sm:text-base">Sessies</span>
+              <span className="text-ash font-bold text-base sm:text-lg">{stats.sessions}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-ember shrink-0" />
-              <span className="text-smoke text-sm">Volgers</span>
-              <span className="text-ash font-bold">{stats.followers}</span>
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-ember shrink-0" />
+              <span className="text-smoke text-sm sm:text-base">Volgers</span>
+              <span className="text-ash font-bold text-base sm:text-lg">{stats.followers}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-ember shrink-0" />
-              <span className="text-smoke text-sm">Volgend</span>
-              <span className="text-ash font-bold">{stats.following}</span>
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-ember shrink-0" />
+              <span className="text-smoke text-sm sm:text-base">Volgend</span>
+              <span className="text-ash font-bold text-base sm:text-lg">{stats.following}</span>
             </div>
             <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-ember shrink-0" />
-              <span className="text-smoke text-sm">Vrienden</span>
-              <span className="text-ash font-bold">{stats.friends}</span>
+              <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-ember shrink-0" />
+              <span className="text-smoke text-sm sm:text-base">Vrienden</span>
+              <span className="text-ash font-bold text-base sm:text-lg">{stats.friends}</span>
             </div>
             {stats.avgRating && (
               <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-ember shrink-0" />
-                <span className="text-smoke text-sm">Rating</span>
-                <span className="text-ash font-bold">{stats.avgRating}</span>
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-ember shrink-0" />
+                <span className="text-smoke text-sm sm:text-base">Rating</span>
+                <span className="text-ash font-bold text-base sm:text-lg">{stats.avgRating}</span>
               </div>
             )}
           </div>
