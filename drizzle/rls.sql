@@ -10,6 +10,8 @@ ALTER TABLE session_temps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipe_favorites ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON profiles
@@ -254,3 +256,41 @@ CREATE POLICY "Users can manage recipe tags for own recipes" ON recipe_tags
       AND recipes.user_id = auth.uid()
     )
   );
+
+-- User follows policies
+CREATE POLICY "Users can view own follows" ON user_follows
+  FOR SELECT USING (follower_id = auth.uid());
+
+CREATE POLICY "Users can view who follows them" ON user_follows
+  FOR SELECT USING (following_id = auth.uid());
+
+CREATE POLICY "Anyone can view follow counts (for public profiles)" ON user_follows
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can create own follows" ON user_follows
+  FOR INSERT WITH CHECK (
+    follower_id = auth.uid() 
+    AND follower_id != following_id
+  );
+
+CREATE POLICY "Users can delete own follows" ON user_follows
+  FOR DELETE USING (follower_id = auth.uid());
+
+-- Recipe favorites policies
+CREATE POLICY "Users can view own favorites" ON recipe_favorites
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can view favorites for accessible recipes" ON recipe_favorites
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM recipes 
+      WHERE recipes.id = recipe_favorites.recipe_id 
+      AND (recipes.visibility = 'public' OR recipes.user_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "Users can create own favorites" ON recipe_favorites
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can delete own favorites" ON recipe_favorites
+  FOR DELETE USING (user_id = auth.uid());

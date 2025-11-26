@@ -114,11 +114,30 @@ export const recipeTags = pgTable("recipe_tags", {
   tagId: uuid("tag_id").references(() => tags.id).notNull(),
 });
 
+// User follows table (follow relationships)
+export const userFollows = pgTable("user_follows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  followerId: uuid("follower_id").references(() => profiles.id).notNull(),
+  followingId: uuid("following_id").references(() => profiles.id).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Recipe favorites table
+export const recipeFavorites = pgTable("recipe_favorites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => profiles.id).notNull(),
+  recipeId: uuid("recipe_id").references(() => recipes.id).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const profilesRelations = relations(profiles, ({ many }) => ({
   recipes: many(recipes),
   cookSessions: many(cookSessions),
   reviews: many(reviews),
+  followers: many(userFollows, { relationName: "followers" }),
+  following: many(userFollows, { relationName: "following" }),
+  favorites: many(recipeFavorites),
 }));
 
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
@@ -132,6 +151,7 @@ export const recipesRelations = relations(recipes, ({ one, many }) => ({
   cookSessions: many(cookSessions),
   reviews: many(reviews),
   tags: many(recipeTags),
+  favorites: many(recipeFavorites),
 }));
 
 export const ingredientsRelations = relations(ingredients, ({ many }) => ({
@@ -210,5 +230,29 @@ export const recipeTagsRelations = relations(recipeTags, ({ one }) => ({
   tag: one(tags, {
     fields: [recipeTags.tagId],
     references: [tags.id],
+  }),
+}));
+
+export const userFollowsRelations = relations(userFollows, ({ one }) => ({
+  follower: one(profiles, {
+    fields: [userFollows.followerId],
+    references: [profiles.id],
+    relationName: "followers",
+  }),
+  following: one(profiles, {
+    fields: [userFollows.followingId],
+    references: [profiles.id],
+    relationName: "following",
+  }),
+}));
+
+export const recipeFavoritesRelations = relations(recipeFavorites, ({ one }) => ({
+  user: one(profiles, {
+    fields: [recipeFavorites.userId],
+    references: [profiles.id],
+  }),
+  recipe: one(recipes, {
+    fields: [recipeFavorites.recipeId],
+    references: [recipes.id],
   }),
 }));
