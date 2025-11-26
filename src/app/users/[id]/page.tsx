@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient, getSession } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { RecipeCard } from "@/components/recipe-card";
+import { FollowButton } from "@/components/follow-button";
 import { MapPin, ChefHat, Award } from "lucide-react";
+import Link from "next/link";
 
 async function fetchUserProfile(userId: string) {
   try {
@@ -157,6 +159,8 @@ export default async function UserProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const session = await getSession();
+  const currentUserId = session?.user.id;
 
   const [profile, stats, recipesWithTags] = await Promise.all([
     fetchUserProfile(id),
@@ -167,6 +171,8 @@ export default async function UserProfilePage({
   if (!profile) {
     notFound();
   }
+
+  const isOwnProfile = currentUserId === id;
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -181,9 +187,14 @@ export default async function UserProfilePage({
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-heading font-bold text-ash mb-2">
-                {profile.display_name || "Gebruiker"}
-              </h1>
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h1 className="text-3xl font-heading font-bold text-ash">
+                  {profile.display_name || "Gebruiker"}
+                </h1>
+                {!isOwnProfile && session && (
+                  <FollowButton userId={id} />
+                )}
+              </div>
               {profile.bio && (
                 <p className="text-smoke mb-4">{profile.bio}</p>
               )}
@@ -244,6 +255,48 @@ export default async function UserProfilePage({
               {stats.avgRating || '—'}
             </div>
             <div className="text-xs text-smoke mt-1">Rating</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Followers/Following Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="bg-coals border-ash">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-heading font-bold text-ash mb-4">
+              Volgers ({stats.followers})
+            </h3>
+            <div className="text-smoke text-sm">
+              {stats.followers > 0 ? (
+                <Link
+                  href={`/users/${id}/followers`}
+                  className="hover:text-ember transition-colors"
+                >
+                  Bekijk alle {stats.followers} volger{stats.followers !== 1 ? "s" : ""}
+                </Link>
+              ) : (
+                "Nog geen volgers"
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-coals border-ash">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-heading font-bold text-ash mb-4">
+              Volgend ({stats.following})
+            </h3>
+            <div className="text-smoke text-sm">
+              {stats.following > 0 ? (
+                <Link
+                  href={`/users/${id}/following`}
+                  className="hover:text-ember transition-colors"
+                >
+                  Bekijk alle {stats.following} gebruiker{stats.following !== 1 ? "s" : ""}
+                </Link>
+              ) : (
+                "Volgt nog niemand"
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
