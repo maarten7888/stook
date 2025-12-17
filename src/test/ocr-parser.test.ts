@@ -567,6 +567,13 @@ een beetje warm.`;
       // Should find ingredients - at least some from the bullet-separated line
       expect(result.ingredients.length).toBeGreaterThan(0);
       
+      // "kerstomaatjes peper zout" should be split into separate ingredients
+      const ingredientNames = result.ingredients.map(i => i.name.toLowerCase());
+      expect(ingredientNames.some(n => n.includes("peper"))).toBe(true);
+      expect(ingredientNames.some(n => n.includes("zout"))).toBe(true);
+      // peper en zout mogen NIET samen in één ingrediënt staan
+      expect(ingredientNames.some(n => n.includes("peper") && n.includes("zout"))).toBe(false);
+      
       // Should find 4 numbered steps
       expect(result.steps.length).toBe(4);
       

@@ -355,8 +355,24 @@ function findStepsHeaderInLine(line: string): { remainder: string } | null {
 }
 
 /**
+ * Bekende losse ingrediënten die vaak zonder hoeveelheid/bullet staan
+ * Als deze achter elkaar staan, moeten ze gesplitst worden
+ */
+const STANDALONE_INGREDIENTS = new Set([
+  // Kruiden/specerijen
+  "peper", "zout", "suiker", "kaneel", "paprikapoeder", "komijn", "kerrie",
+  "curry", "kurkuma", "nootmuskaat", "oregano", "basilicum", "tijm", "rozemarijn",
+  "peterselie", "bieslook", "dille", "munt", "koriander", "laurier",
+  // Vaak zonder hoeveelheid
+  "boter", "olie", "olijfolie", "water", "melk", "room", "slagroom",
+  // Groenten die vaak "naar smaak" zijn
+  "knoflook", "ui", "uien", "sjalot", "sjalotten", "prei",
+]);
+
+/**
  * Split een ingrediënten regel op bullets en andere scheidingstekens
  * OCR output heeft vaak: "500g aardappelen • 1 ui ⚫ 2 el olie"
+ * Ook: "kerstomaatjes peper zout" moet gesplitst worden
  */
 function splitIngredientLine(line: string): string[] {
   if (!line.trim()) return [];
@@ -368,12 +384,69 @@ function splitIngredientLine(line: string): string[] {
     .map(p => p.trim())
     .filter(p => p.length > 0);
   
-  // Als er maar één deel is, return als array
-  if (parts.length <= 1) {
-    return [line.trim()];
+  // Verder splitsen van delen die meerdere losse ingrediënten kunnen bevatten
+  const finalParts: string[] = [];
+  
+  for (const part of parts) {
+    const subParts = splitStandaloneIngredients(part);
+    finalParts.push(...subParts);
   }
   
-  return parts;
+  return finalParts.length > 0 ? finalParts : [line.trim()];
+}
+
+/**
+ * Split een deel dat mogelijk meerdere losse ingrediënten bevat
+ * "kerstomaatjes peper zout" -> ["kerstomaatjes", "peper", "zout"]
+ */
+function splitStandaloneIngredients(part: string): string[] {
+  // Als het deel begint met een hoeveelheid, niet splitsen
+  if (/^\d+|^een|^twee|^drie|^half/i.test(part)) {
+    return [part];
+  }
+  
+  const words = part.split(/\s+/);
+  
+  // Als er maar 1-2 woorden zijn, niet splitsen
+  if (words.length <= 2) {
+    return [part];
+  }
+  
+  // Check hoeveel woorden bekende losse ingrediënten zijn
+  const standaloneCount = words.filter(w => 
+    STANDALONE_INGREDIENTS.has(w.toLowerCase())
+  ).length;
+  
+  // Als minstens 2 bekende losse ingrediënten, probeer te splitsen
+  if (standaloneCount >= 2) {
+    const result: string[] = [];
+    let currentIngredient: string[] = [];
+    
+    for (const word of words) {
+      const isStandalone = STANDALONE_INGREDIENTS.has(word.toLowerCase());
+      
+      if (isStandalone && currentIngredient.length > 0) {
+        // Voeg vorige ingrediënt toe en start nieuwe
+        result.push(currentIngredient.join(" "));
+        currentIngredient = [word];
+      } else if (isStandalone && currentIngredient.length === 0) {
+        // Losse ingrediënt aan het begin
+        result.push(word);
+      } else {
+        // Voeg toe aan huidige ingrediënt
+        currentIngredient.push(word);
+      }
+    }
+    
+    // Laatste ingrediënt toevoegen
+    if (currentIngredient.length > 0) {
+      result.push(currentIngredient.join(" "));
+    }
+    
+    return result.length > 0 ? result : [part];
+  }
+  
+  return [part];
 }
 
 /**
