@@ -79,10 +79,17 @@ const SECTION_PATTERNS = {
     /^dit\s*heb\s*je\s*nodig/i,
     /^voor\s*dit\s*recept/i,
     /^voor\s*\d+\s*personen/i,  // "Voor 4 personen"
+    /^producten/i,              // "Producten" als header
+    /^winkellijst/i,            // "Winkellijst"
+    /^hiervoor\s*nodig/i,       // "Hiervoor nodig"
+    /^u\s*heeft\s*nodig/i,      // Formeel: "U heeft nodig"
+    /^je\s*gebruikt/i,          // "Je gebruikt"
+    /^recept\s*voor/i,          // "Recept voor 4 personen"
     // OCR fuzzy varianten (I/l/1 verwisseling, etc.)
     /^[il1]ngred[il1][eëé]nten/i,
     /^lngredi[eëé]nten/i,
     /^1ngred/i,
+    /^beno[d1]igd/i,            // OCR fout: benodigdheden
     // Afkortingen en variaties
     /^ingr\./i,
   ],
@@ -185,8 +192,20 @@ const STEP_STARTING_VERBS = new Set([
   "garneer", "serveer", "presenteer", "verdeel", "bestrooi",
   // Tijd gerelateerd
   "wacht", "marineer", "laat", "zet",
+  // Extra Nederlandse kookwerkwoorden
+  "pureer", "prak", "stamp", "pers", "knijp", "druk",
+  "kneed", "vouw", "rol", "wikkel", "draai",
+  "bestrijk", "smeer", "besmeer", "penseel",
+  "prik", "steek", "scheur", "breek", "ris",
+  "blus", "ablusseer", "flambeer", "reduceer",
+  "zeef", "giet", "laat", "dompel", "week",
+  "fruit", "bak", "pocheer", "blancheer", "stoom",
+  "wok", "roerbak", "frituur", "deep-fry",
+  "kruid", "breng", "proef", "check", "controleer",
   // Engels (voor gemixte recepten)
   "add", "mix", "stir", "heat", "cook", "bake", "cut", "slice", "pour",
+  "combine", "fold", "whisk", "beat", "blend", "season", "taste",
+  "preheat", "roast", "grill", "fry", "sauté", "simmer", "boil",
 ]);
 
 /**

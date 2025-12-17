@@ -46,6 +46,32 @@ export function preprocessOcrText(text: string): string {
   processed = processed.replace(/^©.*$/gm, "");
   processed = processed.replace(/^bron:.*$/gim, "");
   processed = processed.replace(/^foto:.*$/gim, "");
+  processed = processed.replace(/^fotografie:.*$/gim, "");
+  processed = processed.replace(/^styling:.*$/gim, "");
+  processed = processed.replace(/^recept:.*$/gim, "");
+  
+  // 3a. Verwijder ISBN en andere boek metadata
+  processed = processed.replace(/^ISBN[:\s].*$/gim, "");
+  processed = processed.replace(/^\d{10,13}\s*$/gm, ""); // Losse ISBN nummers
+  
+  // 3a2. Verwijder voedingswaarde informatie (we willen alleen ingrediënten en stappen)
+  processed = processed.replace(/^(voedingswaarde|nutritional|energie|kcal|kj|eiwit|koolhydraten|vetten?|vezels?|natrium|zout)[\s:].*/gim, "");
+  processed = processed.replace(/^\d+\s*(kcal|kj|cal)\s*$/gim, "");
+  processed = processed.replace(/^per\s+(portie|persoon|100\s*g)[\s:].*/gim, "");
+  
+  // 3a3. Verwijder TIP/VARIATIE secties (vaak niet essentieel)
+  // Let op: we verwijderen alleen de header, niet de hele sectie
+  processed = processed.replace(/^TIP[:\s].*$/gim, "");
+  processed = processed.replace(/^TIPS[:\s].*$/gim, "");
+  processed = processed.replace(/^VARIATIE[:\s].*$/gim, "");
+  processed = processed.replace(/^VARIANT[:\s].*$/gim, "");
+  processed = processed.replace(/^LET OP[:\s].*$/gim, "");
+  processed = processed.replace(/^OPMERKING[:\s].*$/gim, "");
+  
+  // 3a4. Verwijder moeilijkheidsgraad en andere metadata regels
+  processed = processed.replace(/^(moeilijkheid|niveau|difficulty)[:\s].*/gim, "");
+  processed = processed.replace(/^(categorie|category|type)[:\s].*/gim, "");
+  processed = processed.replace(/^(keuken|cuisine)[:\s].*/gim, "");
   
   // 3b. Verwijder korte noise regels (1-2 letters/cijfers, vaak afgekapte tekst of codes)
   // "BC", "AB", etc. aan het eind
@@ -404,7 +430,7 @@ export function parseIngredientLine(line: string): {
  */
 function extractIngredientNotes(text: string): { text: string; notes: string | null } {
   const notePatterns = [
-    // Met komma ervoor
+    // Met komma ervoor - standaard notities
     /,\s*(naar smaak)/i,
     /,\s*(optioneel)/i,
     /,\s*(ter garnering)/i,
@@ -415,11 +441,50 @@ function extractIngredientNotes(text: string): { text: string; notes: string | n
     /,\s*(to taste)/i,
     /,\s*(optional)/i,
     /,\s*(for garnish)/i,
+    
+    // Met komma ervoor - bereidingswijze (geperst, gesnipperd, etc.)
+    /,\s*(geperst)/i,
+    /,\s*(gesnipperd)/i,
+    /,\s*(gehakt)/i,
+    /,\s*(gesneden)/i,
+    /,\s*(in stukjes)/i,
+    /,\s*(in plakjes)/i,
+    /,\s*(in blokjes)/i,
+    /,\s*(in ringen)/i,
+    /,\s*(in reepjes)/i,
+    /,\s*(geraspt)/i,
+    /,\s*(geschild)/i,
+    /,\s*(schoongemaakt)/i,
+    /,\s*(gewassen)/i,
+    /,\s*(ontdooid)/i,
+    /,\s*(gesmolten)/i,
+    /,\s*(kamertemperatuur)/i,
+    /,\s*(op kamertemperatuur)/i,
+    /,\s*(geweekt)/i,
+    /,\s*(fijngesneden)/i,
+    /,\s*(grof gehakt)/i,
+    /,\s*(fijn gehakt)/i,
+    /,\s*(uitgelekt)/i,
+    /,\s*(afgespoeld)/i,
+    /,\s*(zonder pit)/i,
+    /,\s*(zonder zaadjes)/i,
+    /,\s*(zonder vel)/i,
+    /,\s*(met vel)/i,
+    /,\s*(biologisch)/i,
+    /,\s*(vers)/i,
+    /,\s*(gedroogd)/i,
+    
     // Tussen haakjes
     /\s*\((naar smaak)\)/i,
     /\s*\((optioneel)\)/i,
     /\s*\((ter garnering)\)/i,
     /\s*\((eventueel)\)/i,
+    /\s*\((geperst)\)/i,
+    /\s*\((gesnipperd)\)/i,
+    /\s*\((gehakt)\)/i,
+    /\s*\((geschild)\)/i,
+    /\s*\((geraspt)\)/i,
+    
     // Aan het eind zonder komma
     /\s+(naar smaak)$/i,
     /\s+(ter garnering)$/i,
@@ -607,6 +672,18 @@ export function extractServings(text: string): number | null {
     /serves?\s*(\d+)/i,
     // Aantal: X
     /aantal[:\s]+(\d+)/i,
+    // X stuks (voor gebak, koekjes)
+    /(\d+)\s*stuks?/i,
+    // ca. X personen
+    /ca\.?\s*(\d+)\s*(?:personen|porties)/i,
+    // circa X personen
+    /circa\s*(\d+)\s*(?:personen|porties)/i,
+    // Recept voor X
+    /recept\s*voor\s*(\d+)/i,
+    // Maakt X / Makes X
+    /(?:maakt|makes)\s*(\d+)/i,
+    // Yields X
+    /yields?\s*(\d+)/i,
   ];
 
   for (const pattern of patterns) {
@@ -630,9 +707,17 @@ export function extractServings(text: string): number | null {
  */
 export function extractPrepTime(text: string): number | null {
   const patterns = [
-    /voorbereid(?:ing|en)?[:\s]+(\d+)\s*(?:minuten|min)/i,
-    /prep(?:aratie)?[:\s]+(\d+)\s*(?:minuten|min)/i,
-    /bereidingstijd[:\s]+(\d+)\s*(?:minuten|min)/i,
+    /voorbereid(?:ing|en)?[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    /prep(?:aratie)?[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    /bereidingstijd[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    /voorbereiding[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    /prep\s*time[:\s]+(\d+)\s*(?:minutes?|min\.?)/i,
+    /preparation[:\s]+(\d+)\s*(?:minutes?|min\.?)/i,
+    // Snijden/klaarmaken tijd
+    /(?:snij|klaarmaak)tijd[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    // Totale tijd
+    /totale?\s*tijd[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    /total\s*time[:\s]+(\d+)\s*(?:minutes?|min\.?)/i,
   ];
 
   for (const pattern of patterns) {
@@ -650,9 +735,19 @@ export function extractPrepTime(text: string): number | null {
  */
 export function extractCookTime(text: string): number | null {
   const patterns = [
-    // Kooktijd/Grilltijd/Rooktijd
-    /(?:kook|grill|rook|bak|braad)tijd[:\s]+(\d+)\s*[-–]?\s*(\d+)?\s*(?:minuten|min|uur|uren)/i,
-    /(?:kook|grill|rook|bak|braad)tijd[:\s]+(\d+(?:[.,]\d+)?)\s*(?:uur|uren)/i,
+    // Kooktijd/Grilltijd/Rooktijd/Baktijd/Braadtijd/Stooftijd/Oventijd
+    /(?:kook|grill|rook|bak|braad|stoof|oven)tijd[:\s]+(\d+)\s*[-–]?\s*(\d+)?\s*(?:minuten|min\.?|uur|uren)/i,
+    /(?:kook|grill|rook|bak|braad|stoof|oven)tijd[:\s]+(\d+(?:[.,]\d+)?)\s*(?:uur|uren)/i,
+    // Cook/Cooking time
+    /cook(?:ing)?\s*time[:\s]+(\d+)\s*[-–]?\s*(\d+)?\s*(?:minutes?|min\.?|hours?|hrs?)/i,
+    // In de oven: X minuten
+    /in\s*de\s*oven[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    // Op het vuur: X minuten
+    /op\s*(?:het\s*)?vuur[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
+    // Marineren/Rusten tijd (kan ook als kooktijd worden gezien)
+    /(?:marineer|rust)tijd[:\s]+(\d+)\s*(?:minuten|min\.?|uur|uren)/i,
+    // Garen: X minuten
+    /garen[:\s]+(\d+)\s*(?:minuten|min\.?)/i,
   ];
 
   for (const pattern of patterns) {
