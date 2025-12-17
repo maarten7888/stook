@@ -28,30 +28,38 @@ export function normalizeUnit(unit: string): string {
     "gram": "g",
     "gr": "g",
     "gr.": "g",
+    "g": "g",
+    "g.": "g",
     "kilogram": "kg",
     "kilo": "kg",
+    "kg": "kg",
     "kg.": "kg",
     "ons": "g", // 100g
-    "pond": "g", // 500g (behandelen we apart)
+    "pond": "g", // 500g
     
     // Volume
     "milliliter": "ml",
     "mililiter": "ml",
+    "ml": "ml",
     "ml.": "ml",
     "liter": "l",
     "lt": "l",
+    "l": "l",
     "l.": "l",
     "deciliter": "dl",
+    "dl": "dl",
     "dl.": "dl",
     
     // Lepels
     "eetlepel": "el",
     "eetlepels": "el",
+    "el": "el",
     "el.": "el",
+    "eetl": "el",
     "theelepel": "tl",
     "theelepels": "tl",
+    "tl": "tl",
     "tl.": "tl",
-    "eetl": "el",
     "theel": "tl",
     
     // Stuks
@@ -79,9 +87,21 @@ export function normalizeUnit(unit: string): string {
     "bosje": "bosje",
     "handje": "handje",
     "handjevol": "handje",
+    "kopje": "kopje",
+    "kopjes": "kopje",
+    "scheutje": "scheutje",
+    "schijfje": "schijfje",
+    "schijfjes": "schijfjes",
+    "plakje": "plakje",
+    "plakjes": "plakjes",
+    "mespuntje": "mespuntje",
+    "sneetje": "sneetje",
+    "sneetjes": "sneetjes",
+    "blaadje": "blaadje",
+    "blaadjes": "blaadjes",
   };
 
-  const normalized = unit.toLowerCase().trim();
+  const normalized = unit.toLowerCase().trim().replace(/\.$/, "");
   return unitMap[normalized] || normalized;
 }
 
@@ -91,27 +111,43 @@ export function normalizeUnit(unit: string): string {
  * - "200 gram kipfilet" -> { amount: 200, unit: "g", name: "kipfilet" }
  * - "2 el olijfolie" -> { amount: 2, unit: "el", name: "olijfolie" }
  * - "zout naar smaak" -> { amount: null, unit: null, name: "zout naar smaak" }
+ * - "500g vastkokende aardappelen" -> { amount: 500, unit: "g", name: "vastkokende aardappelen" }
  */
 export function parseIngredientLine(line: string): {
   amount: number | null;
   unit: string | null;
   name: string;
 } {
-  const trimmed = line.trim();
+  let trimmed = line.trim();
   
   if (!trimmed) {
     return { amount: null, unit: null, name: "" };
   }
 
+  // Verwijder leading bullets en speciale karakters
+  trimmed = trimmed.replace(/^[-•*⚫·◦‣▪▸►]\s*/, "").trim();
+  
+  // OCR cleanup: verwijder losse punten aan het begin
+  trimmed = trimmed.replace(/^\.\s*/, "").trim();
+
+  // Alle mogelijke units (inclusief OCR variaties)
+  const unitPattern = "gram|gr|g|kilogram|kilo|kg|ml|milliliter|mililiter|liter|lt|l|dl|deciliter|" +
+    "el|eetlepel|eetlepels|eetl|tl|theelepel|theelepels|theel|" +
+    "stuks?|st|snufje|snuf|teen|tenen|teentje|teentjes|takje|takjes|" +
+    "blik|blikje|pot|potje|zakje|pak|pakje|bosje|handje|handjevol|" +
+    "kopje|kopjes|scheutje|schijfje|schijfjes|plakje|plakjes|" +
+    "mespuntje|sneetje|sneetjes|blaadje|blaadjes";
+
   // Patronen voor hoeveelheden
-  // Match: "200 gram", "2 el", "1/2 tl", "½ kopje", etc.
   const patterns = [
-    // Nummer + unit + rest
-    /^(\d+(?:[.,]\d+)?)\s*(gram|gr|g|kilogram|kilo|kg|ml|milliliter|liter|l|dl|el|eetlepel|eetlepels|tl|theelepel|theelepels|stuks?|st|snufje|teen|tenen|takje|takjes|blik|blikje|pot|potje|zakje|pak|pakje|bosje|handje|handjevol)\.?\s+(.+)$/i,
-    // Breuk + unit + rest
-    /^(\d+\/\d+|\u00bd|\u00bc|\u00be)\s*(gram|gr|g|kilogram|kilo|kg|ml|milliliter|liter|l|dl|el|eetlepel|eetlepels|tl|theelepel|theelepels|stuks?|st|snufje|teen|tenen|takje|takjes|blik|blikje|pot|potje|zakje|pak|pakje|bosje|handje|handjevol)\.?\s+(.+)$/i,
-    // Alleen nummer + naam (impliciet "stuks")
-    /^(\d+(?:[.,]\d+)?)\s+(.+)$/i,
+    // Nummer direct gevolgd door unit (geen spatie): "500g", "200ml"
+    new RegExp(`^(\\d+(?:[.,]\\d+)?)(${unitPattern})\\.?\\s+(.+)$`, "i"),
+    // Nummer + spatie + unit + rest: "500 g aardappelen", "2 el olijfolie"
+    new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${unitPattern})\\.?\\s+(.+)$`, "i"),
+    // Breuk + unit + rest: "1/2 tl zout", "½ kopje melk"
+    new RegExp(`^(\\d+\\/\\d+|[\\u00bd\\u00bc\\u00be\\u2153\\u2154])\\s*(${unitPattern})\\.?\\s+(.+)$`, "i"),
+    // Nummer + naam (impliciet stuks): "2 uien", "3 eieren"
+    /^(\d+(?:[.,]\d+)?)\s+([a-zA-ZÀ-ž].+)$/i,
   ];
 
   for (const pattern of patterns) {
@@ -125,21 +161,35 @@ export function parseIngredientLine(line: string): {
         // Pattern met unit
         amount = parseFraction(match[1]);
         unit = normalizeUnit(match[2]);
-        name = match[3].trim();
+        name = cleanIngredientName(match[3]);
       } else if (match.length === 3) {
         // Pattern zonder unit
         amount = parseFraction(match[1]);
-        name = match[2].trim();
+        name = cleanIngredientName(match[2]);
       } else {
         continue;
       }
 
-      return { amount, unit, name };
+      if (name) {
+        return { amount, unit, name };
+      }
     }
   }
 
-  // Geen patroon gevonden, return hele string als naam
-  return { amount: null, unit: null, name: trimmed };
+  // Geen patroon gevonden, return hele string als naam (na cleanup)
+  return { amount: null, unit: null, name: cleanIngredientName(trimmed) };
+}
+
+/**
+ * Clean up ingredient naam
+ * Verwijdert extra witruimte en ongewenste karakters
+ */
+function cleanIngredientName(name: string): string {
+  return name
+    .replace(/\s+/g, " ")           // Meerdere spaties naar één
+    .replace(/^[,.\s]+/, "")        // Leading punctuatie verwijderen
+    .replace(/[,.\s]+$/, "")        // Trailing punctuatie verwijderen
+    .trim();
 }
 
 /**

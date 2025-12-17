@@ -389,6 +389,96 @@ Ingrediënten
       // The parser should handle commas in numbers
       expect(result.ingredients.length).toBeGreaterThan(0);
     });
+
+    it("should parse real OCR output with bullets on same line", () => {
+      // Real OCR output from user's cookbook scan
+      const text = `Der 100
+156 MEDITERRAAN
+-
+-
+AARDAPPELPANNETJE
+Gebakken aardappelen maken van rauwe
+aardappelen gaat snel en ze kunnen met
+allerhande ingrediënten worden opge-
+pept. In dit geval zorgen lente-ui en
+tomaat voor een zomers en fruitig accent.
+Wie wil kan daarbij ook nog karakte
+ristieke mediterrane kruiden toevoegen,
+zoals verse tijm of marjolein.
+INGREDIËNTEN: 500
+g
+vastkokende aardappelen
+.
+1 bosje lente-uitjes⚫ kerstomaatjes peper zout • 2 el
+olijfolie
+1. AARDAPPELEN VOORBEREIDEN: schil de
+aardappelen, was ze en snijd ze in dunne plakjes.
+2. UIEN SNIJDEN: was de lente-uitjes, snijd het groen
+in grove stukken en het witte deel in dunnere ringen.
+3. AARDAPPELEN BAKKEN: verhit de olijfolie in een
+pan en laat de aardappelen in de hete olie goudbruin wor-
+den. Voeg na 5 minuten eerst het wit en later het
+van de lente-uitjes toe en laat het geheel gaar worden.
+groen
+4. TOMATEN TOEVOEGEN: leg kort voor het einde
+van de baktijd de gewassen en gehalveerde kerstomaatjes
+op de aardappelen. Ze hoeven niet gaar te worden, alleen
+een beetje warm.`;
+
+      const result = parseOcrText(text);
+
+      // Should find a reasonable title
+      expect(result.title).toBeTruthy();
+      expect(result.title.length).toBeGreaterThan(3);
+      
+      // Should find ingredients - at least some from the bullet-separated line
+      expect(result.ingredients.length).toBeGreaterThan(0);
+      
+      // Should find 4 numbered steps
+      expect(result.steps.length).toBe(4);
+      
+      // Steps should have reasonable content
+      expect(result.steps[0].instruction.toLowerCase()).toContain("aardappel");
+      expect(result.steps[1].instruction.toLowerCase()).toContain("ui");
+      expect(result.steps[2].instruction.toLowerCase()).toContain("bak");
+      expect(result.steps[3].instruction.toLowerCase()).toContain("tomat");
+      
+      // Steps should have extracted the 5 minutes timer
+      const stepWithTimer = result.steps.find(s => s.timerMinutes === 5);
+      expect(stepWithTimer).toBeTruthy();
+      
+      // Overall confidence should be reasonable
+      expect(result.confidence.overall).toBeGreaterThan(0.3);
+    });
+
+    it("should parse ingredients with unit directly attached to number", () => {
+      const text = `
+Test Recept
+
+INGREDIËNTEN: 500g vastkokende aardappelen
+      `.trim();
+
+      const result = parseOcrText(text);
+      
+      expect(result.ingredients.length).toBeGreaterThan(0);
+      const firstIngredient = result.ingredients[0];
+      expect(firstIngredient.amount).toBe(500);
+      expect(firstIngredient.unit).toBe("g");
+      expect(firstIngredient.name).toContain("aardappelen");
+    });
+
+    it("should split ingredients on bullet characters", () => {
+      const text = `
+Test
+
+INGREDIËNTEN: peper zout • 2 el olijfolie ⚫ 1 ui
+      `.trim();
+
+      const result = parseOcrText(text);
+      
+      // Should split on bullets and find multiple ingredients
+      expect(result.ingredients.length).toBeGreaterThanOrEqual(2);
+    });
   });
 });
 

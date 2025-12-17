@@ -145,21 +145,50 @@ function identifySections(lines: string[]): Sections {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check voor sectie headers
-    if (isIngredientHeader(line)) {
+    // Check voor sectie headers - ook als content op dezelfde regel staat
+    const ingredientHeaderMatch = findIngredientHeaderInLine(line);
+    if (ingredientHeaderMatch) {
       currentSection = "ingredients";
       ingredientsStartIndex = i;
+      // Als er content na de header staat, voeg die toe als ingrediënten
+      if (ingredientHeaderMatch.remainder) {
+        // Split op bullets en andere scheidingstekens
+        const ingredientParts = splitIngredientLine(ingredientHeaderMatch.remainder);
+        sections.ingredients.push(...ingredientParts);
+      }
       continue;
     }
 
-    if (isStepsHeader(line)) {
+    // Check voor stappen header
+    const stepsHeaderMatch = findStepsHeaderInLine(line);
+    if (stepsHeaderMatch) {
       currentSection = "steps";
       stepsStartIndex = i;
+      if (stepsHeaderMatch.remainder) {
+        sections.steps.push(stepsHeaderMatch.remainder);
+      }
+      continue;
+    }
+
+    // Check of de regel een genummerde stap is (bijv. "1. AARDAPPELEN VOORBEREIDEN:")
+    // Dit kan ook na de ingrediënten sectie komen
+    if (/^\d+[.)]\s*[A-Z]/.test(line)) {
+      // Dit lijkt een genummerde stap - switch naar steps sectie
+      currentSection = "steps";
+      stepsStartIndex = i;
+      sections.steps.push(line);
       continue;
     }
 
     // Voeg toe aan huidige sectie
-    sections[currentSection].push(line);
+    if (currentSection === "ingredients") {
+      // Check of dit misschien toch een stap is (lange tekst na een korte ingrediënt-achtige sectie)
+      // Split ingrediënten op bullets als ze op één regel staan
+      const parts = splitIngredientLine(line);
+      sections.ingredients.push(...parts);
+    } else {
+      sections[currentSection].push(line);
+    }
   }
 
   // Als geen expliciete headers gevonden, probeer heuristisch te splitsen
@@ -168,6 +197,66 @@ function identifySections(lines: string[]): Sections {
   }
 
   return sections;
+}
+
+/**
+ * Zoek ingredient header in een regel en return eventuele content erna
+ */
+function findIngredientHeaderInLine(line: string): { remainder: string } | null {
+  for (const pattern of SECTION_PATTERNS.ingredients) {
+    // Maak een nieuwe regex die ook content na de header vangt
+    const extendedPattern = new RegExp(pattern.source + "[:\\s]*(.*)$", "i");
+    const match = line.match(extendedPattern);
+    if (match) {
+      return { remainder: match[1]?.trim() || "" };
+    }
+    // Check ook of alleen de header matcht
+    if (pattern.test(line.split(/[:\s]/)[0])) {
+      const remainder = line.replace(pattern, "").replace(/^[:\s]+/, "").trim();
+      return { remainder };
+    }
+  }
+  return null;
+}
+
+/**
+ * Zoek stappen header in een regel en return eventuele content erna
+ */
+function findStepsHeaderInLine(line: string): { remainder: string } | null {
+  for (const pattern of SECTION_PATTERNS.steps) {
+    const extendedPattern = new RegExp(pattern.source + "[:\\s]*(.*)$", "i");
+    const match = line.match(extendedPattern);
+    if (match) {
+      return { remainder: match[1]?.trim() || "" };
+    }
+    if (pattern.test(line.split(/[:\s]/)[0])) {
+      const remainder = line.replace(pattern, "").replace(/^[:\s]+/, "").trim();
+      return { remainder };
+    }
+  }
+  return null;
+}
+
+/**
+ * Split een ingrediënten regel op bullets en andere scheidingstekens
+ * OCR output heeft vaak: "500g aardappelen • 1 ui ⚫ 2 el olie"
+ */
+function splitIngredientLine(line: string): string[] {
+  if (!line.trim()) return [];
+  
+  // Split op bullets, dots die als bullets fungeren, en andere scheidingstekens
+  // Maar niet op punten die onderdeel zijn van afkortingen (el., tl., gr.)
+  const parts = line
+    .split(/\s*[⚫•·◦‣▪▸►]\s*|\s+[.]\s+/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0);
+  
+  // Als er maar één deel is, return als array
+  if (parts.length <= 1) {
+    return [line.trim()];
+  }
+  
+  return parts;
 }
 
 /**
@@ -329,11 +418,12 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
     }
 
     // Check of dit een nieuwe stap is (begint met nummer of bullet)
-    const isNewStep = /^\d+[.):\s]/.test(line) || /^[-•*]\s/.test(line);
+    // Patronen: "1.", "1)", "1:", "1. TITEL:", etc.
+    const isNewStep = /^\d+[.):\s]/.test(line) || /^[-•*⚫]\s/.test(line);
 
     if (isNewStep && currentStep) {
       // Vorige stap opslaan
-      const instruction = normalizeStep(currentStep);
+      const instruction = normalizeStepWithTitle(currentStep);
       if (instruction.length >= 5) {
         steps.push({
           instruction,
@@ -353,7 +443,7 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
 
   // Laatste stap opslaan
   if (currentStep) {
-    const instruction = normalizeStep(currentStep);
+    const instruction = normalizeStepWithTitle(currentStep);
     if (instruction.length >= 5) {
       steps.push({
         instruction,
@@ -381,6 +471,35 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
   }
 
   return steps;
+}
+
+/**
+ * Normaliseer een stap en verwerk eventuele titel
+ * Input: "1. AARDAPPELEN VOORBEREIDEN: schil de aardappelen..."
+ * Output: "Aardappelen voorbereiden: schil de aardappelen..."
+ */
+function normalizeStepWithTitle(step: string): string {
+  let normalized = step
+    .replace(/^\d+[.):\s]+/, "") // Remove leading numbers
+    .replace(/^[-•*⚫]\s*/, "") // Remove bullet points
+    .trim();
+  
+  // Check of er een CAPS titel is gevolgd door een dubbele punt
+  // "AARDAPPELEN VOORBEREIDEN: schil de..."
+  const titleMatch = normalized.match(/^([A-Z][A-Z\s]+):\s*(.+)$/);
+  if (titleMatch) {
+    // Converteer CAPS titel naar Title Case
+    const title = titleMatch[1].toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    const rest = titleMatch[2];
+    // Maak eerste letter van rest lowercase als het geen eigennaam lijkt
+    const restNormalized = rest.charAt(0).toLowerCase() + rest.slice(1);
+    normalized = `${title}: ${restNormalized}`;
+  }
+  
+  return normalized;
 }
 
 /**
