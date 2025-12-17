@@ -95,6 +95,7 @@ export interface OcrResult {
   rawText: string;
   confidence: number;
   blocks: TextBlock[];
+  columnCount?: number; // 1 of 2 kolommen gedetecteerd
 }
 
 export interface TextBlock {
@@ -135,7 +136,8 @@ export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
 
     // Bouw tekst op vanuit de structuur (pages → blocks → paragraphs)
     // Dit geeft betere leesbare tekst dan de raw output
-    const structuredText = buildStructuredText(fullTextAnnotation);
+    // Detecteert kolommen en leest eerst linkerkolom, dan rechterkolom
+    const { text: structuredText, columnCount } = buildStructuredText(fullTextAnnotation);
     
     // Parse de blokken voor gedetailleerde info
     const blocks: TextBlock[] = [];
@@ -186,6 +188,7 @@ export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
       rawText: structuredText || fullTextAnnotation.text || "",
       confidence: Math.round(confidence * 100) / 100,
       blocks,
+      columnCount,
     };
   } catch (error) {
     console.error("Google Vision OCR error:", {
@@ -197,19 +200,67 @@ export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
 }
 
 /**
+ * Detecteert of er 1 of 2 kolommen zijn op basis van x-coordinaten clustering
+ * @param xPositions - Array van x-coordinaten van alle blocks
+ * @returns 1 of 2 (aantal kolommen)
+ */
+function detectColumnCount(xPositions: number[]): number {
+  if (xPositions.length < 3) {
+    return 1; // Te weinig data voor kolomdetectie
+  }
+  
+  // Sorteer x-posities
+  const sorted = [...xPositions].sort((a, b) => a - b);
+  
+  // Bereken de mediaan x-positie
+  const medianX = sorted[Math.floor(sorted.length / 2)];
+  
+  // Bereken de breedte van de pagina (max - min)
+  const pageWidth = sorted[sorted.length - 1] - sorted[0];
+  
+  // Als de pagina breed is en er zijn duidelijk 2 clusters
+  // (veel blocks links van mediaan, veel rechts van mediaan)
+  const leftCount = sorted.filter(x => x < medianX).length;
+  const rightCount = sorted.filter(x => x >= medianX).length;
+  
+  // Check of er een duidelijke scheiding is
+  // Als beide helften minstens 30% van de blocks bevatten
+  // EN de pagina breed genoeg is (minstens 400 pixels)
+  const minBlocksPerColumn = Math.floor(xPositions.length * 0.3);
+  const hasTwoColumns = 
+    leftCount >= minBlocksPerColumn && 
+    rightCount >= minBlocksPerColumn &&
+    pageWidth > 400; // Minimaal 400 pixels breed voor 2 kolommen
+  
+  return hasTwoColumns ? 2 : 1;
+}
+
+/**
+ * Wijs elk block toe aan een kolom (0 = links, 1 = rechts)
+ * @param x - X-coordinaat van het block
+ * @param columnThreshold - X-positie die de kolommen scheidt
+ * @returns 0 voor linkerkolom, 1 voor rechterkolom
+ */
+function assignToColumn(x: number, columnThreshold: number): number {
+  return x < columnThreshold ? 0 : 1;
+}
+
+/**
  * Bouw gestructureerde tekst op vanuit de fullTextAnnotation
- * Sorteert blocks op positie (boven naar onder, links naar rechts)
- * om kolom-layouts correct te lezen
+ * Detecteert kolommen en leest eerst linkerkolom volledig, dan rechterkolom
+ * om ingredient/stap mix te voorkomen bij 2-koloms kookboeken
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildStructuredText(fullTextAnnotation: any): string {
-  const textBlocks: Array<{ text: string; y: number; x: number }> = [];
+function buildStructuredText(fullTextAnnotation: any): { text: string; columnCount: number } {
+  const textBlocks: Array<{ text: string; y: number; x: number; width: number }> = [];
+  const xPositions: number[] = [];
   
   for (const page of fullTextAnnotation.pages || []) {
     for (const block of page.blocks || []) {
       const vertices = block.boundingBox?.vertices || [];
       const y = vertices[0]?.y || 0;
       const x = vertices[0]?.x || 0;
+      const width = (vertices[2]?.x || 0) - x;
       
       let blockText = "";
       for (const paragraph of block.paragraphs || []) {
@@ -223,23 +274,73 @@ function buildStructuredText(fullTextAnnotation: any): string {
       }
       
       if (blockText.trim()) {
-        textBlocks.push({ text: blockText.trim(), y, x });
+        textBlocks.push({ text: blockText.trim(), y, x, width });
+        // Gebruik center x voor kolomdetectie (x + width/2)
+        xPositions.push(x + width / 2);
       }
     }
   }
   
-  // Sorteer blocks op Y-positie (boven naar onder), dan X (links naar rechts)
-  // Met een tolerantie voor blocks op ongeveer dezelfde hoogte
-  const yTolerance = 20; // pixels
-  textBlocks.sort((a, b) => {
-    // Als de Y-posities dichtbij zijn, sorteer op X
+  // Detecteer aantal kolommen
+  const columnCount = detectColumnCount(xPositions);
+  
+  if (columnCount === 1) {
+    // 1 kolom: sorteer op Y, dan X (huidige logica)
+    const yTolerance = 20; // pixels
+    textBlocks.sort((a, b) => {
+      if (Math.abs(a.y - b.y) < yTolerance) {
+        return a.x - b.x;
+      }
+      return a.y - b.y;
+    });
+    
+    return {
+      text: textBlocks.map(b => b.text).join("\n"),
+      columnCount: 1,
+    };
+  }
+  
+  // 2 kolommen: bereken scheidingslijn (mediaan x-positie)
+  const sortedX = [...xPositions].sort((a, b) => a - b);
+  const columnThreshold = sortedX[Math.floor(sortedX.length / 2)];
+  
+  // Wijs blocks toe aan kolommen
+  const leftColumn: typeof textBlocks = [];
+  const rightColumn: typeof textBlocks = [];
+  
+  for (const block of textBlocks) {
+    const centerX = block.x + block.width / 2;
+    const column = assignToColumn(centerX, columnThreshold);
+    
+    if (column === 0) {
+      leftColumn.push(block);
+    } else {
+      rightColumn.push(block);
+    }
+  }
+  
+  // Sorteer elke kolom op Y-positie (boven naar onder)
+  const yTolerance = 20;
+  const sortByY = (a: typeof textBlocks[0], b: typeof textBlocks[0]) => {
     if (Math.abs(a.y - b.y) < yTolerance) {
       return a.x - b.x;
     }
     return a.y - b.y;
-  });
+  };
   
-  return textBlocks.map(b => b.text).join("\n");
+  leftColumn.sort(sortByY);
+  rightColumn.sort(sortByY);
+  
+  // Combineer: eerst linkerkolom volledig, dan rechterkolom
+  const combinedText = [
+    ...leftColumn.map(b => b.text),
+    ...rightColumn.map(b => b.text),
+  ].join("\n");
+  
+  return {
+    text: combinedText,
+    columnCount: 2,
+  };
 }
 
 /**
@@ -259,6 +360,7 @@ async function performBasicOcr(imageBuffer: Buffer, client: ImageAnnotatorClient
       rawText: "",
       confidence: 0,
       blocks: [],
+      columnCount: 1,
     };
   }
 
@@ -283,6 +385,7 @@ async function performBasicOcr(imageBuffer: Buffer, client: ImageAnnotatorClient
     rawText: fullText,
     confidence,
     blocks,
+    columnCount: 1, // Geen kolomdetectie mogelijk zonder fullTextAnnotation structuur
   };
 }
 
