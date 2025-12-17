@@ -24,14 +24,23 @@ function getVisionClient(): ImageAnnotatorClient {
   }
 
   try {
+    console.log("Parsing Google credentials, length:", credentialsJson.length);
     const credentials = JSON.parse(credentialsJson);
+    console.log("Credentials parsed successfully, project_id:", credentials.project_id);
+    console.log("Client email:", credentials.client_email);
+    
     visionClient = new ImageAnnotatorClient({
       credentials,
       projectId: credentials.project_id || process.env.GOOGLE_PROJECT_ID,
     });
+    console.log("Vision client created successfully");
     return visionClient;
   } catch (error) {
-    console.error("Error parsing Google credentials:", error);
+    console.error("Error parsing Google credentials:", {
+      error: error instanceof Error ? error.message : error,
+      jsonLength: credentialsJson?.length,
+      jsonStart: credentialsJson?.substring(0, 50),
+    });
     throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format");
   }
 }
