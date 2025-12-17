@@ -9,7 +9,6 @@ import {
   preprocessOcrText,
   mergebrokenLines,
   parseIngredientLine,
-  normalizeStep,
   extractTimerMinutes,
   extractTemperature,
   extractServings,

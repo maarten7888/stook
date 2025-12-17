@@ -201,7 +201,8 @@ export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
  * Sorteert blocks op positie (boven naar onder, links naar rechts)
  * om kolom-layouts correct te lezen
  */
-function buildStructuredText(fullTextAnnotation: { pages?: Array<{ blocks?: Array<{ boundingBox?: { vertices?: Array<{ x?: number | null; y?: number | null }> }; paragraphs?: Array<{ words?: Array<{ symbols?: Array<{ text?: string | null }> }> }> }> }> }): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildStructuredText(fullTextAnnotation: any): string {
   const textBlocks: Array<{ text: string; y: number; x: number }> = [];
   
   for (const page of fullTextAnnotation.pages || []) {
@@ -214,7 +215,8 @@ function buildStructuredText(fullTextAnnotation: { pages?: Array<{ blocks?: Arra
       for (const paragraph of block.paragraphs || []) {
         let paragraphText = "";
         for (const word of paragraph.words || []) {
-          const wordText = word.symbols?.map(s => s.text || "").join("") || "";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const wordText = word.symbols?.map((s: any) => s.text || "").join("") || "";
           paragraphText += wordText + " ";
         }
         blockText += paragraphText.trim() + "\n";
