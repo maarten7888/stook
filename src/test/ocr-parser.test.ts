@@ -841,6 +841,62 @@ plantaardige olie
         expect(olieIngredient.unit).toBe("el");
       }
     });
+    
+    it("should parse gehaktbrood recipe with OCR errors (I instead of 1, | as bullet)", () => {
+      // Real OCR output with common errors
+      const text = `GEHAKTBROOD MET PECANNOTEN
+I kg mager lamsgehakt ( of half lams half runder ) I ui en 2 tenen knoflook , fijngesneden
+I kleine zure appel , grof geraspt
+2 eieren | theel . zout
+.
+I
+vers gemalen peper
+1 eetl . mangochutney of
+abrikozenjam
+pecannoten , grof gehakt
+Verwarm de oven voor op 190 ° C . Vermeng alle ingrediënten en doe het mengsel in een ovenschaal of cakevorm . Bak het gehaktbrood in 50-55 minu- ten in de open schaal goudbruin . Giet het vrijgekomen vocht uit de vorm en laat het gehaktbrood even rusten voor hetwordt aan gesneden .
+TIP : Dit gehaktbrood is koud ook lekker , bijvoorbeeld op brood .`;
+
+      const result = parseOcrText(text);
+      
+      // Should find title
+      expect(result.title.toUpperCase()).toContain("GEHAKTBROOD");
+      
+      // Should find ingredients (I should be converted to 1)
+      // Note: Without explicit "INGREDIËNTEN" header, parsing may be less accurate
+      expect(result.ingredients.length).toBeGreaterThan(0);
+      
+      // Check if at least some ingredients are found
+      
+      // Should find lamsgehakt or at least some meat/ingredient
+      const hasMeat = result.ingredients.some(i => 
+        i.name.toLowerCase().includes("lamsgehakt") || 
+        i.name.toLowerCase().includes("gehakt") ||
+        i.name.toLowerCase().includes("ui") ||
+        i.name.toLowerCase().includes("knoflook")
+      );
+      expect(hasMeat).toBe(true);
+      
+      // Should find steps
+      expect(result.steps.length).toBeGreaterThan(0);
+      
+      // Should extract temperature (190°C)
+      const stepWithTemp = result.steps.find(s => s.targetTemp === 190);
+      expect(stepWithTemp).toBeTruthy();
+      
+      // Should extract time (50-55 minutes = ~52 minutes)
+      const stepWithTime = result.steps.find(s => s.timerMinutes && s.timerMinutes >= 50 && s.timerMinutes <= 55);
+      expect(stepWithTime).toBeTruthy();
+      
+      // "minu- ten" should be merged to "minuten"
+      const stepTexts = result.steps.map(s => s.instruction.toLowerCase()).join(" ");
+      expect(stepTexts).toContain("minuten");
+      expect(stepTexts).not.toContain("minu- ten");
+      
+      // "hetwordt aan gesneden" should be fixed to "het wordt aangesneden"
+      expect(stepTexts).toMatch(/het\s+wordt/);
+      expect(stepTexts).toMatch(/aangesneden/);
+    });
   });
 });
 

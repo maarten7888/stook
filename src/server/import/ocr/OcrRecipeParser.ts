@@ -476,8 +476,9 @@ function splitIngredientLine(line: string): string[] {
   
   // Split op bullets, dots die als bullets fungeren, en andere scheidingstekens
   // Maar niet op punten die onderdeel zijn van afkortingen (el., tl., gr.)
+  // "|" is vaak een OCR fout voor • of -
   const parts = line
-    .split(/\s*[⚫•·◦‣▪▸►]\s*|\s+[.]\s+/)
+    .split(/\s*[⚫•·◦‣▪▸►|]\s*|\s+[.]\s+/)
     .map(p => p.trim())
     .filter(p => p.length > 0);
   

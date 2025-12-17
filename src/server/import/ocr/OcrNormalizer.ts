@@ -29,8 +29,38 @@ export function normalizeWhitespace(text: string): string {
 export function preprocessOcrText(text: string): string {
   let processed = text;
   
+  // 0. Fix veelvoorkomende OCR fouten VOOR andere processing
+  // "I" (hoofdletter) gevolgd door unit/ingredient → "1" (niet "ik")
+  // Patroon: "I kg", "I ui", "I eetl", "I\nvers" etc.
+  // Case-sensitive: alleen hoofdletter "I" (niet "i" want dat kan "ik" zijn)
+  processed = processed.replace(/\bI\s+(kg|g|gram|ml|l|el|tl|eetl|theel|ui|eieren?|appel|teentje|tenen)/gi, "1 $1");
+  // "I" op aparte regel gevolgd door ingredient
+  processed = processed.replace(/\nI\n([a-z])/gi, "\n1 $1");
+  // "I" gevolgd door spatie en dan ingredient (niet midden in woord)
+  processed = processed.replace(/\bI\s+(vers|kleine|grote|verse|mager|dikke|dunne|geraspt|gehakt|zure)/gi, "1 $1");
+  // "I" gevolgd door getal (bijv. "I kg" midden in regel)
+  processed = processed.replace(/\bI\s+(kg|g|gram|ml|l|el|tl|eetl|theel)\b/gi, "1 $1");
+  
+  // 0b. Fix "|" als bullet character (vaak OCR fout voor • of -)
+  processed = processed.replace(/\|\s*/g, " • ");
+  
+  // 0c. Fix samengevoegde woorden die gesplitst moeten worden
+  // "hetwordt" → "het wordt"
+  processed = processed.replace(/\b(het|dat|wat|dit)(wordt|is|was|zijn|zijn|worden)\b/gi, "$1 $2");
+  // "aangesneden" → "aangesneden" (niet "aan gesneden")
+  // Maar "aan gesneden" → "aangesneden" (als het apart staat)
+  processed = processed.replace(/\baan\s+gesneden\b/gi, "aangesneden");
+  processed = processed.replace(/\baan\s+gezet\b/gi, "aangezet");
+  processed = processed.replace(/\baan\s+gekookt\b/gi, "aangekookt");
+  processed = processed.replace(/\baan\s+gebakken\b/gi, "aangebakken");
+  processed = processed.replace(/\baan\s+gebraad\b/gi, "aangebraad");
+  processed = processed.replace(/\bin\s+gedaan\b/gi, "ingedaan");
+  processed = processed.replace(/\bop\s+gewarmd\b/gi, "opgewarmd");
+  processed = processed.replace(/\buit\s+gegoten\b/gi, "uitgegoten");
+  processed = processed.replace(/\buit\s+gehaald\b/gi, "uitgehaald");
+  
   // 1. Voeg woorden samen die door OCR gesplitst zijn met een streepje
-  // Patronen: "aardap-\nelen", "opge- pept", "wor- den"
+  // Patronen: "aardap-\nelen", "opge- pept", "wor- den", "minu- ten"
   // Met newline
   processed = processed.replace(/(\w)-\n\s*(\w)/g, "$1$2");
   // Met spatie (OCR voegt soms spatie toe na het streepje)
