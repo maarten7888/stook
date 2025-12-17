@@ -33,7 +33,10 @@ export function preprocessOcrText(text: string): string {
   processed = processed.replace(/(\w)-\n(\w)/g, "$1$2");
   
   // 2. Verwijder losse paginanummers (regels met alleen cijfers)
+  // Aan het begin, midden, of eind van de tekst
   processed = processed.replace(/^\d{1,3}\s*$/gm, "");
+  // Ook als laatste regel (vaak paginanummer)
+  processed = processed.replace(/\n\d{1,3}\s*$/, "");
   
   // 3. Verwijder copyright/bron tekst patronen
   processed = processed.replace(/^©.*$/gm, "");

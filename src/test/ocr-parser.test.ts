@@ -633,6 +633,65 @@ Bereiding
       // The parseIngredientLine function handles word amounts (tested separately)
       // Here we verify the full flow works with standard numeric amounts
     });
+
+    it("should handle reversed order: Bereiding before Ingrediënten with title in middle", () => {
+      // Real-world case: some cookbooks have Bereiding first, then Title, then Ingredients
+      const text = `
+Bereiding
+Voor 6 personen
+Pureer chilipepers, knoflook en ui met een stamper.
+Voeg de olie toe.
+Snijd het vlees in reepjes van 4 cm.
+Verhit de olie in een wok.
+Varkensvlees met vijfkruidenpoeder
+Ingrediënten
+12 kleine chilipepers, fijngehakt
+3 teentjes knoflook, geperst
+700 g doorregen varkenslappen
+2 el arachideolie
+54
+      `.trim();
+
+      const result = parseOcrText(text);
+      
+      // Should find the title that's between Bereiding and Ingrediënten
+      expect(result.title.toLowerCase()).toContain("varkensvlees");
+      
+      // Should find ingredients
+      expect(result.ingredients.length).toBeGreaterThan(2);
+      
+      // Should find steps (from Bereiding section)
+      expect(result.steps.length).toBeGreaterThan(0);
+      
+      // Should extract servings
+      expect(result.serves).toBe(6);
+      
+      // Page number 54 should be filtered out
+      const hasPageNumber = result.ingredients.some(i => i.name === "54");
+      expect(hasPageNumber).toBe(false);
+    });
+
+    it("should filter page numbers at end of text", () => {
+      const text = `
+Test Recept
+
+Ingrediënten
+100 gram vlees
+
+Bereiding
+1. Bak het vlees
+42
+      `.trim();
+
+      const result = parseOcrText(text);
+      
+      // Page number should not be in ingredients or steps
+      const hasPageInIngredients = result.ingredients.some(i => i.name.includes("42"));
+      const hasPageInSteps = result.steps.some(s => s.instruction.includes("42"));
+      
+      expect(hasPageInIngredients).toBe(false);
+      expect(hasPageInSteps).toBe(false);
+    });
   });
 });
 

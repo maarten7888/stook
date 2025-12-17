@@ -210,6 +210,9 @@ interface Sections {
 
 /**
  * Identificeer secties in de tekst
+ * Ondersteunt verschillende volgorden: 
+ * - Standaard: Titel → Ingrediënten → Bereiding
+ * - Alternatief: Bereiding → Titel → Ingrediënten
  */
 function identifySections(lines: string[]): Sections {
   const sections: Sections = {
@@ -225,10 +228,26 @@ function identifySections(lines: string[]): Sections {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    
+    // Skip paginanummers
+    if (/^\d{1,3}$/.test(line.trim())) {
+      continue;
+    }
 
     // Check voor sectie headers - ook als content op dezelfde regel staat
     const ingredientHeaderMatch = findIngredientHeaderInLine(line);
     if (ingredientHeaderMatch) {
+      // Als we al in stappen waren, en nu ingrediënten vinden,
+      // check of de vorige regel een titel zou kunnen zijn
+      if (currentSection === "steps" && i > 0) {
+        const prevLine = lines[i - 1];
+        if (isTitleCandidate(prevLine)) {
+          // Verplaats deze regel naar header als potentiële titel
+          sections.steps = sections.steps.filter(s => s !== prevLine);
+          sections.header.push(prevLine);
+        }
+      }
+      
       currentSection = "ingredients";
       ingredientsStartIndex = i;
       // Als er content na de header staat, voeg die toe als ingrediënten
@@ -263,10 +282,16 @@ function identifySections(lines: string[]): Sections {
 
     // Voeg toe aan huidige sectie
     if (currentSection === "ingredients") {
-      // Check of dit misschien toch een stap is (lange tekst na een korte ingrediënt-achtige sectie)
-      // Split ingrediënten op bullets als ze op één regel staan
-      const parts = splitIngredientLine(line);
-      sections.ingredients.push(...parts);
+      // Check of dit misschien een titel is die tussen secties staat
+      if (isTitleCandidate(line) && line.length >= 10 && line.length <= 80) {
+        // Korte regel zonder ingrediënt-patroon, mogelijk een titel
+        // Voeg toe aan header voor titel-extractie
+        sections.header.push(line);
+      } else {
+        // Split ingrediënten op bullets als ze op één regel staan
+        const parts = splitIngredientLine(line);
+        sections.ingredients.push(...parts);
+      }
     } else {
       sections[currentSection].push(line);
     }
@@ -441,18 +466,39 @@ function isStepsHeader(line: string): boolean {
 }
 
 /**
- * Extract titel uit header sectie
+ * Extract titel uit header sectie of elders in de tekst
+ * Sommige recepten hebben de titel niet bovenaan maar ergens midden op de pagina
  */
 function extractTitle(lines: string[], sections: Sections): string {
-  // Titel is meestal de eerste regel of de langste regel in de header
+  // Strategie 1: Zoek in header sectie
   if (sections.header.length > 0) {
-    // Filter regels die te kort of te lang zijn
-    const candidates = sections.header.filter((l) => l.length >= 3 && l.length <= 100);
-    
+    const candidates = sections.header.filter((l) => isTitleCandidate(l));
     if (candidates.length > 0) {
-      // Eerste regel is vaak de titel
       return candidates[0];
     }
+  }
+
+  // Strategie 2: Zoek een titel-achtige regel vlak voor "Ingrediënten" header
+  // Dit is voor recepten waar de volgorde is: Bereiding → Titel → Ingrediënten
+  const titleBeforeIngredients = findTitleBeforeSection(lines, SECTION_PATTERNS.ingredients);
+  if (titleBeforeIngredients) {
+    return titleBeforeIngredients;
+  }
+
+  // Strategie 3: Zoek een titel-achtige regel vlak voor "Bereiding" header
+  const titleBeforeSteps = findTitleBeforeSection(lines, SECTION_PATTERNS.steps);
+  if (titleBeforeSteps) {
+    return titleBeforeSteps;
+  }
+
+  // Strategie 4: Zoek de beste titel-kandidaat in alle regels
+  const allCandidates = lines.filter((l) => isTitleCandidate(l));
+  if (allCandidates.length > 0) {
+    // Kies de regel die het meest op een titel lijkt (niet te lang, geen cijfers aan begin)
+    const bestCandidate = allCandidates.find(c => 
+      c.length >= 10 && c.length <= 60 && /^[A-ZÀ-Ž]/.test(c)
+    ) || allCandidates[0];
+    return bestCandidate;
   }
 
   // Fallback: eerste regel van het document
@@ -461,6 +507,61 @@ function extractTitle(lines: string[], sections: Sections): string {
   }
 
   return "Onbekend recept";
+}
+
+/**
+ * Check of een regel een goede titel-kandidaat is
+ */
+function isTitleCandidate(line: string): boolean {
+  const trimmed = line.trim();
+  
+  // Te kort of te lang
+  if (trimmed.length < 3 || trimmed.length > 100) return false;
+  
+  // Is een sectie header
+  if (isIngredientHeader(trimmed) || isStepsHeader(trimmed)) return false;
+  
+  // Is een paginanummer
+  if (/^\d{1,3}$/.test(trimmed)) return false;
+  
+  // Is een genummerde stap
+  if (/^\d+[.):\s]/.test(trimmed)) return false;
+  
+  // Is een bullet point
+  if (/^[-•*⚫]\s/.test(trimmed)) return false;
+  
+  // Lijkt op een ingrediënt (begint met getal + unit)
+  if (/^\d+(?:[.,]\d+)?\s*(gram|gr|g|kg|ml|l|dl|el|tl|stuks?|st)/i.test(trimmed)) return false;
+  
+  // Bevat "personen" of "porties" (metadata, geen titel)
+  if (/\d+\s*(personen|porties)/i.test(trimmed)) return false;
+  
+  return true;
+}
+
+/**
+ * Zoek een titel-achtige regel vlak voor een sectie header
+ */
+function findTitleBeforeSection(lines: string[], patterns: RegExp[]): string | null {
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    const prevLine = lines[i - 1];
+    
+    // Check of deze regel een sectie header is
+    const isHeader = patterns.some(p => p.test(line));
+    
+    if (isHeader && prevLine) {
+      // Check of de vorige regel een goede titel-kandidaat is
+      if (isTitleCandidate(prevLine) && prevLine.length >= 5 && prevLine.length <= 80) {
+        // Extra check: titel moet beginnen met hoofdletter
+        if (/^[A-ZÀ-Ž]/.test(prevLine)) {
+          return prevLine;
+        }
+      }
+    }
+  }
+  
+  return null;
 }
 
 /**
