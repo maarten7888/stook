@@ -216,13 +216,22 @@ const STEP_STARTING_VERBS = new Set([
 function isLikelyStep(line: string): boolean {
   const trimmed = line.trim();
   
+  // EERST check: is dit een ingredient line? Dan is het GEEN stap
+  const isIngredientPattern = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien)/i.test(trimmed) ||
+                              /^[-•*⚫·◦‣▪▸►]\s*\d+/.test(trimmed) || // bullet + getal
+                              /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl)/i.test(trimmed); // getal + unit
+  
+  if (isIngredientPattern) {
+    return false; // Dit is een ingredient, geen stap
+  }
+  
   // Te korte regels zijn geen stappen
   if (trimmed.length < 30) {
     return false;
   }
   
-  // Genummerde stap
-  if (/^\d+[.):\s]/.test(trimmed)) {
+  // Genummerde stap (met punt of haakje, NIET alleen spatie)
+  if (/^\d+[.):]\s/.test(trimmed)) {
     return true;
   }
   
@@ -370,7 +379,20 @@ function identifySections(lines: string[]): Sections {
     // Dit kan ook na de ingrediënten sectie komen
     // BELANGRIJK: "1 bosje" is geen stap, "1. Snijd" wel
     // Check: getal gevolgd door PUNT of HAAKJE, niet alleen een spatie
-    const looksLikeIngredientLine = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje)/i.test(line);
+    const looksLikeIngredientLine = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien)/i.test(line);
+    
+    // Als het een ingredient line is, skip de stap-detectie
+    if (looksLikeIngredientLine) {
+      // Dit is zeker een ingredient, niet een stap
+      if (currentSection === "ingredients") {
+        const parts = splitIngredientLine(line);
+        sections.ingredients.push(...parts);
+        continue;
+      }
+    }
+    
+    // Check voor genummerde stap: getal + punt/haakje + hoofdletter
+    // NIET: "1 bosje" (dat is ingredient)
     if (/^\d+[.)]\s*[A-Z]/.test(line) && !looksLikeIngredientLine) {
       // Dit lijkt een genummerde stap - switch naar steps sectie
       currentSection = "steps";
@@ -381,6 +403,19 @@ function identifySections(lines: string[]): Sections {
 
     // Voeg toe aan huidige sectie
     if (currentSection === "ingredients") {
+      // EERST check: is dit een ingredient line? (begint met hoeveelheid/unit)
+      // Dit heeft prioriteit boven stap-detectie
+      const isIngredientPattern = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien)/i.test(line) ||
+                                  /^[-•*⚫·◦‣▪▸►]\s*\d+/.test(line) || // bullet + getal
+                                  /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl)/i.test(line); // getal + unit
+      
+      if (isIngredientPattern) {
+        // Dit is zeker een ingredient, split op bullets
+        const parts = splitIngredientLine(line);
+        sections.ingredients.push(...parts);
+        continue;
+      }
+      
       // Check of dit een stap is die tussen ingrediënten staat
       // Veel kookboeken hebben mixed content (stappen tussen ingrediënten)
       if (isLikelyStep(line)) {
@@ -474,13 +509,31 @@ const STANDALONE_INGREDIENTS = new Set([
 function splitIngredientLine(line: string): string[] {
   if (!line.trim()) return [];
   
-  // Split op bullets, dots die als bullets fungeren, en andere scheidingstekens
-  // Maar niet op punten die onderdeel zijn van afkortingen (el., tl., gr.)
-  // "|" is vaak een OCR fout voor • of -
-  const parts = line
-    .split(/\s*[⚫•·◦‣▪▸►|]\s*|\s+[.]\s+/)
+  // Eerst: split op bullets (ook als ze direct aan woorden vastzitten zoals "uitjes⚫")
+  // Pattern: bullet characters (⚫•·◦‣▪▸►|) met of zonder whitespace
+  let processed = line;
+  
+  // Vervang bullets (ook zonder spatie) door een split-marker
+  // Pattern: bullet direct na woord of voor woord
+  processed = processed.replace(/([a-zA-ZÀ-ž])([⚫•·◦‣▪▸►|])/g, "$1 ||SPLIT|| ");
+  processed = processed.replace(/([⚫•·◦‣▪▸►|])([a-zA-ZÀ-ž])/g, " ||SPLIT|| $2");
+  // Ook bullets met whitespace
+  processed = processed.replace(/\s*[⚫•·◦‣▪▸►|]\s*/g, " ||SPLIT|| ");
+  
+  // Split op de marker
+  let parts = processed
+    .split(/\|\|SPLIT\|\|/)
     .map(p => p.trim())
-    .filter(p => p.length > 0);
+    .filter(p => p.length > 0 && !p.match(/^SPLIT$/i)); // Filter out split markers
+  
+  // Als er geen splits zijn gevonden, probeer andere patronen
+  if (parts.length === 1) {
+    // Probeer splitsen op " • " of "⚫" met whitespace
+    parts = line
+      .split(/\s*[⚫•·◦‣▪▸►|]\s*|\s+[.]\s+/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+  }
   
   // Verder splitsen van delen die meerdere losse ingrediënten kunnen bevatten
   const finalParts: string[] = [];
