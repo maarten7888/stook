@@ -47,10 +47,33 @@ export function preprocessOcrText(text: string): string {
   processed = processed.replace(/^bron:.*$/gim, "");
   processed = processed.replace(/^foto:.*$/gim, "");
   
-  // 4. Merge losse unit lines: "500\ng\nvastkokende aardappelen" -> "500 g vastkokende aardappelen"
+  // 3b. Verwijder korte noise regels (1-2 letters/cijfers, vaak afgekapte tekst of codes)
+  // "BC", "AB", etc. aan het eind
+  processed = processed.replace(/\n[A-Z]{1,3}\s*$/g, "");
+  // Aan het begin
+  processed = processed.replace(/^[A-Z]{1,3}\s*\n/g, "");
+  
+  // 3c. Verwijder afgekapte categorie headers zoals "VOOR ONGE" (incomplete woorden)
+  // Patronen: korte CAPS tekst gevolgd door afgekapte woord
+  processed = processed.replace(/^VOOR\s+[A-Z]{2,6}\s*$/gm, "");
+  processed = processed.replace(/^[A-Z]{2,10}\s+[A-Z]{2,6}\s*$/gm, function(match) {
+    // Check of het laatste woord lijkt op een afgekapt woord (geen volledig woord)
+    const words = match.trim().split(/\s+/);
+    if (words.length >= 2) {
+      const lastWord = words[words.length - 1];
+      // Als laatste woord < 5 chars en niet een bekend woord, waarschijnlijk afgekapt
+      const knownShortWords = ["VOOR", "MET", "VAN", "BIJ", "UIT", "AAN", "OP", "IN", "EN", "OF", "TE"];
+      if (lastWord.length < 5 && !knownShortWords.includes(lastWord)) {
+        return ""; // Verwijder
+      }
+    }
+    return match; // Behoud
+  });
+  
+  // 4. Merge losse unit lines en multi-line ingrediënten
   // Dit gebeurt vaak bij OCR waar hoeveelheid, unit en ingrediënt op aparte regels staan
-  // Ook: "INGREDIËNTEN : 500\ng\nvastkokende" -> header apart + "500 g vastkokende"
-  const unitPattern = /^(g|gr|gram|kg|kilogram|ml|l|liter|dl|cl|el|tl|stuks?|st)\.?$/i;
+  const shortUnitPattern = /^(g|gr|gram|kg|kilogram|ml|l|liter|dl|cl|el|tl|stuks?|st)\.?$/i;
+  const longUnitPattern = /^(eetlepels?|theelepels?|teentjes?|kopjes?|glazen|blik|blikje|pot|potje|takjes?|snufjes?|handjes?)$/i;
   const lines = processed.split('\n');
   const mergedLines: string[] = [];
   
@@ -60,37 +83,53 @@ export function preprocessOcrText(text: string): string {
     const lineAfterNext = lines[i + 2]?.trim();
     
     // Check of regel eindigt met een getal na een header (bv "INGREDIËNTEN : 500")
-    // Patroon: header/tekst gevolgd door : of spatie en dan een getal
     const headerWithNumberMatch = line.match(/^(.+?)\s*[:]\s*(\d+(?:[.,]\d+)?)$/);
-    if (headerWithNumberMatch && nextLine && unitPattern.test(nextLine)) {
+    if (headerWithNumberMatch && nextLine && (shortUnitPattern.test(nextLine) || longUnitPattern.test(nextLine))) {
       const headerPart = headerWithNumberMatch[1];
       const numberPart = headerWithNumberMatch[2];
       
-      // Voeg header apart toe
       mergedLines.push(headerPart);
       
-      // Check of er nog een regel na de unit is die het ingrediënt bevat
       if (lineAfterNext && /^[a-zA-ZÀ-ž]/.test(lineAfterNext) && !isHeaderLine(lineAfterNext)) {
         mergedLines.push(`${numberPart} ${nextLine} ${lineAfterNext}`);
-        i += 2; // Skip next two lines
+        i += 2;
       } else {
         mergedLines.push(`${numberPart} ${nextLine}`);
-        i++; // Skip next line
+        i++;
       }
       continue;
     }
     
+    // Patroon: "24 kleine\nkipvleugeltjes" -> getal + bijvoeglijk naamwoord op één regel, ingrediënt op volgende
+    // Check: huidige regel is "getal woord" en volgende regel is een ingredient naam
+    const amountWithAdjectiveMatch = line.match(/^(\d+)\s+([a-zA-ZÀ-ž]+)$/);
+    if (amountWithAdjectiveMatch && nextLine && /^[a-zA-ZÀ-ž]/.test(nextLine) && !isHeaderLine(nextLine)) {
+      // Check of volgende regel geen unit is en geen header
+      if (!shortUnitPattern.test(nextLine) && !longUnitPattern.test(nextLine)) {
+        // "24 kleine" + "kipvleugeltjes" -> "24 kleine kipvleugeltjes"
+        mergedLines.push(`${line} ${nextLine}`);
+        i++;
+        continue;
+      }
+    }
+    
+    // Patroon: "2 eetlepels\nplantaardige olie" -> getal + lange unit, ingrediënt op volgende regel
+    const amountWithLongUnitMatch = line.match(/^(\d+)\s+(eetlepels?|theelepels?|teentjes?|kopjes?|glazen|blik(?:je)?|pot(?:je)?|takjes?|snufjes?|handjes?)$/i);
+    if (amountWithLongUnitMatch && nextLine && /^[a-zA-ZÀ-ž]/.test(nextLine) && !isHeaderLine(nextLine)) {
+      // "2 eetlepels" + "plantaardige olie" -> "2 eetlepels plantaardige olie"
+      mergedLines.push(`${line} ${nextLine}`);
+      i++;
+      continue;
+    }
+    
     // Check of huidige regel alleen een getal is en volgende een unit
-    if (/^\d+(?:[.,]\d+)?$/.test(line) && nextLine && unitPattern.test(nextLine)) {
-      // Check of er nog een regel na de unit is die het ingrediënt bevat
-      // "500" + "g" + "vastkokende aardappelen" -> "500 g vastkokende aardappelen"
+    if (/^\d+(?:[.,]\d+)?$/.test(line) && nextLine && (shortUnitPattern.test(nextLine) || longUnitPattern.test(nextLine))) {
       if (lineAfterNext && /^[a-zA-ZÀ-ž]/.test(lineAfterNext) && !isHeaderLine(lineAfterNext)) {
         mergedLines.push(`${line} ${nextLine} ${lineAfterNext}`);
-        i += 2; // Skip next two lines
+        i += 2;
       } else {
-        // Alleen getal + unit mergen
         mergedLines.push(`${line} ${nextLine}`);
-        i++; // Skip next line
+        i++;
       }
     } else {
       mergedLines.push(lines[i]);

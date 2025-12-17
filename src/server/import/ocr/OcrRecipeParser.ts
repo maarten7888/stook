@@ -71,14 +71,20 @@ const SECTION_PATTERNS = {
     /^ingredients?/i,
     /^je hebt nodig/i,
     /^nodig/i,
+    // Alternatieve headers uit verschillende kookboeken
+    /^boodschappen/i,           // Veel Nederlandse kookboeken
+    /^boodschappenlijst/i,
+    /^shopping\s*list/i,
+    /^je\s*hebt\s*nodig/i,
+    /^dit\s*heb\s*je\s*nodig/i,
+    /^voor\s*dit\s*recept/i,
+    /^voor\s*\d+\s*personen/i,  // "Voor 4 personen"
     // OCR fuzzy varianten (I/l/1 verwisseling, etc.)
     /^[il1]ngred[il1][eëé]nten/i,
     /^lngredi[eëé]nten/i,
     /^1ngred/i,
     // Afkortingen en variaties
     /^ingr\./i,
-    /^voor dit recept/i,
-    /^dit heb je nodig/i,
   ],
   steps: [
     // Standaard
@@ -162,8 +168,68 @@ function fuzzyMatchHeader(text: string, targetWords: string[]): boolean {
 }
 
 // Known header words for fuzzy matching
-const FUZZY_INGREDIENT_HEADERS = ["ingredienten", "ingrediënten", "benodigdheden", "ingredients"];
+const FUZZY_INGREDIENT_HEADERS = ["ingredienten", "ingrediënten", "benodigdheden", "ingredients", "boodschappen", "boodschappenlijst"];
 const FUZZY_STEPS_HEADERS = ["bereiding", "bereidingswijze", "werkwijze", "instructies", "method", "preparation"];
+
+// Nederlandse werkwoorden die vaak stappen beginnen (imperatief)
+const STEP_STARTING_VERBS = new Set([
+  // Koken basics
+  "meng", "roer", "klop", "mix", "voeg", "doe", "giet", "schenk",
+  "kook", "bak", "braad", "stoof", "smelt", "verhit", "verwarm", "laat",
+  "snijd", "snij", "hak", "rasp", "schil", "was", "spoel", "dep",
+  "leg", "zet", "plaats", "dek", "bedek", "strooi", "bestrooi",
+  "haal", "neem", "pak", "gebruik", "verdeel", "schep", "lepel",
+  // Oven/grill
+  "verwarm", "voorverwarm", "gril", "rooster", "gratineer",
+  // Afwerking
+  "garneer", "serveer", "presenteer", "verdeel", "bestrooi",
+  // Tijd gerelateerd
+  "wacht", "marineer", "laat", "zet",
+  // Engels (voor gemixte recepten)
+  "add", "mix", "stir", "heat", "cook", "bake", "cut", "slice", "pour",
+]);
+
+/**
+ * Check of een regel waarschijnlijk een stap is
+ * (begint met werkwoord of is een lange instructieve zin)
+ * Strenger: alleen duidelijke stappen herkennen om geen ingrediënten te verliezen
+ */
+function isLikelyStep(line: string): boolean {
+  const trimmed = line.trim();
+  
+  // Te korte regels zijn geen stappen
+  if (trimmed.length < 30) {
+    return false;
+  }
+  
+  // Genummerde stap
+  if (/^\d+[.):\s]/.test(trimmed)) {
+    return true;
+  }
+  
+  // Begint met werkwoord EN is een redelijke zin
+  const firstWord = trimmed.split(/[\s,.:]/)[0].toLowerCase();
+  if (STEP_STARTING_VERBS.has(firstWord) && trimmed.length > 40) {
+    // Extra check: moet een punt hebben of eindigen met instructie
+    if (trimmed.endsWith(".") || /minuten|uur|graden|°/i.test(trimmed)) {
+      return true;
+    }
+  }
+  
+  // Bevat oven temperatuur instructie (zeer specifiek voor kook-stappen)
+  if (/verwarm.*oven|oven.*verwarm|voorverwarm/i.test(trimmed) && /\d+\s*°/.test(trimmed)) {
+    return true;
+  }
+  
+  // Bevat temperatuur EN tijd indicatie (zeer waarschijnlijk een stap)
+  const hasTemp = /\d+\s*°\s*[cCfF]/.test(trimmed) || /\d+\s*graden/i.test(trimmed);
+  const hasTime = /\d+\s*minuten?/i.test(trimmed) || /\d+\s*uur/i.test(trimmed);
+  if (hasTemp && hasTime && trimmed.length > 40) {
+    return true;
+  }
+  
+  return false;
+}
 
 /**
  * Parse OCR tekst naar een gestructureerd recept
@@ -283,7 +349,10 @@ function identifySections(lines: string[]): Sections {
 
     // Check of de regel een genummerde stap is (bijv. "1. AARDAPPELEN VOORBEREIDEN:")
     // Dit kan ook na de ingrediënten sectie komen
-    if (/^\d+[.)]\s*[A-Z]/.test(line)) {
+    // BELANGRIJK: "1 bosje" is geen stap, "1. Snijd" wel
+    // Check: getal gevolgd door PUNT of HAAKJE, niet alleen een spatie
+    const looksLikeIngredientLine = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje)/i.test(line);
+    if (/^\d+[.)]\s*[A-Z]/.test(line) && !looksLikeIngredientLine) {
       // Dit lijkt een genummerde stap - switch naar steps sectie
       currentSection = "steps";
       stepsStartIndex = i;
@@ -293,6 +362,15 @@ function identifySections(lines: string[]): Sections {
 
     // Voeg toe aan huidige sectie
     if (currentSection === "ingredients") {
+      // Check of dit een stap is die tussen ingrediënten staat
+      // Veel kookboeken hebben mixed content (stappen tussen ingrediënten)
+      if (isLikelyStep(line)) {
+        // Dit is een stap, niet een ingrediënt
+        sections.steps.push(line);
+        // Blijf wel in ingredients sectie voor volgende regels
+        continue;
+      }
+      
       // Check of dit misschien een titel is die tussen secties staat
       if (isTitleCandidate(line) && line.length >= 10 && line.length <= 80) {
         // Korte regel zonder ingrediënt-patroon, mogelijk een titel
@@ -852,7 +930,12 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
 
     // Check of dit een nieuwe stap is (begint met nummer of bullet)
     // Patronen: "1.", "1)", "1:", "1. TITEL:", etc.
-    const isNewStep = /^\d+[.):\s]/.test(line) || /^[-•*⚫]\s/.test(line);
+    // NIET: "1 bosje" (dat is een ingrediënt, geen stap)
+    const startsWithNumberPunct = /^\d+[.):]/.test(line); // getal + punct (geen spatie!)
+    const startsWithBullet = /^[-•*⚫]\s/.test(line);
+    // "1 bosje", "2 el" etc. zijn ingrediënten, geen stappen
+    const looksLikeIngredient = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje)/i.test(line);
+    const isNewStep = (startsWithNumberPunct || startsWithBullet) && !looksLikeIngredient;
 
     if (isNewStep && currentStep) {
       // Vorige stap opslaan
