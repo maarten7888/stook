@@ -46,6 +46,17 @@ describe("OcrNormalizer", () => {
       expect(preprocessOcrText("10–20")).toBe("10-20");
       expect(preprocessOcrText("10—20")).toBe("10-20");
     });
+    
+    it("should merge header with trailing number + unit + ingredient", () => {
+      // OCR vaak: "INGREDIËNTEN : 500\ng\nvastkokende aardappelen"
+      const input = "INGREDIËNTEN : 500\ng\nvastkokende aardappelen";
+      const result = preprocessOcrText(input);
+      // Header moet apart, daarna gemergde ingrediënt
+      expect(result).toContain("INGREDIËNTEN");
+      expect(result).toContain("500 g vastkokende aardappelen");
+      // 500 mag niet meer in de header staan
+      expect(result).not.toContain("INGREDIËNTEN : 500");
+    });
   });
 
   describe("mergebrokenLines", () => {

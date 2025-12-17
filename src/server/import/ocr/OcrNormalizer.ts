@@ -49,6 +49,7 @@ export function preprocessOcrText(text: string): string {
   
   // 4. Merge losse unit lines: "500\ng\nvastkokende aardappelen" -> "500 g vastkokende aardappelen"
   // Dit gebeurt vaak bij OCR waar hoeveelheid, unit en ingrediënt op aparte regels staan
+  // Ook: "INGREDIËNTEN : 500\ng\nvastkokende" -> header apart + "500 g vastkokende"
   const unitPattern = /^(g|gr|gram|kg|kilogram|ml|l|liter|dl|cl|el|tl|stuks?|st)\.?$/i;
   const lines = processed.split('\n');
   const mergedLines: string[] = [];
@@ -57,6 +58,27 @@ export function preprocessOcrText(text: string): string {
     const line = lines[i].trim();
     const nextLine = lines[i + 1]?.trim();
     const lineAfterNext = lines[i + 2]?.trim();
+    
+    // Check of regel eindigt met een getal na een header (bv "INGREDIËNTEN : 500")
+    // Patroon: header/tekst gevolgd door : of spatie en dan een getal
+    const headerWithNumberMatch = line.match(/^(.+?)\s*[:]\s*(\d+(?:[.,]\d+)?)$/);
+    if (headerWithNumberMatch && nextLine && unitPattern.test(nextLine)) {
+      const headerPart = headerWithNumberMatch[1];
+      const numberPart = headerWithNumberMatch[2];
+      
+      // Voeg header apart toe
+      mergedLines.push(headerPart);
+      
+      // Check of er nog een regel na de unit is die het ingrediënt bevat
+      if (lineAfterNext && /^[a-zA-ZÀ-ž]/.test(lineAfterNext) && !isHeaderLine(lineAfterNext)) {
+        mergedLines.push(`${numberPart} ${nextLine} ${lineAfterNext}`);
+        i += 2; // Skip next two lines
+      } else {
+        mergedLines.push(`${numberPart} ${nextLine}`);
+        i++; // Skip next line
+      }
+      continue;
+    }
     
     // Check of huidige regel alleen een getal is en volgende een unit
     if (/^\d+(?:[.,]\d+)?$/.test(line) && nextLine && unitPattern.test(nextLine)) {
