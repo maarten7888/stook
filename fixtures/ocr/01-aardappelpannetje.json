@@ -1,0 +1,56 @@
+{
+  "name": "Aardappelpannetje - Bullets op één regel",
+  "description": "Recept met bullets op één regel, multi-line ingrediënten, en genummerde stappen",
+  "rawText": "Der 100\n156 MEDITERRAAN\n-\n-\nAARDAPPELPANNETJE\nGebakken aardappelen maken van rauwe aardappelen gaat snel en ze kunnen met allerhande ingrediënten worden opgepept. In dit geval zorgen lente-ui en tomaat voor een zomers en fruitig accent. Wie wil kan daarbij ook nog karakteristieke mediterrane kruiden toevoegen, zoals verse tijm of marjolein.\nINGREDIËNTEN: 500\ng\nvastkokende aardappelen\n.\n1 bosje lente-uitjes⚫ kerstomaatjes peper zout • 2 el\nolijfolie\n1. AARDAPPELEN VOORBEREIDEN: schil de aardappelen, was ze en snijd ze in dunne plakjes.\n2. UIEN SNIJDEN: was de lente-uitjes, snijd het groen in grove stukken en het witte deel in dunnere ringen.\n3. AARDAPPELEN BAKKEN: verhit de olijfolie in een pan en laat de aardappelen in de hete olie goudbruin worden. Voeg na 5 minuten eerst het wit en later het groen van de lente-uitjes toe en laat het geheel gaar worden.\n4. TOMATEN TOEVOEGEN: leg kort voor het einde van de baktijd de gewassen en gehalveerde kerstomaatjes op de aardappelen. Ze hoeven niet gaar te worden, alleen een beetje warm.",
+  "expected": {
+    "title": {
+      "exact": "AARDAPPELPANNETJE",
+      "contains": ["aardappel", "pannetje"]
+    },
+    "description": {
+      "contains": ["aardappelen", "lente-ui", "tomaat"]
+    },
+    "ingredients": {
+      "count": {
+        "min": 1,
+        "max": 3
+      },
+      "items": [
+        {
+          "name": { "contains": "aardappelen" },
+          "amount": 500,
+          "unit": "g"
+        }
+      ]
+    },
+    "steps": {
+      "count": {
+        "min": 4,
+        "max": 6
+      },
+      "items": [
+        {
+          "instruction": { "contains": "aardappel" },
+          "orderNo": { "min": 1, "max": 2 }
+        },
+        {
+          "instruction": { "contains": "ui" },
+          "orderNo": { "min": 2, "max": 3 }
+        },
+        {
+          "instruction": { "contains": "bak" },
+          "orderNo": { "min": 3, "max": 5 },
+          "timerMinutes": 5
+        },
+        {
+          "instruction": { "contains": "tomat" },
+          "orderNo": { "min": 4, "max": 6 }
+        }
+      ]
+    },
+    "confidence": {
+      "overall": { "min": 0.4 }
+    }
+  }
+}
+

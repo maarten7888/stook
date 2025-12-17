@@ -1,0 +1,53 @@
+{
+  "name": "Kipdrumstics - BOODSCHAPPEN header",
+  "description": "Recept met BOODSCHAPPEN header, multi-line ingrediënten, mixed content",
+  "rawText": "VOOR ONGE\nKIPDRUMSTICS\nSnijd de kipvleugeltjes bij het hoofdgewricht doormidden . Gooi de vleugelpunten weg ( of trek er bouillon van ) . Snijd met een scherp mes het vlees van elk doorgesneden gewricht en schraap het vlees van het bot naar beneden . Duw het over het onderste gewricht , zodat de vleugel op een kippenboutje lijkt . Leg de drumsticks in een ondiepe schaal .\nBOODSCHAPPEN\n24 kleine\nkipvleugeltjes\n2 eetlepels\nplantaardige olie\n3 eetlepels\nhoisinsaus\nMeng olie , 3 eetlepels hoisinsaus , sojasaus , sherry , knoflook , chili en gember in een pot met een schroefdeksel . Schud om alles goed te mengen . Schenk de saus over de kip . Dek deze af en laat hem 3 uur in de koelkast marineren .\n4 eetlepels lichte\nsojasaus\n2 eetlepels droge sherry\n4 teentjes knoflook , geperst\n1 kleine , rode Spaanse peper ,\nzonder zaadjes en\nVerwarm de oven voor op 180 ° C / gasstand 4 .\nHaal de kip uit de marinade en leg hem in een licht ingevette braadslee . Bak de kip in de voorverwarmde oven in 15-20 minuten gaar .\ngehakt\nHeet of koud serveren met hoisinsaus .\n3 theelepels verse\ngember , geschild en\ngeraspt\n125 ml hoisinsaus ,\nals dipsaus\nBC",
+  "expected": {
+    "title": {
+      "contains": ["kip", "drumstic"]
+    },
+    "ingredients": {
+      "count": {
+        "min": 1,
+        "max": 10
+      },
+      "items": [
+        {
+          "name": { "contains": "kipvleugeltjes" }
+        },
+        {
+          "name": { "contains": "olie" }
+        },
+        {
+          "name": { "contains": "hoisinsaus" }
+        },
+        {
+          "name": { "contains": "knoflook" }
+        }
+      ]
+    },
+    "steps": {
+      "count": {
+        "min": 1,
+        "max": 6
+      },
+      "items": [
+        {
+          "instruction": { "contains": "meng" }
+        },
+        {
+          "instruction": { "contains": "verwarm" },
+          "targetTemp": 180
+        },
+        {
+          "instruction": { "contains": "bak" },
+          "timerMinutes": { "min": 15, "max": 20 }
+        }
+      ]
+    },
+    "confidence": {
+      "overall": { "min": 0.4 }
+    }
+  }
+}
+

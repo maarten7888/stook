@@ -1,0 +1,37 @@
+{
+  "name": "Eenvoudig Nederlands Recept",
+  "description": "Basis recept met standaard structuur",
+  "rawText": "PULLED PORK\nEen heerlijk Amerikaans BBQ recept voor pulled pork.\n\nINGREDIËNTEN\n500 gram varkensschouder\n2 eetlepels paprikapoeder\n1 theelepel zout\n1 theelepel peper\n\nBEREIDING\n1. Verwarm de BBQ tot 120 graden.\n2. Wrijf het vlees in met de kruiden.\n3. Leg het vlees op de BBQ en laat 4 uur garen.\n4. Haal het vlees eraf en trek het uit elkaar.\n\nVoor 4 personen",
+  "expected": {
+    "title": {
+      "contains": ["pulled", "pork", "bbq"]
+    },
+    "ingredients": {
+      "count": {
+        "min": 1,
+        "max": 5
+      },
+      "items": [
+        {
+          "name": { "contains": "varkensschouder" }
+        }
+      ]
+    },
+    "steps": {
+      "count": {
+        "min": 1,
+        "max": 5
+      },
+      "items": [
+        {
+          "instruction": { "contains": "verwarm" }
+        }
+      ]
+    },
+    "serves": 4,
+    "confidence": {
+      "overall": { "min": 0.7 }
+    }
+  }
+}
+
