@@ -25,7 +25,8 @@ STACK & HOSTING (NIET-ONDERHANDELBAAR)
 * **Hosting**: **Vercel**. Edge/Node runtimes per route: standaard **Node.js 20**; edge alleen waar nuttig.
 * **Uploads**: Supabase Storage buckets.
 * **OCR (nieuw)**: **Google Cloud Vision API** (`@google-cloud/vision`) via **Route Handlers (Node runtime)**. Geen edge voor OCR/DB.
-* **Credentials (OCR)**: service account JSON via `GOOGLE_APPLICATION_CREDENTIALS_JSON` (server-only env var). Nooit loggen.
+* **Credentials (OCR)**: service account JSON via `GOOGLE_APPLICATION_CREDENTIALS_JSON` (server-only env var). **Base64 encoded** in Vercel (decode automatisch). Nooit loggen.
+* **OCR Method**: Gebruikt `documentTextDetection` (niet `textDetection`) voor betere document structuur en kolomdetectie.
 * **E-mail** (optioneel): Resend/Postmark adapter via server actions.
 * **Testing**: Vitest + Testing Library (component) en Playwright (e2e). CI via GitHub Actions bij push/PR.
 * **Lint/format**: ESLint (next/core-web-vitals) + Prettier.
@@ -150,10 +151,16 @@ IMPORT (Web Scraping + OCR)
 
   * server modules in `server/import/ocr/*`:
 
-    * `GoogleVisionOcr` (Vision textDetection)
-    * `OcrRecipeParser` (NL/EN headings; bullets/nummering; confidence)
-    * `OcrNormalizer` (units/whitespace; stapnummering)
+    * `GoogleVisionOcr` (Vision `documentTextDetection`; kolomdetectie via x-coordinate clustering; text block sorting Y/X)
+    * `OcrRecipeParser` (NL/EN headings; bullets/nummering; ingredient vs step detection; confidence scoring)
+    * `OcrNormalizer` (units/whitespace; hyphenation merging; noise removal; line continuation; stapnummering)
   * Flow foto: upload → `POST /api/import/photo/ocr` → `POST /api/import/photo/preview` → user edits → `POST /api/import/photo` → insert recipe (private).
+  * **Kolomdetectie**: Detecteert 1 vs 2 kolommen via x-coordinate clustering; parseert linkerkolom volledig voor rechterkolom (voorkomt ingredient/stap mix).
+  * **Parser features**: 
+    * Ingredient lines met nummers (bijv. "1 bosje") worden niet meer als stappen gezien
+    * Bullet splitting: handles bullets met/zonder whitespace (bijv. "uitjes⚫")
+    * Multi-line ingredient merging (bijv. "500\ng\nvastkokende aardappelen")
+    * Standalone ingredient splitting (bijv. "peper zout" → 2 ingrediënten)
 
 UI & STYLING
 
@@ -176,7 +183,8 @@ QUALITY BAR / DONE
 * ESLint clean; type-safe server actions; Zod schema’s voor API payloads.
 * OCR Done (nieuw):
 
-  * Vitest: `OcrRecipeParser` testcases (NL headings “Ingrediënten/Bereiding”, EN fallback, bullets, lege OCR).
+  * Vitest: `OcrRecipeParser` testcases (NL headings "Ingrediënten/Bereiding", EN fallback, bullets, lege OCR).
+  * **Golden testset**: `fixtures/ocr/*.json` met 4+ test cases + `src/test/ocr-golden.test.ts` met metrics logging (title exact/contains, ingredient/step counts, confidence).
   * Playwright e2e: `/import` → tab foto → upload fixture → preview → import → recipe detail.
 * Seed scripts: `pnpm seed` beschikbaar, maar in prod bij voorkeur via SQL Editor. Demo user aanmaken via Supabase Auth + insert in `profiles`.
 * README met setup, `.env.example`, deploy-stappen Vercel, RLS policies, seeds.
@@ -219,6 +227,8 @@ CODING NOTES
   * Path ownership check: importpad moet `.../imports/${user_id}/...` bevatten.
   * Rate limiting: maximaal 10 OCR runs / uur / user (simpel in dev; in prod uitbreidbaar).
   * Failfast: geen tekst gevonden → 422 met NL microcopy.
+  * **Credential parsing**: Base64 decode + control character removal + newline normalization voor robuuste JSON parsing.
+  * **Column detection**: Minimum 5 blocks, 30% per kolom, 400px page width threshold voor 2-kolom detectie.
 * Auto-save: `useEffect` + `setTimeout` debounce (2s); cleanup clear.
 * Data fetching in server components: altijd direct Supabase Admin Client i.p.v. `fetch()` naar interne API routes.
 * Error handling: uitgebreide `console.error` logging met codes/messages/details/hints (geen secrets).
@@ -231,7 +241,7 @@ MILESTONES
 * M3 Import flow (URL) ✅ VOLTOOID
 * M4 UI Components + Branding ✅ VOLTOOID
 * M5 Production Polish 🔄 IN PROGRESS
-* M6 Import OCR (Google Vision) ⏳ TE DOEN
+* M6 Import OCR (Google Vision) ✅ VOLTOOID
 
 OCR SPRINT (M6) – PLAN (concreet)
 
@@ -287,13 +297,15 @@ CURRENT STATUS (December 2024)
 📋 VOLGENDE STAPPEN:
 
 1. Branch protection rules op main (GitHub settings)
-2. M6 OCR Import (Google Vision) implementeren op `/import`
-3. PWA manifest en service worker
-4. Real-time updates (Supabase Realtime)
-5. Zoeken functionaliteit (pg_trgm/Meilisearch)
-6. Error boundaries + toasts
-7. Signed image URL expiratie + cache headers
-8. Monitoring integratie (Sentry/Logflare)
+2. OCR parser verder verbeteren (statistische cues, ALLCAPS kopjes, agressievere splitting)
+3. Meer golden test cases toevoegen (10-20 test cases voor betere coverage)
+4. CI metrics setup voor golden tests
+5. PWA manifest en service worker
+6. Real-time updates (Supabase Realtime)
+7. Zoeken functionaliteit (pg_trgm/Meilisearch)
+8. Error boundaries + toasts
+9. Signed image URL expiratie + cache headers
+10. Monitoring integratie (Sentry/Logflare)
 
 SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
 
