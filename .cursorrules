@@ -115,10 +115,10 @@ ROUTES / PAGINA'S (Next.js App Router)
 * `/recipes/[id]/edit` [Gereed]
 * `/sessions` [Gereed]
 * `/sessions/[id]` [Gereed]
-* `/import` (Import Hub) [URL import gereed; OCR uitbreiden]
+* `/import` (Import Hub) [URL + OCR import gereed]
 
-  * **Tab 1 (bestaand)**: URL → Preview → Import, met confidence scoring.
-  * **Tab 2 (nieuw)**: Foto → OCR (Google Vision) → Preview → Import.
+  * **Tab 1**: URL → Preview → Import, met confidence scoring.
+  * **Tab 2**: Foto → OCR (Google Vision) → Preview → Import.
   * Preview is één gedeelde UI: titel/omschrijving, ingrediënten (editable), stappen (editable) + confidence per sectie.
   * Microcopy NL: kort, vriendelijk, to-the-point.
 * `/profile` [Gereed]
