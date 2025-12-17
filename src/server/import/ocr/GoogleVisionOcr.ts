@@ -25,9 +25,25 @@ function getVisionClient(): ImageAnnotatorClient {
 
   try {
     console.log("Parsing Google credentials, length:", credentialsJson.length);
-    const credentials = JSON.parse(credentialsJson);
+    
+    // Handle escaped newlines in private_key (common issue with env vars)
+    let processedJson = credentialsJson;
+    
+    // If the JSON contains literal \\n (double escaped), convert to actual newlines
+    if (credentialsJson.includes('\\\\n')) {
+      processedJson = credentialsJson.replace(/\\\\n/g, '\\n');
+    }
+    
+    const credentials = JSON.parse(processedJson);
+    
+    // Also fix newlines in the private_key if they got double-escaped
+    if (credentials.private_key && typeof credentials.private_key === 'string') {
+      credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    }
+    
     console.log("Credentials parsed successfully, project_id:", credentials.project_id);
     console.log("Client email:", credentials.client_email);
+    console.log("Private key starts with:", credentials.private_key?.substring(0, 30));
     
     visionClient = new ImageAnnotatorClient({
       credentials,
@@ -38,10 +54,11 @@ function getVisionClient(): ImageAnnotatorClient {
   } catch (error) {
     console.error("Error parsing Google credentials:", {
       error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
       jsonLength: credentialsJson?.length,
-      jsonStart: credentialsJson?.substring(0, 50),
+      jsonStart: credentialsJson?.substring(0, 100),
     });
-    throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format");
+    throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format: " + (error instanceof Error ? error.message : "unknown"));
   }
 }
 
