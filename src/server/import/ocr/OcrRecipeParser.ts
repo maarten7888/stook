@@ -47,6 +47,17 @@ export interface RecipeConfidence {
   title: number;
   ingredients: number;
   steps: number;
+  // Gedetailleerde breakdown
+  details: {
+    titlePresent: boolean;
+    titleScore: number;
+    ingredientsCount: number;
+    ingredientsWithAmount: number;
+    stepsCount: number;
+    avgStepLength: number;
+    hasServings: boolean;
+    hasCookTime: boolean;
+  };
 }
 
 // Heading patterns voor sectie herkenning
@@ -186,7 +197,7 @@ export function parseOcrText(rawText: string): ParsedRecipe {
   const targetInternalTemp = extractTemperature(text);
 
   // Bereken confidence scores
-  const confidence = calculateConfidence(title, ingredients, steps);
+  const confidence = calculateConfidence(title, ingredients, steps, serves, cookMinutes);
 
   return {
     title,
@@ -470,38 +481,69 @@ function isStepsHeader(line: string): boolean {
  * Sommige recepten hebben de titel niet bovenaan maar ergens midden op de pagina
  */
 function extractTitle(lines: string[], sections: Sections): string {
+  // Verzamel alle kandidaten met scores
+  const scoredCandidates: Array<{ text: string; score: number; source: string }> = [];
+  
   // Strategie 1: Zoek in header sectie
-  if (sections.header.length > 0) {
-    const candidates = sections.header.filter((l) => isTitleCandidate(l));
-    if (candidates.length > 0) {
-      return candidates[0];
+  for (const line of sections.header) {
+    if (isTitleCandidate(line)) {
+      scoredCandidates.push({
+        text: line,
+        score: scoreTitleCandidate(line) + 1, // Bonus voor header positie
+        source: "header"
+      });
     }
   }
 
   // Strategie 2: Zoek een titel-achtige regel vlak voor "Ingrediënten" header
-  // Dit is voor recepten waar de volgorde is: Bereiding → Titel → Ingrediënten
   const titleBeforeIngredients = findTitleBeforeSection(lines, SECTION_PATTERNS.ingredients);
-  if (titleBeforeIngredients) {
-    return titleBeforeIngredients;
+  if (titleBeforeIngredients && isTitleCandidate(titleBeforeIngredients)) {
+    scoredCandidates.push({
+      text: titleBeforeIngredients,
+      score: scoreTitleCandidate(titleBeforeIngredients) + 2, // Bonus voor positie voor ingrediënten
+      source: "before_ingredients"
+    });
   }
 
   // Strategie 3: Zoek een titel-achtige regel vlak voor "Bereiding" header
   const titleBeforeSteps = findTitleBeforeSection(lines, SECTION_PATTERNS.steps);
-  if (titleBeforeSteps) {
-    return titleBeforeSteps;
+  if (titleBeforeSteps && isTitleCandidate(titleBeforeSteps)) {
+    scoredCandidates.push({
+      text: titleBeforeSteps,
+      score: scoreTitleCandidate(titleBeforeSteps),
+      source: "before_steps"
+    });
   }
 
-  // Strategie 4: Zoek de beste titel-kandidaat in alle regels
-  const allCandidates = lines.filter((l) => isTitleCandidate(l));
-  if (allCandidates.length > 0) {
-    // Kies de regel die het meest op een titel lijkt (niet te lang, geen cijfers aan begin)
-    const bestCandidate = allCandidates.find(c => 
-      c.length >= 10 && c.length <= 60 && /^[A-ZÀ-Ž]/.test(c)
-    ) || allCandidates[0];
-    return bestCandidate;
+  // Strategie 4: Zoek in eerste 10 regels voor uppercase-heavy titels
+  const top10 = lines.slice(0, 10);
+  for (const line of top10) {
+    if (isTitleCandidate(line) && !scoredCandidates.some(c => c.text === line)) {
+      const uppercaseRatio = getUppercaseRatio(line);
+      if (uppercaseRatio > 0.5) {
+        scoredCandidates.push({
+          text: line,
+          score: scoreTitleCandidate(line),
+          source: "top10_uppercase"
+        });
+      }
+    }
   }
 
-  // Fallback: eerste regel van het document
+  // Sorteer op score (hoogste eerst) en kies de beste
+  scoredCandidates.sort((a, b) => b.score - a.score);
+  
+  if (scoredCandidates.length > 0 && scoredCandidates[0].score > 0) {
+    return scoredCandidates[0].text;
+  }
+
+  // Fallback: eerste titel-kandidaat in alle regels
+  const fallbackCandidate = lines.find(l => isTitleCandidate(l));
+  if (fallbackCandidate) {
+    return fallbackCandidate;
+  }
+
+  // Laatste fallback: eerste regel van het document
   if (lines.length > 0) {
     return lines[0].substring(0, 100);
   }
@@ -515,8 +557,8 @@ function extractTitle(lines: string[], sections: Sections): string {
 function isTitleCandidate(line: string): boolean {
   const trimmed = line.trim();
   
-  // Te kort of te lang
-  if (trimmed.length < 3 || trimmed.length > 100) return false;
+  // Te kort of te lang (4-60 karakters is ideaal voor titels)
+  if (trimmed.length < 4 || trimmed.length > 60) return false;
   
   // Is een sectie header
   if (isIngredientHeader(trimmed) || isStepsHeader(trimmed)) return false;
@@ -536,7 +578,116 @@ function isTitleCandidate(line: string): boolean {
   // Bevat "personen" of "porties" (metadata, geen titel)
   if (/\d+\s*(personen|porties)/i.test(trimmed)) return false;
   
+  // Bevat cijfers aan het begin (vaak paginanummers of ruis zoals "Der 100")
+  if (/^(Der|Seite|Page|Pagina)?\s*\d+/i.test(trimmed)) return false;
+  
+  // Is een categorie header (vaak CAPS, generieke termen)
+  if (isCategoryHeader(trimmed)) return false;
+  
   return true;
+}
+
+/**
+ * Check of een regel een categorie header is (geen recept titel)
+ * Bijv. "MEDITERRAAN", "VOORGERECHTEN", "HOOFDGERECHTEN"
+ */
+function isCategoryHeader(line: string): boolean {
+  const categoryPatterns = [
+    /^MEDITERRAAN$/i,
+    /^(VOOR|HOOFD|NA)GERECHTEN?$/i,
+    /^DESSERTS?$/i,
+    /^SALADES?$/i,
+    /^SOEPEN?$/i,
+    /^BIJGERECHTEN?$/i,
+    /^SNACKS?$/i,
+    /^DRANKEN?$/i,
+    /^ONTBIJT$/i,
+    /^LUNCH$/i,
+    /^DINER$/i,
+    /^HAPJES?$/i,
+    /^VLEES$/i,
+    /^VIS$/i,
+    /^VEGETARISCH$/i,
+    /^VEGAN$/i,
+    /^BAKKEN$/i,
+    /^GRILLEN$/i,
+    /^ROKEN$/i,
+    /^BBQ$/i,
+    /^KAMADO$/i,
+  ];
+  
+  return categoryPatterns.some(p => p.test(line.trim()));
+}
+
+/**
+ * Bereken uppercase ratio van een string
+ * Titels hebben vaak een hoge uppercase ratio
+ */
+function getUppercaseRatio(text: string): number {
+  const letters = text.replace(/[^a-zA-ZÀ-ž]/g, "");
+  if (letters.length === 0) return 0;
+  
+  const uppercase = letters.replace(/[^A-ZÀ-Ž]/g, "");
+  return uppercase.length / letters.length;
+}
+
+/**
+ * Score een titel kandidaat (hoger = beter)
+ */
+function scoreTitleCandidate(line: string): number {
+  let score = 0;
+  const trimmed = line.trim();
+  
+  // Korte titels (5-25 karakters) zijn vaak de beste
+  if (trimmed.length >= 5 && trimmed.length <= 25) {
+    score += 3;
+  } else if (trimmed.length >= 4 && trimmed.length <= 40) {
+    score += 2;
+  } else if (trimmed.length <= 50) {
+    score += 1;
+  }
+  
+  // Begint met hoofdletter
+  if (/^[A-ZÀ-Ž]/.test(trimmed)) {
+    score += 2;
+  }
+  
+  // Hoge uppercase ratio (>0.5) suggereert een titel
+  const uppercaseRatio = getUppercaseRatio(trimmed);
+  if (uppercaseRatio > 0.5) {
+    score += 2;
+  } else if (uppercaseRatio > 0.2) {
+    score += 1;
+  }
+  
+  // Bonus voor titel-achtige patronen (twee woorden met hoofdletters)
+  if (/^[A-ZÀ-Ž][a-zà-ž]+\s+[A-ZÀ-Ž]/.test(trimmed) || /^[A-ZÀ-Ž][a-zà-ž]+\s+[a-zà-ž]+$/.test(trimmed)) {
+    score += 2;
+  }
+  
+  // Penalty voor zinnen (bevat "Een", "Het", "Dit", "De" aan het begin)
+  if (/^(Een|Het|Dit|De|Er|We|Je|Als)\s/i.test(trimmed)) {
+    score -= 3;
+  }
+  
+  // Penalty voor zinnen met veel woorden (>5)
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount > 5) {
+    score -= 2;
+  }
+  
+  // Penalty voor alleen hoofdletters (vaak categorie)
+  if (uppercaseRatio === 1 && trimmed.length < 15) {
+    score -= 2;
+  }
+  
+  // Penalty voor tekst met veel leestekens
+  const punctuationRatio = (trimmed.match(/[.,;:!?()]/g) || []).length / trimmed.length;
+  if (punctuationRatio > 0.05) {
+    score -= 2;
+  }
+  
+  return score;
 }
 
 /**
@@ -712,51 +863,104 @@ function normalizeStepWithTitle(step: string): string {
 }
 
 /**
- * Bereken confidence scores
+ * Bereken confidence scores met gedetailleerde breakdown
  */
 function calculateConfidence(
   title: string,
   ingredients: ParsedIngredient[],
-  steps: ParsedStep[]
+  steps: ParsedStep[],
+  serves: number | null,
+  cookMinutes: number | null
 ): RecipeConfidence {
-  // Title confidence
-  const titleConfidence = title && title !== "Onbekend recept" ? 0.9 : 0.3;
+  // Verzamel details
+  const titlePresent = Boolean(title && title !== "Onbekend recept");
+  const titleScore = titlePresent ? scoreTitleCandidate(title) : 0;
+  const ingredientsCount = ingredients.length;
+  const ingredientsWithAmount = ingredients.filter((i) => i.amount !== null).length;
+  const stepsCount = steps.length;
+  const avgStepLength = steps.length > 0 
+    ? steps.reduce((sum, s) => sum + s.instruction.length, 0) / steps.length 
+    : 0;
+  const hasServings = serves !== null;
+  const hasCookTime = cookMinutes !== null;
 
-  // Ingredients confidence
-  let ingredientsConfidence = 0;
-  if (ingredients.length === 0) {
-    ingredientsConfidence = 0;
-  } else if (ingredients.length < 3) {
-    ingredientsConfidence = 0.5;
-  } else {
-    // Hoger als meer ingrediënten een hoeveelheid hebben
-    const withAmount = ingredients.filter((i) => i.amount !== null).length;
-    ingredientsConfidence = 0.5 + (withAmount / ingredients.length) * 0.4;
+  // Component scores (0-1)
+  
+  // Title: 0.15 max
+  let titleConfidence = 0;
+  if (titlePresent) {
+    titleConfidence = 0.10;
+    if (titleScore > 2) titleConfidence = 0.15;
+    else if (titleScore > 0) titleConfidence = 0.12;
   }
 
-  // Steps confidence
+  // Ingredients: 0.30 max
+  let ingredientsConfidence = 0;
+  if (ingredientsCount >= 5) {
+    ingredientsConfidence = 0.20;
+  } else if (ingredientsCount >= 3) {
+    ingredientsConfidence = 0.15;
+  } else if (ingredientsCount >= 1) {
+    ingredientsConfidence = 0.08;
+  }
+  // Bonus voor ingrediënten met hoeveelheden
+  if (ingredientsCount > 0) {
+    const amountRatio = ingredientsWithAmount / ingredientsCount;
+    ingredientsConfidence += amountRatio * 0.10;
+  }
+
+  // Steps: 0.30 max
   let stepsConfidence = 0;
-  if (steps.length === 0) {
-    stepsConfidence = 0;
-  } else if (steps.length < 2) {
-    stepsConfidence = 0.4;
-  } else {
-    // Hoger als stappen een redelijke lengte hebben
-    const goodSteps = steps.filter((s) => s.instruction.length > 20).length;
-    stepsConfidence = 0.5 + (goodSteps / steps.length) * 0.4;
+  if (stepsCount >= 4) {
+    stepsConfidence = 0.20;
+  } else if (stepsCount >= 2) {
+    stepsConfidence = 0.15;
+  } else if (stepsCount >= 1) {
+    stepsConfidence = 0.08;
+  }
+  // Bonus voor goede stap-lengte (>30 karakters gemiddeld)
+  if (avgStepLength > 50) {
+    stepsConfidence += 0.10;
+  } else if (avgStepLength > 30) {
+    stepsConfidence += 0.05;
+  }
+
+  // Metadata: 0.15 max
+  let metadataConfidence = 0;
+  if (hasServings) metadataConfidence += 0.08;
+  if (hasCookTime) metadataConfidence += 0.07;
+
+  // No noise bonus: 0.10 max
+  // Als titel geen ruis bevat (geen "Der", geen cijfers)
+  let noNoiseBonus = 0;
+  if (titlePresent && !/\d/.test(title) && !/^(Der|MEDITERRAAN)/i.test(title)) {
+    noNoiseBonus = 0.10;
   }
 
   // Overall confidence
-  const overall =
-    titleConfidence * 0.2 +
-    ingredientsConfidence * 0.4 +
-    stepsConfidence * 0.4;
+  const overall = Math.min(1, 
+    titleConfidence + 
+    ingredientsConfidence + 
+    stepsConfidence + 
+    metadataConfidence + 
+    noNoiseBonus
+  );
 
   return {
     overall: Math.round(overall * 100) / 100,
-    title: Math.round(titleConfidence * 100) / 100,
-    ingredients: Math.round(ingredientsConfidence * 100) / 100,
-    steps: Math.round(stepsConfidence * 100) / 100,
+    title: Math.round((titleConfidence / 0.15) * 100) / 100,
+    ingredients: Math.round((ingredientsConfidence / 0.30) * 100) / 100,
+    steps: Math.round((stepsConfidence / 0.30) * 100) / 100,
+    details: {
+      titlePresent,
+      titleScore,
+      ingredientsCount,
+      ingredientsWithAmount,
+      stepsCount,
+      avgStepLength: Math.round(avgStepLength),
+      hasServings,
+      hasCookTime,
+    },
   };
 }
 
@@ -778,6 +982,16 @@ function createEmptyRecipe(): ParsedRecipe {
       title: 0,
       ingredients: 0,
       steps: 0,
+      details: {
+        titlePresent: false,
+        titleScore: 0,
+        ingredientsCount: 0,
+        ingredientsWithAmount: 0,
+        stepsCount: 0,
+        avgStepLength: 0,
+        hasServings: false,
+        hasCookTime: false,
+      },
     },
   };
 }

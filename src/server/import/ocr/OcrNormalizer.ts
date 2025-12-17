@@ -24,6 +24,7 @@ export function normalizeWhitespace(text: string): string {
  * - Voeg gesplitste woorden samen (aardap-\nelen -> aardappelen)
  * - Verwijder paginanummers en ruis
  * - Fix common OCR fouten
+ * - Merge losse unit lines (500\ng -> 500 g)
  */
 export function preprocessOcrText(text: string): string {
   let processed = text;
@@ -43,10 +44,26 @@ export function preprocessOcrText(text: string): string {
   processed = processed.replace(/^bron:.*$/gim, "");
   processed = processed.replace(/^foto:.*$/gim, "");
   
-  // 4. Fix common OCR character misreads
-  // "0" vaak gelezen als "O" in context van nummers
-  // "l" vaak gelezen als "1" of "I"
-  // Dit is lastig zonder context, dus we doen alleen veilige fixes
+  // 4. Merge losse unit lines: "500\ng" -> "500 g"
+  // Dit gebeurt vaak bij OCR waar hoeveelheid en unit op aparte regels staan
+  const unitPattern = /^(g|gr|gram|kg|kilogram|ml|l|liter|dl|cl|el|tl|stuks?|st)\.?$/i;
+  const lines = processed.split('\n');
+  const mergedLines: string[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const nextLine = lines[i + 1]?.trim();
+    
+    // Check of huidige regel alleen een getal is en volgende een unit
+    if (/^\d+(?:[.,]\d+)?$/.test(line) && nextLine && unitPattern.test(nextLine)) {
+      // Merge: "500" + "g" -> "500 g"
+      mergedLines.push(`${line} ${nextLine}`);
+      i++; // Skip next line
+    } else {
+      mergedLines.push(lines[i]);
+    }
+  }
+  processed = mergedLines.join('\n');
   
   // 5. Verwijder lege regels die alleen streepjes of bullets bevatten
   processed = processed.replace(/^[-–—•·]+\s*$/gm, "");
@@ -57,6 +74,10 @@ export function preprocessOcrText(text: string): string {
   // 7. Normaliseer quotes
   processed = processed.replace(/[""„]/g, '"');
   processed = processed.replace(/[''‚]/g, "'");
+  
+  // 8. Normaliseer spaties rond streepjes in woorden
+  // "lente - uitjes" -> "lente-uitjes"
+  processed = processed.replace(/(\w)\s+-\s+(\w)/g, "$1-$2");
   
   return processed;
 }
