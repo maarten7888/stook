@@ -109,6 +109,8 @@ export interface TextBlock {
 
 /**
  * Voert OCR uit op een afbeelding buffer
+ * Gebruikt documentTextDetection voor betere structuur bij documenten/recepten
+ * 
  * @param imageBuffer - Buffer van de afbeelding
  * @returns OcrResult met herkende tekst en confidence
  */
@@ -116,47 +118,73 @@ export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
   const client = getVisionClient();
 
   try {
-    const [result] = await client.textDetection({
+    // Gebruik documentTextDetection voor betere structuur bij documenten
+    // Dit geeft pages/blocks/paragraphs/words structuur
+    const [result] = await client.documentTextDetection({
       image: {
         content: imageBuffer,
       },
     });
 
-    const textAnnotations = result.textAnnotations;
+    const fullTextAnnotation = result.fullTextAnnotation;
     
-    if (!textAnnotations || textAnnotations.length === 0) {
-      return {
-        rawText: "",
-        confidence: 0,
-        blocks: [],
-      };
+    if (!fullTextAnnotation || !fullTextAnnotation.text) {
+      // Fallback naar textDetection als documentTextDetection geen resultaat geeft
+      return await performBasicOcr(imageBuffer, client);
     }
 
-    // Eerste annotatie bevat de volledige tekst
-    const fullText = textAnnotations[0].description || "";
+    // Bouw tekst op vanuit de structuur (pages → blocks → paragraphs)
+    // Dit geeft betere leesbare tekst dan de raw output
+    const structuredText = buildStructuredText(fullTextAnnotation);
     
     // Parse de blokken voor gedetailleerde info
-    const blocks: TextBlock[] = textAnnotations.slice(1).map((annotation) => {
-      const vertices = annotation.boundingPoly?.vertices || [];
-      const x = vertices[0]?.x || 0;
-      const y = vertices[0]?.y || 0;
-      const width = (vertices[1]?.x || 0) - x;
-      const height = (vertices[2]?.y || 0) - y;
+    const blocks: TextBlock[] = [];
+    
+    for (const page of fullTextAnnotation.pages || []) {
+      for (const block of page.blocks || []) {
+        const vertices = block.boundingBox?.vertices || [];
+        const x = vertices[0]?.x || 0;
+        const y = vertices[0]?.y || 0;
+        const width = (vertices[2]?.x || 0) - x;
+        const height = (vertices[2]?.y || 0) - y;
+        
+        // Verzamel tekst uit paragraphs in dit block
+        let blockText = "";
+        for (const paragraph of block.paragraphs || []) {
+          for (const word of paragraph.words || []) {
+            const wordText = word.symbols?.map(s => s.text).join("") || "";
+            blockText += wordText + " ";
+          }
+          blockText += "\n";
+        }
+        
+        if (blockText.trim()) {
+          blocks.push({
+            text: blockText.trim(),
+            boundingBox: { x, y, width, height },
+          });
+        }
+      }
+    }
 
-      return {
-        text: annotation.description || "",
-        boundingBox: { x, y, width, height },
-      };
-    });
-
-    // Bereken een gemiddelde confidence score
-    // Google Vision geeft geen directe confidence voor textDetection,
-    // dus we schatten op basis van of er tekst is gevonden
-    const confidence = fullText.length > 50 ? 0.85 : fullText.length > 10 ? 0.7 : 0.5;
+    // Bereken confidence op basis van de document-level confidence
+    let totalConfidence = 0;
+    let wordCount = 0;
+    
+    for (const page of fullTextAnnotation.pages || []) {
+      for (const block of page.blocks || []) {
+        if (block.confidence) {
+          totalConfidence += block.confidence;
+          wordCount++;
+        }
+      }
+    }
+    
+    const confidence = wordCount > 0 ? totalConfidence / wordCount : 0.5;
 
     return {
-      rawText: fullText,
-      confidence,
+      rawText: structuredText || fullTextAnnotation.text || "",
+      confidence: Math.round(confidence * 100) / 100,
       blocks,
     };
   } catch (error) {
@@ -166,6 +194,94 @@ export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
     });
     throw error;
   }
+}
+
+/**
+ * Bouw gestructureerde tekst op vanuit de fullTextAnnotation
+ * Sorteert blocks op positie (boven naar onder, links naar rechts)
+ * om kolom-layouts correct te lezen
+ */
+function buildStructuredText(fullTextAnnotation: { pages?: Array<{ blocks?: Array<{ boundingBox?: { vertices?: Array<{ x?: number | null; y?: number | null }> }; paragraphs?: Array<{ words?: Array<{ symbols?: Array<{ text?: string | null }> }> }> }> }> }): string {
+  const textBlocks: Array<{ text: string; y: number; x: number }> = [];
+  
+  for (const page of fullTextAnnotation.pages || []) {
+    for (const block of page.blocks || []) {
+      const vertices = block.boundingBox?.vertices || [];
+      const y = vertices[0]?.y || 0;
+      const x = vertices[0]?.x || 0;
+      
+      let blockText = "";
+      for (const paragraph of block.paragraphs || []) {
+        let paragraphText = "";
+        for (const word of paragraph.words || []) {
+          const wordText = word.symbols?.map(s => s.text || "").join("") || "";
+          paragraphText += wordText + " ";
+        }
+        blockText += paragraphText.trim() + "\n";
+      }
+      
+      if (blockText.trim()) {
+        textBlocks.push({ text: blockText.trim(), y, x });
+      }
+    }
+  }
+  
+  // Sorteer blocks op Y-positie (boven naar onder), dan X (links naar rechts)
+  // Met een tolerantie voor blocks op ongeveer dezelfde hoogte
+  const yTolerance = 20; // pixels
+  textBlocks.sort((a, b) => {
+    // Als de Y-posities dichtbij zijn, sorteer op X
+    if (Math.abs(a.y - b.y) < yTolerance) {
+      return a.x - b.x;
+    }
+    return a.y - b.y;
+  });
+  
+  return textBlocks.map(b => b.text).join("\n");
+}
+
+/**
+ * Fallback naar basic textDetection
+ */
+async function performBasicOcr(imageBuffer: Buffer, client: ImageAnnotatorClient): Promise<OcrResult> {
+  const [result] = await client.textDetection({
+    image: {
+      content: imageBuffer,
+    },
+  });
+
+  const textAnnotations = result.textAnnotations;
+  
+  if (!textAnnotations || textAnnotations.length === 0) {
+    return {
+      rawText: "",
+      confidence: 0,
+      blocks: [],
+    };
+  }
+
+  const fullText = textAnnotations[0].description || "";
+  
+  const blocks: TextBlock[] = textAnnotations.slice(1).map((annotation) => {
+    const vertices = annotation.boundingPoly?.vertices || [];
+    const x = vertices[0]?.x || 0;
+    const y = vertices[0]?.y || 0;
+    const width = (vertices[1]?.x || 0) - x;
+    const height = (vertices[2]?.y || 0) - y;
+
+    return {
+      text: annotation.description || "",
+      boundingBox: { x, y, width, height },
+    };
+  });
+
+  const confidence = fullText.length > 50 ? 0.85 : fullText.length > 10 ? 0.7 : 0.5;
+
+  return {
+    rawText: fullText,
+    confidence,
+    blocks,
+  };
 }
 
 /**

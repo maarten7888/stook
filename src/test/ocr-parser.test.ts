@@ -125,6 +125,7 @@ describe("OcrNormalizer", () => {
         amount: 200,
         unit: "g",
         name: "kipfilet",
+        notes: null,
       });
     });
 
@@ -134,6 +135,7 @@ describe("OcrNormalizer", () => {
         amount: 2,
         unit: "el",
         name: "olijfolie",
+        notes: null,
       });
     });
 
@@ -143,6 +145,7 @@ describe("OcrNormalizer", () => {
         amount: 1,
         unit: "tl",
         name: "zout",
+        notes: null,
       });
     });
 
@@ -152,6 +155,7 @@ describe("OcrNormalizer", () => {
         amount: 1.5,
         unit: "kg",
         name: "varkensvlees",
+        notes: null,
       });
     });
 
@@ -161,15 +165,37 @@ describe("OcrNormalizer", () => {
         amount: 3,
         unit: null,
         name: "eieren",
+        notes: null,
       });
     });
 
-    it("should handle ingredient without amount", () => {
+    it("should extract 'naar smaak' as notes", () => {
       const result = parseIngredientLine("zout naar smaak");
       expect(result).toEqual({
         amount: null,
         unit: null,
-        name: "zout naar smaak",
+        name: "zout",
+        notes: "naar smaak",
+      });
+    });
+
+    it("should extract 'ter garnering' as notes", () => {
+      const result = parseIngredientLine("peterselie, ter garnering");
+      expect(result).toEqual({
+        amount: null,
+        unit: null,
+        name: "peterselie",
+        notes: "ter garnering",
+      });
+    });
+
+    it("should extract notes in parentheses", () => {
+      const result = parseIngredientLine("knoflook (optioneel)");
+      expect(result).toEqual({
+        amount: null,
+        unit: null,
+        name: "knoflook",
+        notes: "optioneel",
       });
     });
 
@@ -179,6 +205,7 @@ describe("OcrNormalizer", () => {
         amount: null,
         unit: null,
         name: "",
+        notes: null,
       });
     });
 
@@ -187,16 +214,19 @@ describe("OcrNormalizer", () => {
         amount: 0.5,
         unit: null,
         name: "ui",
+        notes: null,
       });
       expect(parseIngredientLine("een snufje zout")).toEqual({
         amount: 1,
         unit: "snufje",
         name: "zout",
+        notes: null,
       });
       expect(parseIngredientLine("twee eieren")).toEqual({
         amount: 2,
         unit: null,
         name: "eieren",
+        notes: null,
       });
     });
 
@@ -205,11 +235,13 @@ describe("OcrNormalizer", () => {
         amount: 200,
         unit: "g",
         name: "vlees",
+        notes: null,
       });
       expect(parseIngredientLine("⚫ peper")).toEqual({
         amount: null,
         unit: null,
         name: "peper",
+        notes: null,
       });
     });
   });

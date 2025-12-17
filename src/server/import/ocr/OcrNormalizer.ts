@@ -203,22 +203,24 @@ export function normalizeUnit(unit: string): string {
 }
 
 /**
- * Parse een ingredient string naar amount, unit en naam
+ * Parse een ingredient string naar amount, unit, naam en notes
  * Voorbeelden:
- * - "200 gram kipfilet" -> { amount: 200, unit: "g", name: "kipfilet" }
- * - "2 el olijfolie" -> { amount: 2, unit: "el", name: "olijfolie" }
- * - "zout naar smaak" -> { amount: null, unit: null, name: "zout naar smaak" }
- * - "500g vastkokende aardappelen" -> { amount: 500, unit: "g", name: "vastkokende aardappelen" }
+ * - "200 gram kipfilet" -> { amount: 200, unit: "g", name: "kipfilet", notes: null }
+ * - "2 el olijfolie" -> { amount: 2, unit: "el", name: "olijfolie", notes: null }
+ * - "zout naar smaak" -> { amount: null, unit: null, name: "zout", notes: "naar smaak" }
+ * - "peterselie, ter garnering" -> { amount: null, unit: null, name: "peterselie", notes: "ter garnering" }
+ * - "500g vastkokende aardappelen" -> { amount: 500, unit: "g", name: "vastkokende aardappelen", notes: null }
  */
 export function parseIngredientLine(line: string): {
   amount: number | null;
   unit: string | null;
   name: string;
+  notes: string | null;
 } {
   let trimmed = line.trim();
   
   if (!trimmed) {
-    return { amount: null, unit: null, name: "" };
+    return { amount: null, unit: null, name: "", notes: null };
   }
 
   // Verwijder leading bullets en speciale karakters
@@ -226,6 +228,10 @@ export function parseIngredientLine(line: string): {
   
   // OCR cleanup: verwijder losse punten aan het begin
   trimmed = trimmed.replace(/^\.\s*/, "").trim();
+  
+  // Extract notes: "naar smaak", "optioneel", "ter garnering", etc.
+  const { text: textWithoutNotes, notes } = extractIngredientNotes(trimmed);
+  trimmed = textWithoutNotes;
 
   // Alle mogelijke units (inclusief OCR variaties)
   const unitPattern = "gram|gr|g|kilogram|kilo|kg|ml|milliliter|mililiter|liter|lt|l|dl|deciliter|" +
@@ -276,13 +282,52 @@ export function parseIngredientLine(line: string): {
       }
 
       if (name) {
-        return { amount, unit, name };
+        return { amount, unit, name, notes };
       }
     }
   }
 
   // Geen patroon gevonden, return hele string als naam (na cleanup)
-  return { amount: null, unit: null, name: cleanIngredientName(trimmed) };
+  return { amount: null, unit: null, name: cleanIngredientName(trimmed), notes };
+}
+
+/**
+ * Extract notes van een ingrediënt regel
+ * Patronen: "naar smaak", "optioneel", "ter garnering", "voor erbij", etc.
+ */
+function extractIngredientNotes(text: string): { text: string; notes: string | null } {
+  const notePatterns = [
+    // Met komma ervoor
+    /,\s*(naar smaak)/i,
+    /,\s*(optioneel)/i,
+    /,\s*(ter garnering)/i,
+    /,\s*(voor erbij)/i,
+    /,\s*(indien gewenst)/i,
+    /,\s*(eventueel)/i,
+    /,\s*(of naar smaak)/i,
+    /,\s*(to taste)/i,
+    /,\s*(optional)/i,
+    /,\s*(for garnish)/i,
+    // Tussen haakjes
+    /\s*\((naar smaak)\)/i,
+    /\s*\((optioneel)\)/i,
+    /\s*\((ter garnering)\)/i,
+    /\s*\((eventueel)\)/i,
+    // Aan het eind zonder komma
+    /\s+(naar smaak)$/i,
+    /\s+(ter garnering)$/i,
+  ];
+  
+  for (const pattern of notePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const notes = match[1];
+      const textWithoutNotes = text.replace(pattern, "").trim();
+      return { text: textWithoutNotes, notes };
+    }
+  }
+  
+  return { text, notes: null };
 }
 
 /**

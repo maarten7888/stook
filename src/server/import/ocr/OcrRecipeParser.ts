@@ -33,6 +33,7 @@ export interface ParsedIngredient {
   name: string;
   amount: number | null;
   unit: string | null;
+  notes: string | null; // "naar smaak", "optioneel", "ter garnering", etc.
 }
 
 export interface ParsedStep {
@@ -604,6 +605,7 @@ function parseIngredients(ingredientLines: string[]): ParsedIngredient[] {
         name: parsed.name,
         amount: parsed.amount,
         unit: parsed.unit,
+        notes: parsed.notes,
       });
     }
   }
