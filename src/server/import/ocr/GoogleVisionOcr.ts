@@ -24,14 +24,27 @@ function getVisionClient(): ImageAnnotatorClient {
   }
 
   try {
-    console.log("Parsing Google credentials, length:", credentialsJson.length);
+    // Clean the input - remove any whitespace, newlines, or quotes that Vercel might add
+    let cleanedInput = credentialsJson.trim();
     
-    let jsonString = credentialsJson;
+    // Remove surrounding quotes if present
+    if ((cleanedInput.startsWith('"') && cleanedInput.endsWith('"')) ||
+        (cleanedInput.startsWith("'") && cleanedInput.endsWith("'"))) {
+      cleanedInput = cleanedInput.slice(1, -1);
+    }
+    
+    console.log("Parsing Google credentials, cleaned length:", cleanedInput.length);
+    
+    let jsonString = cleanedInput;
     
     // Check if it's base64 encoded (doesn't start with {)
-    if (!credentialsJson.trim().startsWith('{')) {
+    if (!cleanedInput.startsWith('{')) {
       console.log("Detected base64 encoded credentials, decoding...");
-      jsonString = Buffer.from(credentialsJson, 'base64').toString('utf-8');
+      // Remove any whitespace/newlines that might have been added
+      const cleanBase64 = cleanedInput.replace(/\s/g, '');
+      console.log("Clean base64 length:", cleanBase64.length);
+      jsonString = Buffer.from(cleanBase64, 'base64').toString('utf-8');
+      console.log("Decoded JSON length:", jsonString.length);
     }
     
     const credentials = JSON.parse(jsonString);
@@ -53,8 +66,8 @@ function getVisionClient(): ImageAnnotatorClient {
   } catch (error) {
     console.error("Error parsing Google credentials:", {
       error: error instanceof Error ? error.message : error,
-      jsonLength: credentialsJson?.length,
-      startsWithBrace: credentialsJson?.trim().startsWith('{'),
+      inputLength: credentialsJson?.length,
+      first100chars: credentialsJson?.substring(0, 100),
     });
     throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format: " + (error instanceof Error ? error.message : "unknown"));
   }
