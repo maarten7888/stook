@@ -30,8 +30,11 @@ export function preprocessOcrText(text: string): string {
   let processed = text;
   
   // 1. Voeg woorden samen die door OCR gesplitst zijn met een streepje
-  // "aardap-\nelen" -> "aardappelen"
-  processed = processed.replace(/(\w)-\n(\w)/g, "$1$2");
+  // Patronen: "aardap-\nelen", "opge- pept", "wor- den"
+  // Met newline
+  processed = processed.replace(/(\w)-\n\s*(\w)/g, "$1$2");
+  // Met spatie (OCR voegt soms spatie toe na het streepje)
+  processed = processed.replace(/(\w)-\s+(\w)/g, "$1$2");
   
   // 2. Verwijder losse paginanummers (regels met alleen cijfers)
   // Aan het begin, midden, of eind van de tekst
@@ -44,8 +47,8 @@ export function preprocessOcrText(text: string): string {
   processed = processed.replace(/^bron:.*$/gim, "");
   processed = processed.replace(/^foto:.*$/gim, "");
   
-  // 4. Merge losse unit lines: "500\ng" -> "500 g"
-  // Dit gebeurt vaak bij OCR waar hoeveelheid en unit op aparte regels staan
+  // 4. Merge losse unit lines: "500\ng\nvastkokende aardappelen" -> "500 g vastkokende aardappelen"
+  // Dit gebeurt vaak bij OCR waar hoeveelheid, unit en ingrediënt op aparte regels staan
   const unitPattern = /^(g|gr|gram|kg|kilogram|ml|l|liter|dl|cl|el|tl|stuks?|st)\.?$/i;
   const lines = processed.split('\n');
   const mergedLines: string[] = [];
@@ -53,12 +56,20 @@ export function preprocessOcrText(text: string): string {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const nextLine = lines[i + 1]?.trim();
+    const lineAfterNext = lines[i + 2]?.trim();
     
     // Check of huidige regel alleen een getal is en volgende een unit
     if (/^\d+(?:[.,]\d+)?$/.test(line) && nextLine && unitPattern.test(nextLine)) {
-      // Merge: "500" + "g" -> "500 g"
-      mergedLines.push(`${line} ${nextLine}`);
-      i++; // Skip next line
+      // Check of er nog een regel na de unit is die het ingrediënt bevat
+      // "500" + "g" + "vastkokende aardappelen" -> "500 g vastkokende aardappelen"
+      if (lineAfterNext && /^[a-zA-ZÀ-ž]/.test(lineAfterNext) && !isHeaderLine(lineAfterNext)) {
+        mergedLines.push(`${line} ${nextLine} ${lineAfterNext}`);
+        i += 2; // Skip next two lines
+      } else {
+        // Alleen getal + unit mergen
+        mergedLines.push(`${line} ${nextLine}`);
+        i++; // Skip next line
+      }
     } else {
       mergedLines.push(lines[i]);
     }
@@ -80,6 +91,20 @@ export function preprocessOcrText(text: string): string {
   processed = processed.replace(/(\w)\s+-\s+(\w)/g, "$1-$2");
   
   return processed;
+}
+
+/**
+ * Check of een regel een header is (Ingrediënten, Bereiding, etc.)
+ */
+function isHeaderLine(line: string): boolean {
+  const headerPatterns = [
+    /^ingredi[eëé]nten/i,
+    /^bereiding/i,
+    /^werkwijze/i,
+    /^instructies/i,
+    /^\d+\./,  // Genummerde stap
+  ];
+  return headerPatterns.some(p => p.test(line.trim()));
 }
 
 /**
