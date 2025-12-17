@@ -33,17 +33,35 @@ function getVisionClient(): ImageAnnotatorClient {
       cleanedInput = cleanedInput.slice(1, -1);
     }
     
-    console.log("Parsing Google credentials, length:", cleanedInput.length);
+    console.log("Parsing Google credentials, input length:", cleanedInput.length);
+    console.log("First 50 chars:", cleanedInput.substring(0, 50));
     
     let jsonString = cleanedInput;
     
     // Check if it's base64 encoded (doesn't start with {)
     if (!cleanedInput.startsWith('{')) {
       console.log("Detected base64 encoded credentials, decoding...");
+      
       // Remove any whitespace/newlines that might have been added
       const cleanBase64 = cleanedInput.replace(/\s/g, '');
+      console.log("Clean base64 length:", cleanBase64.length);
+      
+      // Decode base64
       jsonString = Buffer.from(cleanBase64, 'base64').toString('utf-8');
       console.log("Decoded JSON length:", jsonString.length);
+      console.log("Decoded first 100 chars:", jsonString.substring(0, 100));
+      console.log("Decoded last 100 chars:", jsonString.substring(jsonString.length - 100));
+      
+      // Check if decoded string looks like valid JSON
+      if (!jsonString.startsWith('{')) {
+        console.error("Decoded string doesn't start with {, first char code:", jsonString.charCodeAt(0));
+      }
+      if (!jsonString.endsWith('}')) {
+        console.error("Decoded string doesn't end with }, last char code:", jsonString.charCodeAt(jsonString.length - 1));
+        // Try to trim any trailing whitespace or invisible characters
+        jsonString = jsonString.replace(/[\s\x00-\x1F\x7F]+$/, '');
+        console.log("After trim, last 50 chars:", jsonString.substring(jsonString.length - 50));
+      }
     }
     
     const credentials = JSON.parse(jsonString);
@@ -66,7 +84,7 @@ function getVisionClient(): ImageAnnotatorClient {
     console.error("Error parsing Google credentials:", {
       error: error instanceof Error ? error.message : error,
       inputLength: credentialsJson?.length,
-      first50chars: credentialsJson?.substring(0, 50),
+      first100chars: credentialsJson?.substring(0, 100),
       last50chars: credentialsJson?.substring(credentialsJson.length - 50),
     });
     throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format: " + (error instanceof Error ? error.message : "unknown"));
@@ -180,4 +198,3 @@ export function validateImage(
 
   return { valid: true };
 }
-
