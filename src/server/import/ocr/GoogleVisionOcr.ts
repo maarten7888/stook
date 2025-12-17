@@ -26,24 +26,23 @@ function getVisionClient(): ImageAnnotatorClient {
   try {
     console.log("Parsing Google credentials, length:", credentialsJson.length);
     
-    // Handle escaped newlines in private_key (common issue with env vars)
-    let processedJson = credentialsJson;
+    let jsonString = credentialsJson;
     
-    // If the JSON contains literal \\n (double escaped), convert to actual newlines
-    if (credentialsJson.includes('\\\\n')) {
-      processedJson = credentialsJson.replace(/\\\\n/g, '\\n');
+    // Check if it's base64 encoded (doesn't start with {)
+    if (!credentialsJson.trim().startsWith('{')) {
+      console.log("Detected base64 encoded credentials, decoding...");
+      jsonString = Buffer.from(credentialsJson, 'base64').toString('utf-8');
     }
     
-    const credentials = JSON.parse(processedJson);
+    const credentials = JSON.parse(jsonString);
     
-    // Also fix newlines in the private_key if they got double-escaped
+    // Ensure newlines in private_key are actual newlines
     if (credentials.private_key && typeof credentials.private_key === 'string') {
       credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
     }
     
     console.log("Credentials parsed successfully, project_id:", credentials.project_id);
     console.log("Client email:", credentials.client_email);
-    console.log("Private key starts with:", credentials.private_key?.substring(0, 30));
     
     visionClient = new ImageAnnotatorClient({
       credentials,
@@ -54,9 +53,8 @@ function getVisionClient(): ImageAnnotatorClient {
   } catch (error) {
     console.error("Error parsing Google credentials:", {
       error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : undefined,
       jsonLength: credentialsJson?.length,
-      jsonStart: credentialsJson?.substring(0, 100),
+      startsWithBrace: credentialsJson?.trim().startsWith('{'),
     });
     throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format: " + (error instanceof Error ? error.message : "unknown"));
   }
