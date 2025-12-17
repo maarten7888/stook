@@ -20,6 +20,100 @@ export function normalizeWhitespace(text: string): string {
 }
 
 /**
+ * Pre-process OCR tekst voor betere parsing
+ * - Voeg gesplitste woorden samen (aardap-\nelen -> aardappelen)
+ * - Verwijder paginanummers en ruis
+ * - Fix common OCR fouten
+ */
+export function preprocessOcrText(text: string): string {
+  let processed = text;
+  
+  // 1. Voeg woorden samen die door OCR gesplitst zijn met een streepje
+  // "aardap-\nelen" -> "aardappelen"
+  processed = processed.replace(/(\w)-\n(\w)/g, "$1$2");
+  
+  // 2. Verwijder losse paginanummers (regels met alleen cijfers)
+  processed = processed.replace(/^\d{1,3}\s*$/gm, "");
+  
+  // 3. Verwijder copyright/bron tekst patronen
+  processed = processed.replace(/^©.*$/gm, "");
+  processed = processed.replace(/^bron:.*$/gim, "");
+  processed = processed.replace(/^foto:.*$/gim, "");
+  
+  // 4. Fix common OCR character misreads
+  // "0" vaak gelezen als "O" in context van nummers
+  // "l" vaak gelezen als "1" of "I"
+  // Dit is lastig zonder context, dus we doen alleen veilige fixes
+  
+  // 5. Verwijder lege regels die alleen streepjes of bullets bevatten
+  processed = processed.replace(/^[-–—•·]+\s*$/gm, "");
+  
+  // 6. Normaliseer verschillende soorten streepjes
+  processed = processed.replace(/[–—]/g, "-");
+  
+  // 7. Normaliseer quotes
+  processed = processed.replace(/[""„]/g, '"');
+  processed = processed.replace(/[''‚]/g, "'");
+  
+  return processed;
+}
+
+/**
+ * Merge lijnen die waarschijnlijk bij elkaar horen
+ * OCR splitst soms zinnen op willekeurige plekken
+ */
+export function mergebrokenLines(lines: string[]): string[] {
+  const merged: string[] = [];
+  let buffer = "";
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (buffer) {
+        merged.push(buffer);
+        buffer = "";
+      }
+      continue;
+    }
+    
+    // Check of de vorige regel onvolledig eindigt
+    // (geen punt, vraagteken, uitroepteken, dubbele punt)
+    const prevEndsIncomplete = buffer && 
+      !buffer.match(/[.!?:;,]$/) && 
+      !buffer.match(/\d$/) &&  // Niet als het een nummer is
+      buffer.length < 100;     // Korte regels worden vaak voortgezet
+    
+    // Check of deze regel een voortzetting lijkt
+    // (begint met kleine letter, of met "en", "of", "maar", etc.)
+    const continuesLine = /^[a-z]/.test(trimmed) || 
+      /^(en|of|maar|met|in|op|voor|tot|bij|van|naar|door)\s/i.test(trimmed);
+    
+    // Check of dit een nieuwe sectie/item is
+    const isNewItem = /^\d+[.):\s]/.test(trimmed) ||  // Genummerde stap
+      /^[-•*⚫]\s/.test(trimmed) ||                    // Bullet point
+      /^[A-Z]{2,}/.test(trimmed);                      // CAPS header
+    
+    if (prevEndsIncomplete && continuesLine && !isNewItem) {
+      // Merge met vorige regel
+      buffer = buffer + " " + trimmed;
+    } else {
+      // Nieuwe regel
+      if (buffer) {
+        merged.push(buffer);
+      }
+      buffer = trimmed;
+    }
+  }
+  
+  // Laatste buffer toevoegen
+  if (buffer) {
+    merged.push(buffer);
+  }
+  
+  return merged;
+}
+
+/**
  * Normaliseer ingredient hoeveelheden en units
  */
 export function normalizeUnit(unit: string): string {
@@ -136,7 +230,11 @@ export function parseIngredientLine(line: string): {
     "stuks?|st|snufje|snuf|teen|tenen|teentje|teentjes|takje|takjes|" +
     "blik|blikje|pot|potje|zakje|pak|pakje|bosje|handje|handjevol|" +
     "kopje|kopjes|scheutje|schijfje|schijfjes|plakje|plakjes|" +
-    "mespuntje|sneetje|sneetjes|blaadje|blaadjes";
+    "mespuntje|sneetje|sneetjes|blaadje|blaadjes|" +
+    "druppel|druppels|scheut|schep|lepel|lepels";
+  
+  // Nederlandse woord-hoeveelheden
+  const wordAmountPattern = "een|één|twee|drie|vier|vijf|zes|zeven|acht|negen|tien|half|halve|kwart|driekwart";
 
   // Patronen voor hoeveelheden
   const patterns = [
@@ -146,6 +244,10 @@ export function parseIngredientLine(line: string): {
     new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${unitPattern})\\.?\\s+(.+)$`, "i"),
     // Breuk + unit + rest: "1/2 tl zout", "½ kopje melk"
     new RegExp(`^(\\d+\\/\\d+|[\\u00bd\\u00bc\\u00be\\u2153\\u2154])\\s*(${unitPattern})\\.?\\s+(.+)$`, "i"),
+    // Nederlandse woord-hoeveelheid + unit: "halve liter melk", "een snufje zout"
+    new RegExp(`^(${wordAmountPattern})\\s+(${unitPattern})\\.?\\s+(.+)$`, "i"),
+    // Nederlandse woord-hoeveelheid zonder unit: "halve ui", "een ei"
+    new RegExp(`^(${wordAmountPattern})\\s+([a-zA-ZÀ-ž].+)$`, "i"),
     // Nummer + naam (impliciet stuks): "2 uien", "3 eieren"
     /^(\d+(?:[.,]\d+)?)\s+([a-zA-ZÀ-ž].+)$/i,
   ];
@@ -193,9 +295,34 @@ function cleanIngredientName(name: string): string {
 }
 
 /**
- * Parse breuken naar decimale getallen
+ * Parse breuken en Nederlandse woord-hoeveelheden naar decimale getallen
  */
 function parseFraction(value: string): number | null {
+  const lowerValue = value.toLowerCase().trim();
+  
+  // Nederlandse woord-hoeveelheden
+  const wordAmounts: Record<string, number> = {
+    "een": 1,
+    "één": 1,
+    "twee": 2,
+    "drie": 3,
+    "vier": 4,
+    "vijf": 5,
+    "zes": 6,
+    "zeven": 7,
+    "acht": 8,
+    "negen": 9,
+    "tien": 10,
+    "half": 0.5,
+    "halve": 0.5,
+    "kwart": 0.25,
+    "driekwart": 0.75,
+  };
+  
+  if (wordAmounts[lowerValue] !== undefined) {
+    return wordAmounts[lowerValue];
+  }
+  
   // Unicode breuken
   const unicodeFractions: Record<string, number> = {
     "\u00bd": 0.5, // ½

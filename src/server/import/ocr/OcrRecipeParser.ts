@@ -6,6 +6,8 @@
 
 import {
   normalizeWhitespace,
+  preprocessOcrText,
+  mergebrokenLines,
   parseIngredientLine,
   normalizeStep,
   extractTimerMinutes,
@@ -48,16 +50,27 @@ export interface RecipeConfidence {
 }
 
 // Heading patterns voor sectie herkenning
+// Inclusief fuzzy varianten voor OCR fouten
 const SECTION_PATTERNS = {
   ingredients: [
-    /^ingredi[eë]nten/i,
+    // Standaard
+    /^ingredi[eëé]nten/i,
     /^benodigdheden/i,
     /^wat heb je nodig/i,
-    /^ingredients/i,
+    /^ingredients?/i,
     /^je hebt nodig/i,
     /^nodig/i,
+    // OCR fuzzy varianten (I/l/1 verwisseling, etc.)
+    /^[il1]ngred[il1][eëé]nten/i,
+    /^lngredi[eëé]nten/i,
+    /^1ngred/i,
+    // Afkortingen en variaties
+    /^ingr\./i,
+    /^voor dit recept/i,
+    /^dit heb je nodig/i,
   ],
   steps: [
+    // Standaard
     /^bereiding/i,
     /^bereidingswijze/i,
     /^werkwijze/i,
@@ -65,25 +78,93 @@ const SECTION_PATTERNS = {
     /^stappen/i,
     /^zo maak je het/i,
     /^aan de slag/i,
-    /^instructions/i,
+    /^instructions?/i,
     /^method/i,
-    /^directions/i,
+    /^directions?/i,
     /^preparation/i,
+    // OCR fuzzy varianten
+    /^bereid[il1]ng/i,
+    /^werkw[il1]jze/i,
+    // Extra variaties
+    /^zo maak je/i,
+    /^maak zo/i,
+    /^recept/i,
+    /^stappenplan/i,
   ],
   info: [
     /^info/i,
     /^informatie/i,
     /^gegevens/i,
     /^over dit recept/i,
+    /^tips?/i,
+    /^variatie/i,
   ],
 };
+
+/**
+ * Bereken Levenshtein afstand tussen twee strings
+ * Voor fuzzy matching van headers
+ */
+function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  
+  return matrix[b.length][a.length];
+}
+
+/**
+ * Fuzzy match tegen bekende sectie headers
+ * Returns true als de string lijkt op een bekend header
+ */
+function fuzzyMatchHeader(text: string, targetWords: string[]): boolean {
+  const cleaned = text.toLowerCase().replace(/[^a-zàáâãäåèéêëìíîïòóôõöùúûüñç]/gi, "");
+  
+  for (const target of targetWords) {
+    const distance = levenshteinDistance(cleaned, target.toLowerCase());
+    const maxDistance = Math.floor(target.length * 0.3); // 30% tolerance
+    if (distance <= maxDistance) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Known header words for fuzzy matching
+const FUZZY_INGREDIENT_HEADERS = ["ingredienten", "ingrediënten", "benodigdheden", "ingredients"];
+const FUZZY_STEPS_HEADERS = ["bereiding", "bereidingswijze", "werkwijze", "instructies", "method", "preparation"];
 
 /**
  * Parse OCR tekst naar een gestructureerd recept
  */
 export function parseOcrText(rawText: string): ParsedRecipe {
-  const text = normalizeWhitespace(rawText);
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  // Pre-process de tekst: fix OCR fouten, verwijder ruis
+  const preprocessed = preprocessOcrText(rawText);
+  const text = normalizeWhitespace(preprocessed);
+  
+  // Split in regels en merge gebroken lijnen
+  const rawLines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = mergebrokenLines(rawLines);
 
   if (lines.length === 0) {
     return createEmptyRecipe();
@@ -323,14 +404,40 @@ function inferSections(lines: string[]): Sections {
  * Check of een regel een ingrediënten header is
  */
 function isIngredientHeader(line: string): boolean {
-  return SECTION_PATTERNS.ingredients.some((pattern) => pattern.test(line));
+  // Eerst exacte/regex match proberen
+  if (SECTION_PATTERNS.ingredients.some((pattern) => pattern.test(line))) {
+    return true;
+  }
+  
+  // Dan fuzzy match op korte regels (headers zijn meestal kort)
+  if (line.length < 30) {
+    const firstWord = line.split(/[\s:]/)[0];
+    if (fuzzyMatchHeader(firstWord, FUZZY_INGREDIENT_HEADERS)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 /**
  * Check of een regel een stappen header is
  */
 function isStepsHeader(line: string): boolean {
-  return SECTION_PATTERNS.steps.some((pattern) => pattern.test(line));
+  // Eerst exacte/regex match proberen
+  if (SECTION_PATTERNS.steps.some((pattern) => pattern.test(line))) {
+    return true;
+  }
+  
+  // Dan fuzzy match op korte regels
+  if (line.length < 30) {
+    const firstWord = line.split(/[\s:]/)[0];
+    if (fuzzyMatchHeader(firstWord, FUZZY_STEPS_HEADERS)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 /**
