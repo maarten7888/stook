@@ -1,0 +1,146 @@
+import { ImageAnnotatorClient } from "@google-cloud/vision";
+
+/**
+ * GoogleVisionOcr - OCR via Google Cloud Vision API
+ * 
+ * Gebruikt textDetection voor het herkennen van tekst in afbeeldingen.
+ * Service account credentials worden geladen via GOOGLE_APPLICATION_CREDENTIALS_JSON env var.
+ */
+
+let visionClient: ImageAnnotatorClient | null = null;
+
+function getVisionClient(): ImageAnnotatorClient {
+  if (visionClient) {
+    return visionClient;
+  }
+
+  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  
+  if (!credentialsJson) {
+    throw new Error(
+      "GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable is not set. " +
+      "Please configure your Google Cloud Vision credentials."
+    );
+  }
+
+  try {
+    const credentials = JSON.parse(credentialsJson);
+    visionClient = new ImageAnnotatorClient({
+      credentials,
+      projectId: credentials.project_id || process.env.GOOGLE_PROJECT_ID,
+    });
+    return visionClient;
+  } catch (error) {
+    console.error("Error parsing Google credentials:", error);
+    throw new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON format");
+  }
+}
+
+export interface OcrResult {
+  rawText: string;
+  confidence: number;
+  blocks: TextBlock[];
+}
+
+export interface TextBlock {
+  text: string;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+/**
+ * Voert OCR uit op een afbeelding buffer
+ * @param imageBuffer - Buffer van de afbeelding
+ * @returns OcrResult met herkende tekst en confidence
+ */
+export async function performOcr(imageBuffer: Buffer): Promise<OcrResult> {
+  const client = getVisionClient();
+
+  try {
+    const [result] = await client.textDetection({
+      image: {
+        content: imageBuffer,
+      },
+    });
+
+    const textAnnotations = result.textAnnotations;
+    
+    if (!textAnnotations || textAnnotations.length === 0) {
+      return {
+        rawText: "",
+        confidence: 0,
+        blocks: [],
+      };
+    }
+
+    // Eerste annotatie bevat de volledige tekst
+    const fullText = textAnnotations[0].description || "";
+    
+    // Parse de blokken voor gedetailleerde info
+    const blocks: TextBlock[] = textAnnotations.slice(1).map((annotation) => {
+      const vertices = annotation.boundingPoly?.vertices || [];
+      const x = vertices[0]?.x || 0;
+      const y = vertices[0]?.y || 0;
+      const width = (vertices[1]?.x || 0) - x;
+      const height = (vertices[2]?.y || 0) - y;
+
+      return {
+        text: annotation.description || "",
+        boundingBox: { x, y, width, height },
+      };
+    });
+
+    // Bereken een gemiddelde confidence score
+    // Google Vision geeft geen directe confidence voor textDetection,
+    // dus we schatten op basis van of er tekst is gevonden
+    const confidence = fullText.length > 50 ? 0.85 : fullText.length > 10 ? 0.7 : 0.5;
+
+    return {
+      rawText: fullText,
+      confidence,
+      blocks,
+    };
+  } catch (error) {
+    console.error("Google Vision OCR error:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      code: (error as { code?: string })?.code,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Valideert of de afbeelding geschikt is voor OCR
+ * @param mimeType - MIME type van de afbeelding
+ * @param sizeBytes - Grootte in bytes
+ * @returns Object met valid boolean en eventuele error message
+ */
+export function validateImage(
+  mimeType: string,
+  sizeBytes: number
+): { valid: boolean; error?: string } {
+  const allowedMimes = (process.env.OCR_ALLOWED_MIME || "image/jpeg,image/png,image/webp").split(",");
+  const maxBytes = parseInt(process.env.OCR_MAX_BYTES || "8000000", 10);
+
+  if (!allowedMimes.includes(mimeType)) {
+    return {
+      valid: false,
+      error: `Bestandstype niet ondersteund. Gebruik: ${allowedMimes.join(", ")}`,
+    };
+  }
+
+  if (sizeBytes > maxBytes) {
+    const maxMb = Math.round(maxBytes / 1024 / 1024);
+    return {
+      valid: false,
+      error: `Bestand is te groot. Maximum: ${maxMb}MB`,
+    };
+  }
+
+  return { valid: true };
+}
+

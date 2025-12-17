@@ -7,12 +7,15 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run --environment node",
+    "test:watch": "vitest --environment node",
     "db:push": "drizzle-kit push",
     "db:rls": "node scripts/apply-rls.mjs",
     "db:bucket": "node scripts/create-photos-bucket.mjs",
     "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
+    "@google-cloud/vision": "^5.3.4",
     "@next/font": "^14.2.15",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-dialog": "^1.1.15",

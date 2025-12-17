@@ -8,6 +8,7 @@
 - **Tailwind CSS v4**, shadcn/ui (Radix), lucide‑react
 - **Supabase** (Postgres + Auth + Storage), regio eu‑central (Frankfurt)
 - **Drizzle ORM** + drizzle‑kit (migraties in `drizzle/`)
+- **Google Cloud Vision** (OCR voor foto import)
 - **Vitest** + Testing Library, **Playwright** (e2e)
 - **GitHub Actions** CI/CD
 
@@ -17,6 +18,7 @@
 - 🔥 **Kooksessies**: Live tracking, temperatuur logs, foto's
 - ⭐ **Reviews**: Beoordelingen voor publieke recepten
 - 📤 **Import**: URL → Preview → Import flow
+- 📷 **OCR Import**: Maak foto van recept → automatisch digitaliseren
 - 👤 **Profiel**: Gebruikersvoorkeuren en statistieken
 - 🖼️ **Foto's**: Supabase Storage met signed URLs
 - 🔒 **RLS**: Row Level Security policies
@@ -43,6 +45,9 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 # Database URL (gebruik Pooler in productie)
 DATABASE_URL=postgresql://postgres:<password>@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require&options=project%3D<ref>
+
+# Google Cloud Vision (optioneel, voor OCR import)
+GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account","project_id":"..."}
 ```
 
 ### 3. Database setup
@@ -64,6 +69,53 @@ pnpm seed
 ```bash
 pnpm dev
 ```
+
+## Google Cloud Vision Setup (OCR)
+
+Om de foto import functie te gebruiken, moet je Google Cloud Vision configureren:
+
+### 1. Google Cloud Project aanmaken
+1. Ga naar [Google Cloud Console](https://console.cloud.google.com/)
+2. Maak een nieuw project aan of selecteer een bestaand project
+3. Noteer de **Project ID**
+
+### 2. Vision API inschakelen
+1. Ga naar **APIs & Services** → **Library**
+2. Zoek naar "Cloud Vision API"
+3. Klik op **Enable**
+
+### 3. Service Account aanmaken
+1. Ga naar **IAM & Admin** → **Service Accounts**
+2. Klik op **Create Service Account**
+3. Geef een naam (bijv. "stook-ocr")
+4. Geef de rol: **Cloud Vision API User** (of meer specifiek: `roles/vision.user`)
+5. Klik op **Done**
+
+### 4. Service Account Key genereren
+1. Klik op de aangemaakte service account
+2. Ga naar **Keys** tab
+3. Klik op **Add Key** → **Create new key**
+4. Kies **JSON** formaat
+5. Download het JSON bestand
+
+### 5. Environment variabele instellen
+Kopieer de inhoud van het JSON bestand naar de `GOOGLE_APPLICATION_CREDENTIALS_JSON` environment variable.
+
+> ⚠️ **Let op**: De JSON moet op één regel staan of correct geëscaped worden.
+
+**Voorbeeld:**
+```bash
+GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account","project_id":"my-project","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"stook-ocr@my-project.iam.gserviceaccount.com",...}
+```
+
+### Troubleshooting OCR
+
+| Probleem | Oplossing |
+|----------|-----------|
+| "OCR service is niet correct geconfigureerd" | Check of `GOOGLE_APPLICATION_CREDENTIALS_JSON` correct is ingesteld |
+| "Geen tekst gevonden" | Probeer een duidelijkere foto met beter licht |
+| "Quota bereikt" | Wacht tot quota reset of verhoog in Google Cloud Console |
+| "Permission denied" | Check of Vision API is ingeschakeld en service account juiste rol heeft |
 
 ## Scripts
 
@@ -128,7 +180,11 @@ Alle tabellen hebben Row Level Security ingeschakeld:
 
 ### Import
 - `POST /api/import/preview` - URL preview
-- `POST /api/import` - Recept importeren
+- `POST /api/import` - Recept importeren van URL
+- `POST /api/import/photo/presign` - Signed upload URL voor OCR
+- `POST /api/import/photo/ocr` - OCR uitvoeren op foto
+- `POST /api/import/photo/preview` - OCR tekst naar recept preview
+- `POST /api/import/photo` - Recept importeren van OCR
 
 ### Profiel
 - `GET /api/profile` - Gebruikersprofiel
@@ -141,7 +197,7 @@ Alle tabellen hebben Row Level Security ingeschakeld:
 ```bash
 pnpm test
 ```
-Tests voor RLS policies, database schema validatie en utility functies.
+Tests voor RLS policies, database schema validatie, utility functies en OCR parser.
 
 ### E2E Tests (Playwright)
 ```bash
@@ -151,7 +207,7 @@ End-to-end tests voor:
 - Authenticatie flow (registreren/inloggen)
 - Recepten CRUD operaties
 - Sessie management
-- Import flow
+- Import flow (URL + OCR)
 - Profiel beheer
 
 ## Deploy (Vercel)
@@ -169,6 +225,7 @@ Zet alle vereiste env vars in Vercel dashboard:
 - `DATABASE_URL` (gebruik Supabase Pooler!)
 - `NEXT_PUBLIC_SITE_URL`
 - `SITE_URL`
+- `GOOGLE_APPLICATION_CREDENTIALS_JSON` (voor OCR)
 
 ### 3. Domeinen
 - **Primair**: `stookboek.nl`
@@ -197,8 +254,8 @@ Automatische checks bij elke push/PR:
 - Server-only keys nooit client-side
 
 ### Database
-- Altijd Drizzle ORM gebruiken
-- Migraties via `drizzle-kit`
+- Altijd Supabase Admin Client voor runtime queries
+- Drizzle ORM alleen voor migraties
 - RLS policies verplicht
 - Service-role key alleen server-side
 
@@ -210,7 +267,7 @@ Automatische checks bij elke push/PR:
 
 ## Roadmap
 
-### Sprint 0 ✅ (Voltooid)
+### M0-M4 ✅ (Voltooid)
 - [x] Basis scaffolding en theming
 - [x] Supabase setup + Drizzle schema
 - [x] Authenticatie flow
@@ -218,21 +275,28 @@ Automatische checks bij elke push/PR:
 - [x] Sessies + temperatuur tracking
 - [x] Reviews systeem
 - [x] Foto upload + Storage
-- [x] Import flow
+- [x] Import flow (URL)
 - [x] Profiel management
 - [x] Testing setup
 - [x] CI/CD pipeline
 
-### Sprint 1 (Gepland)
-- [ ] Favorieten/follows systeem
-- [ ] Geavanceerde zoekfunctionaliteit
-- [ ] Notificaties
-- [ ] Mobile app (PWA)
-- [ ] Real-time updates (Supabase Realtime)
+### M5 🔄 (In Progress)
+- [x] Social features (follows/vrienden)
+- [x] Favorieten systeem
+- [ ] Branch protection rules
+- [ ] PWA manifest
+
+### M6 ✅ (Voltooid)
+- [x] OCR Import (Google Cloud Vision)
+- [x] Foto upload voor OCR
+- [x] Tekst herkenning en parsing
+- [x] Preview en bewerken
+- [x] Recept aanmaken van OCR
 
 ### Sprint 2 (Toekomst)
-- [ ] Social features (delen, comments)
+- [ ] Real-time updates (Supabase Realtime)
+- [ ] Geavanceerde zoekfunctionaliteit
+- [ ] Notificaties
 - [ ] Analytics dashboard
 - [ ] Export functionaliteit
 - [ ] Multi-language support
-- [ ] Advanced import parsers

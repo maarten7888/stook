@@ -1,0 +1,344 @@
+/**
+ * OcrNormalizer - Normalisatie van OCR tekst
+ * 
+ * Normaliseer units, whitespace, en stapnummering voor consistente verwerking.
+ */
+
+/**
+ * Normaliseer whitespace in tekst
+ * - Verwijder overtollige spaties
+ * - Normaliseer line endings
+ * - Verwijder lege regels aan begin/eind
+ */
+export function normalizeWhitespace(text: string): string {
+  return text
+    .replace(/\r\n/g, "\n") // Windows line endings
+    .replace(/\r/g, "\n") // Old Mac line endings
+    .replace(/[ \t]+/g, " ") // Multiple spaces/tabs to single space
+    .replace(/\n{3,}/g, "\n\n") // Max 2 consecutive newlines
+    .trim();
+}
+
+/**
+ * Normaliseer ingredient hoeveelheden en units
+ */
+export function normalizeUnit(unit: string): string {
+  const unitMap: Record<string, string> = {
+    // Gewicht
+    "gram": "g",
+    "gr": "g",
+    "gr.": "g",
+    "kilogram": "kg",
+    "kilo": "kg",
+    "kg.": "kg",
+    "ons": "g", // 100g
+    "pond": "g", // 500g (behandelen we apart)
+    
+    // Volume
+    "milliliter": "ml",
+    "mililiter": "ml",
+    "ml.": "ml",
+    "liter": "l",
+    "lt": "l",
+    "l.": "l",
+    "deciliter": "dl",
+    "dl.": "dl",
+    
+    // Lepels
+    "eetlepel": "el",
+    "eetlepels": "el",
+    "el.": "el",
+    "theelepel": "tl",
+    "theelepels": "tl",
+    "tl.": "tl",
+    "eetl": "el",
+    "theel": "tl",
+    
+    // Stuks
+    "stuk": "stuks",
+    "stuks": "stuks",
+    "st": "stuks",
+    "st.": "stuks",
+    
+    // Overig
+    "snufje": "snufje",
+    "snuf": "snufje",
+    "takje": "takje",
+    "takjes": "takjes",
+    "teen": "teen",
+    "tenen": "tenen",
+    "teentje": "teen",
+    "teentjes": "tenen",
+    "blik": "blik",
+    "blikje": "blik",
+    "pot": "pot",
+    "potje": "pot",
+    "zakje": "zakje",
+    "pak": "pak",
+    "pakje": "pak",
+    "bosje": "bosje",
+    "handje": "handje",
+    "handjevol": "handje",
+  };
+
+  const normalized = unit.toLowerCase().trim();
+  return unitMap[normalized] || normalized;
+}
+
+/**
+ * Parse een ingredient string naar amount, unit en naam
+ * Voorbeelden:
+ * - "200 gram kipfilet" -> { amount: 200, unit: "g", name: "kipfilet" }
+ * - "2 el olijfolie" -> { amount: 2, unit: "el", name: "olijfolie" }
+ * - "zout naar smaak" -> { amount: null, unit: null, name: "zout naar smaak" }
+ */
+export function parseIngredientLine(line: string): {
+  amount: number | null;
+  unit: string | null;
+  name: string;
+} {
+  const trimmed = line.trim();
+  
+  if (!trimmed) {
+    return { amount: null, unit: null, name: "" };
+  }
+
+  // Patronen voor hoeveelheden
+  // Match: "200 gram", "2 el", "1/2 tl", "½ kopje", etc.
+  const patterns = [
+    // Nummer + unit + rest
+    /^(\d+(?:[.,]\d+)?)\s*(gram|gr|g|kilogram|kilo|kg|ml|milliliter|liter|l|dl|el|eetlepel|eetlepels|tl|theelepel|theelepels|stuks?|st|snufje|teen|tenen|takje|takjes|blik|blikje|pot|potje|zakje|pak|pakje|bosje|handje|handjevol)\.?\s+(.+)$/i,
+    // Breuk + unit + rest
+    /^(\d+\/\d+|\u00bd|\u00bc|\u00be)\s*(gram|gr|g|kilogram|kilo|kg|ml|milliliter|liter|l|dl|el|eetlepel|eetlepels|tl|theelepel|theelepels|stuks?|st|snufje|teen|tenen|takje|takjes|blik|blikje|pot|potje|zakje|pak|pakje|bosje|handje|handjevol)\.?\s+(.+)$/i,
+    // Alleen nummer + naam (impliciet "stuks")
+    /^(\d+(?:[.,]\d+)?)\s+(.+)$/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      let amount: number | null = null;
+      let unit: string | null = null;
+      let name: string;
+
+      if (match.length === 4) {
+        // Pattern met unit
+        amount = parseFraction(match[1]);
+        unit = normalizeUnit(match[2]);
+        name = match[3].trim();
+      } else if (match.length === 3) {
+        // Pattern zonder unit
+        amount = parseFraction(match[1]);
+        name = match[2].trim();
+      } else {
+        continue;
+      }
+
+      return { amount, unit, name };
+    }
+  }
+
+  // Geen patroon gevonden, return hele string als naam
+  return { amount: null, unit: null, name: trimmed };
+}
+
+/**
+ * Parse breuken naar decimale getallen
+ */
+function parseFraction(value: string): number | null {
+  // Unicode breuken
+  const unicodeFractions: Record<string, number> = {
+    "\u00bd": 0.5, // ½
+    "\u00bc": 0.25, // ¼
+    "\u00be": 0.75, // ¾
+    "\u2153": 0.333, // ⅓
+    "\u2154": 0.667, // ⅔
+  };
+
+  if (unicodeFractions[value]) {
+    return unicodeFractions[value];
+  }
+
+  // Normale breuk (1/2, 1/4, etc.)
+  if (value.includes("/")) {
+    const [num, denom] = value.split("/").map(Number);
+    if (!isNaN(num) && !isNaN(denom) && denom !== 0) {
+      return num / denom;
+    }
+  }
+
+  // Normaal getal (met komma of punt)
+  const normalized = value.replace(",", ".");
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Normaliseer een bereidingsstap
+ * - Verwijder leading nummering
+ * - Normaliseer whitespace
+ */
+export function normalizeStep(step: string): string {
+  return step
+    .replace(/^\d+[.):\s]+/, "") // Remove leading numbers like "1.", "1)", "1:"
+    .replace(/^[-•*]\s*/, "") // Remove bullet points
+    .trim();
+}
+
+/**
+ * Extract tijdsindicaties uit tekst (minuten)
+ * Voorbeelden: "30 minuten", "1 uur", "2-3 uur"
+ */
+export function extractTimerMinutes(text: string): number | null {
+  const patterns = [
+    // X-Y minuten/min (neem gemiddelde)
+    /(\d+)\s*[-–]\s*(\d+)\s*(?:minuten|min\.?|minuut)/i,
+    // X minuten/min
+    /(\d+)\s*(?:minuten|min\.?|minuut)/i,
+    // X-Y uur (neem gemiddelde, converteer naar minuten)
+    /(\d+)\s*[-–]\s*(\d+)\s*(?:uur|uren|u\.?)/i,
+    // X uur (converteer naar minuten)
+    /(\d+(?:[.,]\d+)?)\s*(?:uur|uren|u\.?)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[2]) {
+        // Range: gemiddelde nemen
+        const low = parseInt(match[1], 10);
+        const high = parseInt(match[2], 10);
+        const avg = Math.round((low + high) / 2);
+        
+        // Check of het uren zijn
+        if (pattern.source.includes("uur")) {
+          return avg * 60;
+        }
+        return avg;
+      } else {
+        // Enkel getal
+        const value = parseFloat(match[1].replace(",", "."));
+        if (pattern.source.includes("uur")) {
+          return Math.round(value * 60);
+        }
+        return Math.round(value);
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract temperatuur uit tekst (°C)
+ * Voorbeelden: "180°C", "180 graden", "110°C"
+ */
+export function extractTemperature(text: string): number | null {
+  const patterns = [
+    // X°C of X °C
+    /(\d+)\s*°\s*C/i,
+    // X graden (Celsius)
+    /(\d+)\s*graden(?:\s*celsius)?/i,
+    // kerntemperatuur X
+    /kerntemperatuur[:\s]+(\d+)/i,
+    // interne temperatuur X
+    /interne\s*temperatuur[:\s]+(\d+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const temp = parseInt(match[1], 10);
+      // Sanity check: BBQ temperaturen zijn meestal 50-350°C
+      if (temp >= 30 && temp <= 400) {
+        return temp;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract aantal personen uit tekst
+ * Voorbeelden: "Voor 4 personen", "4-6 porties", "Serves 8"
+ */
+export function extractServings(text: string): number | null {
+  const patterns = [
+    // Voor X personen/porties
+    /voor\s*(\d+)\s*(?:personen|porties|persoon)/i,
+    // X-Y personen (neem gemiddelde)
+    /(\d+)\s*[-–]\s*(\d+)\s*(?:personen|porties)/i,
+    // X personen/porties
+    /(\d+)\s*(?:personen|porties)/i,
+    // Serves X
+    /serves?\s*(\d+)/i,
+    // Aantal: X
+    /aantal[:\s]+(\d+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[2]) {
+        // Range
+        const low = parseInt(match[1], 10);
+        const high = parseInt(match[2], 10);
+        return Math.round((low + high) / 2);
+      }
+      return parseInt(match[1], 10);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract bereidingstijd uit tekst
+ */
+export function extractPrepTime(text: string): number | null {
+  const patterns = [
+    /voorbereid(?:ing|en)?[:\s]+(\d+)\s*(?:minuten|min)/i,
+    /prep(?:aratie)?[:\s]+(\d+)\s*(?:minuten|min)/i,
+    /bereidingstijd[:\s]+(\d+)\s*(?:minuten|min)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract kooktijd uit tekst
+ */
+export function extractCookTime(text: string): number | null {
+  const patterns = [
+    // Kooktijd/Grilltijd/Rooktijd
+    /(?:kook|grill|rook|bak|braad)tijd[:\s]+(\d+)\s*[-–]?\s*(\d+)?\s*(?:minuten|min|uur|uren)/i,
+    /(?:kook|grill|rook|bak|braad)tijd[:\s]+(\d+(?:[.,]\d+)?)\s*(?:uur|uren)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const isHours = pattern.source.includes("uur");
+      if (match[2]) {
+        // Range
+        const low = parseInt(match[1], 10);
+        const high = parseInt(match[2], 10);
+        const avg = Math.round((low + high) / 2);
+        return isHours ? avg * 60 : avg;
+      }
+      const value = parseFloat(match[1].replace(",", "."));
+      return isHours ? Math.round(value * 60) : Math.round(value);
+    }
+  }
+
+  return null;
+}
+
