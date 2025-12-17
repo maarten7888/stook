@@ -41,41 +41,6 @@ interface GoldenTestCase {
 }
 
 /**
- * Check of een waarde voldoet aan een expected constraint
- */
-function matchesConstraint(
-  actual: any,
-  expected: string | number | { contains?: string; min?: number; max?: number } | undefined
-): boolean {
-  if (expected === undefined) {
-    return true; // Geen constraint
-  }
-
-  if (typeof expected === "string") {
-    return actual === expected;
-  }
-
-  if (typeof expected === "number") {
-    return actual === expected;
-  }
-
-  if (typeof expected === "object") {
-    if ("contains" in expected && typeof actual === "string") {
-      return actual.toLowerCase().includes(expected.contains.toLowerCase());
-    }
-    if ("min" in expected && typeof actual === "number") {
-      if (actual < expected.min!) return false;
-    }
-    if ("max" in expected && typeof actual === "number") {
-      if (actual > expected.max!) return false;
-    }
-    return true;
-  }
-
-  return false;
-}
-
-/**
  * Check of een ingredient voldoet aan expected constraints
  */
 function matchesIngredient(
