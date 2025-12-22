@@ -57,6 +57,12 @@ export interface RecipeConfidence {
     avgStepLength: number;
     hasServings: boolean;
     hasCookTime: boolean;
+    // Per-sectie scores (0-1) voor repair passes
+    ingredientSectionScore?: number;
+    stepSectionScore?: number;
+    // Repair pass info
+    ingredientRepairApplied?: boolean;
+    stepRepairApplied?: boolean;
   };
 }
 
@@ -281,8 +287,36 @@ export function parseOcrText(rawText: string): ParsedRecipe {
   // Parse elke sectie
   const title = extractTitle(lines, sections);
   const description = extractDescription(lines, sections);
-  const ingredients = parseIngredients(sections.ingredients);
-  const steps = parseSteps(sections.steps);
+  let ingredients = parseIngredients(sections.ingredients);
+  let steps = parseSteps(sections.steps);
+
+  // Bereken per-sectie scores voor repair passes
+  const ingredientSectionScore = calculateIngredientSectionScore(sections.ingredients);
+  const stepSectionScore = calculateStepSectionScore(sections.steps);
+
+  // Track of repair passes zijn toegepast
+  let ingredientRepairApplied = false;
+  let stepRepairApplied = false;
+
+  // Repair pass voor ingrediënten: als count laag is maar score hoog
+  // Threshold: min 0.5 score (i.p.v. 0.6) voor meer agressieve repair
+  if (ingredients.length < 3 && ingredientSectionScore > 0.5) {
+    const repairedIngredients = repairIngredientParsing(sections.ingredients, ingredients);
+    if (repairedIngredients.length > ingredients.length) {
+      ingredients = repairedIngredients;
+      ingredientRepairApplied = true;
+    }
+  }
+
+  // Repair pass voor stappen: als count laag is maar score hoog
+  // Threshold: min 0.5 score (i.p.v. 0.6) voor meer agressieve repair
+  if (steps.length < 2 && stepSectionScore > 0.5) {
+    const repairedSteps = repairStepParsing(sections.steps, steps);
+    if (repairedSteps.length > steps.length) {
+      steps = repairedSteps;
+      stepRepairApplied = true;
+    }
+  }
 
   // Extract metadata uit de hele tekst
   const serves = extractServings(text);
@@ -290,8 +324,18 @@ export function parseOcrText(rawText: string): ParsedRecipe {
   const cookMinutes = extractCookTime(text);
   const targetInternalTemp = extractTemperature(text);
 
-  // Bereken confidence scores
-  const confidence = calculateConfidence(title, ingredients, steps, serves, cookMinutes);
+  // Bereken confidence scores (met per-sectie scores)
+  const confidence = calculateConfidence(
+    title, 
+    ingredients, 
+    steps, 
+    serves, 
+    cookMinutes,
+    ingredientSectionScore,
+    stepSectionScore,
+    ingredientRepairApplied,
+    stepRepairApplied
+  );
 
   return {
     title,
@@ -1196,6 +1240,417 @@ function normalizeStepWithTitle(step: string): string {
 }
 
 /**
+ * Bereken ingredient section score (0-1)
+ * Analyseert de ingredient sectie op basis van statistische cues
+ */
+function calculateIngredientSectionScore(lines: string[]): number {
+  if (lines.length === 0) return 0;
+  
+  let score = 0;
+  let totalLines = 0;
+  
+  for (const line of lines) {
+    // Skip headers en lege regels
+    if (!line.trim() || isIngredientHeader(line) || isStepsHeader(line)) {
+      continue;
+    }
+    
+    totalLines++;
+    const trimmed = line.trim();
+    
+    // Check voor getal + unit patroon (sterke indicator)
+    if (/^\d+(?:[.,]\d+)?\s*(gram|gr|g|kg|ml|l|dl|el|tl|stuks?|st|theelepel|eetlepel)/i.test(trimmed)) {
+      score += 0.3;
+    }
+    // Check voor alleen getal (zwakkere indicator)
+    else if (/^\d+(?:[.,]\d+)?\s+[a-z]/i.test(trimmed)) {
+      score += 0.15;
+    }
+    
+    // Check voor "naar smaak" / "optioneel" (indicator van ingredient)
+    if (/naar\s+smaak|optioneel|ter\s+garnering/i.test(trimmed)) {
+      score += 0.2;
+    }
+    
+    // Check voor komma-lijst (meerdere ingrediënten op één regel)
+    const commaCount = (trimmed.match(/,/g) || []).length;
+    if (commaCount >= 2) {
+      score += 0.25; // Sterke indicator van meerdere ingrediënten
+    } else if (commaCount === 1) {
+      score += 0.1;
+    }
+    
+    // Check voor bullet points
+    if (/^[-•*⚫·◦‣▪▸►]\s/.test(trimmed)) {
+      score += 0.15;
+    }
+    
+    // Check voor standalone ingredient woorden
+    const words = trimmed.toLowerCase().split(/\s+/);
+    for (const word of words) {
+      if (STANDALONE_INGREDIENTS.has(word)) {
+        score += 0.1;
+        break;
+      }
+    }
+  }
+  
+  // Normaliseer naar 0-1 (max score per regel is ~0.8, dus deel door 0.8 * aantal regels)
+  if (totalLines === 0) return 0;
+  const normalizedScore = Math.min(1, score / (totalLines * 0.8));
+  return normalizedScore;
+}
+
+/**
+ * Bereken step section score (0-1)
+ * Analyseert de stappen sectie op basis van statistische cues
+ */
+function calculateStepSectionScore(lines: string[]): number {
+  if (lines.length === 0) return 0;
+  
+  let score = 0;
+  let totalLines = 0;
+  
+  for (const line of lines) {
+    // Skip headers en lege regels
+    if (!line.trim() || isIngredientHeader(line) || isStepsHeader(line)) {
+      continue;
+    }
+    
+    totalLines++;
+    const trimmed = line.trim();
+    
+    // Check voor genummerde stap (sterke indicator)
+    if (/^\d+[.):]\s/.test(trimmed)) {
+      score += 0.3;
+    }
+    
+    // Check voor werkwoord aan het begin (sterke indicator)
+    const firstWord = trimmed.split(/[\s,.:]/)[0].toLowerCase();
+    if (STEP_STARTING_VERBS.has(firstWord)) {
+      score += 0.25;
+    }
+    
+    // Check voor tijd indicatie (minuten, uur)
+    if (/\d+\s*(minuten?|uur)/i.test(trimmed)) {
+      score += 0.2;
+    }
+    
+    // Check voor temperatuur (°C, graden)
+    if (/\d+\s*°|graden/i.test(trimmed)) {
+      score += 0.2;
+    }
+    
+    // Check voor imperatief (begint met hoofdletter, eindigt met punt)
+    if (/^[A-Z][a-z]+.*\.$/.test(trimmed) && trimmed.length > 30) {
+      score += 0.15;
+    }
+    
+    // Check voor ALLCAPS kopjes (stap headers)
+    if (isAllCapsStepHeader(trimmed)) {
+      score += 0.25;
+    }
+    
+    // Check voor lange instructie (waarschijnlijk een stap)
+    if (trimmed.length > 50 && !/^\d+\s+(gram|gr|g|kg|ml|l|dl|el|tl)/i.test(trimmed)) {
+      score += 0.1;
+    }
+  }
+  
+  // Normaliseer naar 0-1
+  if (totalLines === 0) return 0;
+  const normalizedScore = Math.min(1, score / (totalLines * 0.8));
+  return normalizedScore;
+}
+
+/**
+ * Repair ingredient parsing met agressievere splitting
+ * Probeert ingrediënten te vinden die gemist zijn door de normale parsing
+ */
+function repairIngredientParsing(
+  lines: string[],
+  _currentIngredients: ParsedIngredient[]
+): ParsedIngredient[] {
+  const repaired: ParsedIngredient[] = [];
+  
+  for (const line of lines) {
+    // Skip headers en lege regels
+    if (!line.trim() || isIngredientHeader(line) || isStepsHeader(line)) {
+      continue;
+    }
+    
+    // Skip als het duidelijk een stap is (lange regel met werkwoord)
+    if (isLikelyStep(line)) {
+      continue;
+    }
+    
+    // EERST: split op bullets (ook als ze direct aan woorden vastzitten)
+    const bulletParts = splitIngredientLine(line);
+    
+    if (bulletParts.length > 1) {
+      // Meerdere ingrediënten gevonden via bullets
+      for (const part of bulletParts) {
+        const parsed = parseIngredientLine(part);
+        if (parsed.name && parsed.name.length > 1) {
+          repaired.push({
+            name: parsed.name,
+            amount: parsed.amount,
+            unit: parsed.unit,
+            notes: parsed.notes,
+          });
+        }
+      }
+      continue;
+    }
+    
+    // TWEEDE: split op komma's en puntkomma's (agressiever)
+    const commaParts = line
+      .split(/[,;]/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+    
+    if (commaParts.length > 1) {
+      // Meerdere ingrediënten op één regel gescheiden door komma's
+      for (const part of commaParts) {
+        const parsed = parseIngredientLine(part);
+        if (parsed.name && parsed.name.length > 1) {
+          repaired.push({
+            name: parsed.name,
+            amount: parsed.amount,
+            unit: parsed.unit,
+            notes: parsed.notes,
+          });
+        }
+      }
+      continue;
+    }
+    
+    // DERDE: split standalone ingrediënten (peper zout suiker)
+    const standaloneParts = splitStandaloneIngredients(line);
+    if (standaloneParts.length > 1) {
+      for (const part of standaloneParts) {
+        const parsed = parseIngredientLine(part);
+        if (parsed.name && parsed.name.length > 1) {
+          repaired.push({
+            name: parsed.name,
+            amount: parsed.amount,
+            unit: parsed.unit,
+            notes: parsed.notes,
+          });
+        }
+      }
+      continue;
+    }
+    
+    // VIERDE: normale parsing (als fallback)
+    const parsed = parseIngredientLine(line);
+    if (parsed.name && parsed.name.length > 1) {
+      repaired.push({
+        name: parsed.name,
+        amount: parsed.amount,
+        unit: parsed.unit,
+        notes: parsed.notes,
+      });
+    }
+  }
+  
+  // Verwijder duplicaten (op basis van naam, case-insensitive)
+  const unique: ParsedIngredient[] = [];
+  const seenNames = new Set<string>();
+  
+  for (const ing of repaired) {
+    const nameLower = ing.name.toLowerCase().trim();
+    if (!seenNames.has(nameLower) && nameLower.length > 1) {
+      seenNames.add(nameLower);
+      unique.push(ing);
+    }
+  }
+  
+  return unique;
+}
+
+/**
+ * Repair step parsing met slimmere detectie
+ * Probeert stappen te vinden die gemist zijn door de normale parsing
+ */
+function repairStepParsing(
+  lines: string[],
+  _currentSteps: ParsedStep[]
+): ParsedStep[] {
+  const repaired: ParsedStep[] = [];
+  let currentStep = "";
+  let orderNo = 1;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined;
+    
+    // Skip headers en lege regels
+    if (!line.trim() || isStepsHeader(line)) {
+      continue;
+    }
+    
+    // Skip ingrediënten (duidelijke ingredient patterns)
+    const looksLikeIngredient = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje)/i.test(line) ||
+                                /^\d+(?:[.,]\d+)?\s*(gram|gr|g|kg|ml|l|dl|el|tl)/i.test(line);
+    if (looksLikeIngredient) {
+      continue;
+    }
+    
+    // Check voor ALLCAPS header (ook als het gemist was)
+    if (isAllCapsStepHeader(line, nextLine)) {
+      if (currentStep) {
+        // Vorige stap opslaan
+        const instruction = normalizeStepWithTitle(currentStep);
+        if (instruction.length >= 5) {
+          repaired.push({
+            instruction,
+            timerMinutes: extractTimerMinutes(instruction),
+            targetTemp: extractTemperature(instruction),
+            orderNo: orderNo++,
+          });
+        }
+      }
+      currentStep = line;
+      continue;
+    }
+    
+    // Check voor genummerde stap (ook met lagere threshold)
+    const startsWithNumberPunct = /^\d+[.):]/.test(line);
+    
+    if (startsWithNumberPunct && !looksLikeIngredient) {
+      if (currentStep) {
+        const instruction = normalizeStepWithTitle(currentStep);
+        if (instruction.length >= 5) {
+          repaired.push({
+            instruction,
+            timerMinutes: extractTimerMinutes(instruction),
+            targetTemp: extractTemperature(instruction),
+            orderNo: orderNo++,
+          });
+        }
+      }
+      currentStep = line;
+      continue;
+    }
+    
+    // Check voor werkwoord (met lagere threshold - ook korte regels vanaf 15 karakters)
+    const firstWord = line.trim().split(/[\s,.:]/)[0].toLowerCase();
+    if (STEP_STARTING_VERBS.has(firstWord) && line.trim().length > 15) {
+      if (currentStep) {
+        const instruction = normalizeStepWithTitle(currentStep);
+        if (instruction.length >= 5) {
+          repaired.push({
+            instruction,
+            timerMinutes: extractTimerMinutes(instruction),
+            targetTemp: extractTemperature(instruction),
+            orderNo: orderNo++,
+          });
+        }
+      }
+      currentStep = line;
+      continue;
+    }
+    
+    // Check voor temperatuur + tijd combinatie (zeer waarschijnlijk stap)
+    const hasTemp = /\d+\s*°\s*[cCfF]/.test(line) || /\d+\s*graden/i.test(line);
+    const hasTime = /\d+\s*minuten?/i.test(line) || /\d+\s*uur/i.test(line);
+    if (hasTemp && hasTime && line.trim().length > 30) {
+      if (currentStep) {
+        const instruction = normalizeStepWithTitle(currentStep);
+        if (instruction.length >= 5) {
+          repaired.push({
+            instruction,
+            timerMinutes: extractTimerMinutes(instruction),
+            targetTemp: extractTemperature(instruction),
+            orderNo: orderNo++,
+          });
+        }
+      }
+      currentStep = line;
+      continue;
+    }
+    
+    // Check voor oven/verwarm instructies (zeer specifiek voor stappen)
+    if (/verwarm.*oven|oven.*verwarm|voorverwarm/i.test(line) && line.trim().length > 20) {
+      if (currentStep) {
+        const instruction = normalizeStepWithTitle(currentStep);
+        if (instruction.length >= 5) {
+          repaired.push({
+            instruction,
+            timerMinutes: extractTimerMinutes(instruction),
+            targetTemp: extractTemperature(instruction),
+            orderNo: orderNo++,
+          });
+        }
+      }
+      currentStep = line;
+      continue;
+    }
+    
+    // Voortzetting van huidige stap (als het lang genoeg is)
+    if (currentStep) {
+      currentStep += " " + line;
+    } else if (line.trim().length > 20) {
+      // Start nieuwe stap als regel lang genoeg is
+      currentStep = line;
+    }
+  }
+  
+  // Laatste stap opslaan
+  if (currentStep) {
+    const instruction = normalizeStepWithTitle(currentStep);
+    if (instruction.length >= 5) {
+      repaired.push({
+        instruction,
+        timerMinutes: extractTimerMinutes(instruction),
+        targetTemp: extractTemperature(instruction),
+        orderNo: orderNo,
+      });
+    }
+  }
+  
+  // Verwijder duplicaten (op basis van instruction text, case-insensitive)
+  const unique: ParsedStep[] = [];
+  const seenInstructions = new Set<string>();
+  
+  for (const step of repaired) {
+    const instructionLower = step.instruction.toLowerCase().trim();
+    // Check of we deze instructie al hebben gezien (met fuzzy matching voor kleine verschillen)
+    let isDuplicate = false;
+    for (const seen of seenInstructions) {
+      // Als instructies >80% overeenkomen, beschouw als duplicaat
+      const similarity = calculateStringSimilarity(instructionLower, seen);
+      if (similarity > 0.8) {
+        isDuplicate = true;
+        break;
+      }
+    }
+    
+    if (!isDuplicate && instructionLower.length > 5) {
+      seenInstructions.add(instructionLower);
+      unique.push(step);
+    }
+  }
+  
+  return unique;
+}
+
+/**
+ * Bereken string similarity (0-1) met Jaccard similarity
+ */
+function calculateStringSimilarity(a: string, b: string): number {
+  const wordsA = new Set(a.split(/\s+/));
+  const wordsB = new Set(b.split(/\s+/));
+  
+  const intersection = new Set([...wordsA].filter(x => wordsB.has(x)));
+  const union = new Set([...wordsA, ...wordsB]);
+  
+  if (union.size === 0) return 0;
+  return intersection.size / union.size;
+}
+
+/**
  * Bereken confidence scores met gedetailleerde breakdown
  */
 function calculateConfidence(
@@ -1203,7 +1658,11 @@ function calculateConfidence(
   ingredients: ParsedIngredient[],
   steps: ParsedStep[],
   serves: number | null,
-  cookMinutes: number | null
+  cookMinutes: number | null,
+  ingredientSectionScore?: number,
+  stepSectionScore?: number,
+  ingredientRepairApplied?: boolean,
+  stepRepairApplied?: boolean
 ): RecipeConfidence {
   // Verzamel details
   const titlePresent = Boolean(title && title !== "Onbekend recept");
@@ -1228,34 +1687,59 @@ function calculateConfidence(
   }
 
   // Ingredients: 0.30 max
+  // Gebruik per-sectie score als beschikbaar, anders fallback naar count-based
   let ingredientsConfidence = 0;
-  if (ingredientsCount >= 5) {
-    ingredientsConfidence = 0.20;
-  } else if (ingredientsCount >= 3) {
-    ingredientsConfidence = 0.15;
-  } else if (ingredientsCount >= 1) {
-    ingredientsConfidence = 0.08;
-  }
-  // Bonus voor ingrediënten met hoeveelheden
-  if (ingredientsCount > 0) {
-    const amountRatio = ingredientsWithAmount / ingredientsCount;
-    ingredientsConfidence += amountRatio * 0.10;
+  if (ingredientSectionScore !== undefined) {
+    // Gebruik per-sectie score (0-1) en schaal naar 0-0.30
+    ingredientsConfidence = ingredientSectionScore * 0.20;
+    // Bonus voor ingrediënten met hoeveelheden
+    if (ingredientsCount > 0) {
+      const amountRatio = ingredientsWithAmount / ingredientsCount;
+      ingredientsConfidence += amountRatio * 0.10;
+    }
+  } else {
+    // Fallback naar oude logica
+    if (ingredientsCount >= 5) {
+      ingredientsConfidence = 0.20;
+    } else if (ingredientsCount >= 3) {
+      ingredientsConfidence = 0.15;
+    } else if (ingredientsCount >= 1) {
+      ingredientsConfidence = 0.08;
+    }
+    // Bonus voor ingrediënten met hoeveelheden
+    if (ingredientsCount > 0) {
+      const amountRatio = ingredientsWithAmount / ingredientsCount;
+      ingredientsConfidence += amountRatio * 0.10;
+    }
   }
 
   // Steps: 0.30 max
+  // Gebruik per-sectie score als beschikbaar, anders fallback naar count-based
   let stepsConfidence = 0;
-  if (stepsCount >= 4) {
-    stepsConfidence = 0.20;
-  } else if (stepsCount >= 2) {
-    stepsConfidence = 0.15;
-  } else if (stepsCount >= 1) {
-    stepsConfidence = 0.08;
-  }
-  // Bonus voor goede stap-lengte (>30 karakters gemiddeld)
-  if (avgStepLength > 50) {
-    stepsConfidence += 0.10;
-  } else if (avgStepLength > 30) {
-    stepsConfidence += 0.05;
+  if (stepSectionScore !== undefined) {
+    // Gebruik per-sectie score (0-1) en schaal naar 0-0.30
+    stepsConfidence = stepSectionScore * 0.20;
+    // Bonus voor goede stap-lengte (>30 karakters gemiddeld)
+    if (avgStepLength > 50) {
+      stepsConfidence += 0.10;
+    } else if (avgStepLength > 30) {
+      stepsConfidence += 0.05;
+    }
+  } else {
+    // Fallback naar oude logica
+    if (stepsCount >= 4) {
+      stepsConfidence = 0.20;
+    } else if (stepsCount >= 2) {
+      stepsConfidence = 0.15;
+    } else if (stepsCount >= 1) {
+      stepsConfidence = 0.08;
+    }
+    // Bonus voor goede stap-lengte (>30 karakters gemiddeld)
+    if (avgStepLength > 50) {
+      stepsConfidence += 0.10;
+    } else if (avgStepLength > 30) {
+      stepsConfidence += 0.05;
+    }
   }
 
   // Metadata: 0.15 max
@@ -1293,6 +1777,14 @@ function calculateConfidence(
       avgStepLength: Math.round(avgStepLength),
       hasServings,
       hasCookTime,
+      ingredientSectionScore: ingredientSectionScore !== undefined 
+        ? Math.round(ingredientSectionScore * 100) / 100 
+        : undefined,
+      stepSectionScore: stepSectionScore !== undefined 
+        ? Math.round(stepSectionScore * 100) / 100 
+        : undefined,
+      ingredientRepairApplied: ingredientRepairApplied || false,
+      stepRepairApplied: stepRepairApplied || false,
     },
   };
 }
