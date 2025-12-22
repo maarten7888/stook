@@ -290,21 +290,23 @@ CURRENT STATUS (December 2024)
 
 🔄 IN PROGRESS:
 
-* Branch protection rules op main
 * PWA manifest en service worker
 * Real-time updates (Supabase Realtime)
 
 📋 VOLGENDE STAPPEN:
 
-1. Branch protection rules op main (GitHub settings)
-2. OCR parser verder verbeteren (statistische cues, ALLCAPS kopjes, agressievere splitting)
-3. Meer golden test cases toevoegen (uitbreiden van 4 naar 10-20 test cases voor betere coverage)
-4. PWA manifest en service worker
-5. Real-time updates (Supabase Realtime)
-6. Zoeken functionaliteit (pg_trgm/Meilisearch)
-7. Error boundaries + toasts
-8. Signed image URL expiratie + cache headers
-9. Monitoring integratie (Sentry/Logflare)
+1. OCR parser verder verbeteren (statistische cues, ALLCAPS kopjes, agressievere splitting)
+2. Meer golden test cases toevoegen (uitbreiden van 4 naar 10-20 test cases voor betere coverage)
+3. PWA manifest en service worker
+4. Real-time updates (Supabase Realtime)
+5. Zoeken functionaliteit (pg_trgm/Meilisearch)
+6. Error boundaries + toasts
+7. Signed image URL expiratie + cache headers
+8. Monitoring integratie (Sentry/Logflare)
+
+💡 LATER OPTIONEEL (voor teams/samenwerking):
+
+* Branch protection rules op main (GitHub settings) - handig bij samenwerking, niet nodig voor solo project
 
 **Opmerking:** Golden testset (4 test cases + CI metrics) en kolomdetectie zijn al geïmplementeerd ✅.
 

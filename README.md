@@ -601,7 +601,6 @@ Automatische checks bij elke push/PR:
 ### M5 🔄 (In Progress)
 - [x] Social features (follows/vrienden)
 - [x] Favorieten systeem
-- [ ] Branch protection rules
 - [ ] PWA manifest
 
 ### M6 ✅ (Voltooid)
@@ -618,3 +617,6 @@ Automatische checks bij elke push/PR:
 - [ ] Analytics dashboard
 - [ ] Export functionaliteit
 - [ ] Multi-language support
+
+### Later optioneel (voor teams/samenwerking)
+- [ ] Branch protection rules (handig bij samenwerking, niet nodig voor solo project)

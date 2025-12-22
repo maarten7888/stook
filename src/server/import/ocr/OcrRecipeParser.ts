@@ -400,6 +400,20 @@ function identifySections(lines: string[]): Sections {
       sections.steps.push(line);
       continue;
     }
+    
+    // Check voor ALLCAPS stap header (bijv. "AARDAPPELEN VOORBEREIDEN:")
+    // Dit kan helpen om de stappen sectie te identificeren, vooral na ingrediënten
+    const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined;
+    if (isAllCapsStepHeader(line, nextLine)) {
+      // Als we in ingredients sectie zijn of nog geen sectie hebben geïdentificeerd,
+      // en dit is een ALLCAPS header, dan zijn we waarschijnlijk in de stappen sectie
+      if (currentSection === "ingredients" || currentSection === "header") {
+        currentSection = "steps";
+        stepsStartIndex = i;
+        sections.steps.push(line);
+        continue;
+      }
+    }
 
     // Voeg toe aan huidige sectie
     if (currentSection === "ingredients") {
@@ -995,7 +1009,10 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
   let currentStep = "";
   let orderNo = 1;
 
-  for (const line of stepLines) {
+  for (let i = 0; i < stepLines.length; i++) {
+    const line = stepLines[i];
+    const nextLine = i + 1 < stepLines.length ? stepLines[i + 1] : undefined;
+    
     // Skip headers
     if (isStepsHeader(line)) {
       continue;
@@ -1008,7 +1025,11 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
     const startsWithBullet = /^[-•*⚫]\s/.test(line);
     // "1 bosje", "2 el" etc. zijn ingrediënten, geen stappen
     const looksLikeIngredient = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje)/i.test(line);
-    const isNewStep = (startsWithNumberPunct || startsWithBullet) && !looksLikeIngredient;
+    
+    // Check voor ALLCAPS stap header (bijv. "AARDAPPELEN VOORBEREIDEN:")
+    const isAllCapsHeader = isAllCapsStepHeader(line, nextLine);
+    
+    const isNewStep = (startsWithNumberPunct || startsWithBullet || isAllCapsHeader) && !looksLikeIngredient;
 
     if (isNewStep && currentStep) {
       // Vorige stap opslaan
@@ -1063,9 +1084,72 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
 }
 
 /**
+ * Check of een regel een ALLCAPS stap header is
+ * Detecteert patronen zoals "AARDAPPELEN VOORBEREIDEN:" of "VLEES MARINEREN:"
+ * 
+ * Guards:
+ * - Moet 2-5 woorden bevatten
+ * - Moet >80% hoofdletters zijn
+ * - Moet eindigen met ":" of gevolgd worden door instructie
+ * - Geen ingrediënt-patroon (geen "500G AARDAPPELEN")
+ */
+function isAllCapsStepHeader(line: string, nextLine?: string): boolean {
+  const trimmed = line.trim();
+  
+  // Te korte of te lange regels zijn geen headers
+  if (trimmed.length < 5 || trimmed.length > 80) {
+    return false;
+  }
+  
+  // Check of het een ingrediënt-patroon is (false positive voorkomen)
+  const isIngredientPattern = /^\d+\s*(gram|gr|g|kg|ml|l|dl|el|tl|stuks?|st)/i.test(trimmed) ||
+                              /^\d+[.,]\d+\s*(gram|gr|g|kg|ml|l|dl|el|tl)/i.test(trimmed);
+  if (isIngredientPattern) {
+    return false;
+  }
+  
+  // Tel aantal woorden
+  const words = trimmed.split(/\s+/).filter(w => w.length > 0);
+  if (words.length < 2 || words.length > 5) {
+    return false;
+  }
+  
+  // Check of regel >80% hoofdletters bevat (rekening houdend met leestekens)
+  const letters = trimmed.replace(/[^A-Za-z]/g, "");
+  if (letters.length === 0) {
+    return false;
+  }
+  
+  const uppercaseLetters = letters.replace(/[^A-Z]/g, "");
+  const uppercaseRatio = uppercaseLetters.length / letters.length;
+  
+  if (uppercaseRatio < 0.8) {
+    return false;
+  }
+  
+  // Moet eindigen met ":" of gevolgd worden door instructie op volgende regel
+  const endsWithColon = trimmed.endsWith(":");
+  const hasInstructionAfter = nextLine && nextLine.trim().length > 20 && 
+                              !/^[A-Z\s]+:?\s*$/.test(nextLine.trim());
+  
+  if (!endsWithColon && !hasInstructionAfter) {
+    return false;
+  }
+  
+  // Check of het geen bekende ingredient header is
+  if (isIngredientHeader(trimmed) || isStepsHeader(trimmed)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
  * Normaliseer een stap en verwerk eventuele titel
  * Input: "1. AARDAPPELEN VOORBEREIDEN: schil de aardappelen..."
  * Output: "Aardappelen voorbereiden: schil de aardappelen..."
+ * 
+ * Ook: "AARDAPPELEN VOORBEREIDEN:\nschil de aardappelen..." → "Aardappelen voorbereiden: schil de aardappelen..."
  */
 function normalizeStepWithTitle(step: string): string {
   let normalized = step
@@ -1073,19 +1157,39 @@ function normalizeStepWithTitle(step: string): string {
     .replace(/^[-•*⚫]\s*/, "") // Remove bullet points
     .trim();
   
-  // Check of er een CAPS titel is gevolgd door een dubbele punt
-  // "AARDAPPELEN VOORBEREIDEN: schil de..."
-  const titleMatch = normalized.match(/^([A-Z][A-Z\s]+):\s*(.+)$/);
-  if (titleMatch) {
-    // Converteer CAPS titel naar Title Case
-    const title = titleMatch[1].toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    const rest = titleMatch[2];
-    // Maak eerste letter van rest lowercase als het geen eigennaam lijkt
-    const restNormalized = rest.charAt(0).toLowerCase() + rest.slice(1);
-    normalized = `${title}: ${restNormalized}`;
+  // Check of er een ALLCAPS titel is (met of zonder dubbele punt)
+  // Patronen:
+  // - "AARDAPPELEN VOORBEREIDEN: schil de..." (op één regel)
+  // - "AARDAPPELEN VOORBEREIDEN:\nschil de..." (op meerdere regels, maar al gemerged)
+  // - "AARDAPPELEN VOORBEREIDEN" (alleen titel, rest komt later)
+  const allCapsTitleMatch = normalized.match(/^([A-Z][A-Z\s]{2,}):?\s*(.+)?$/);
+  if (allCapsTitleMatch) {
+    const titlePart = allCapsTitleMatch[1].trim();
+    const restPart = allCapsTitleMatch[2]?.trim() || "";
+    
+    // Check of het echt ALLCAPS is (>80% hoofdletters)
+    const letters = titlePart.replace(/[^A-Za-z]/g, "");
+    if (letters.length > 0) {
+      const uppercaseLetters = letters.replace(/[^A-Z]/g, "");
+      const uppercaseRatio = uppercaseLetters.length / letters.length;
+      
+      if (uppercaseRatio >= 0.8) {
+        // Converteer ALLCAPS titel naar Title Case
+        const title = titlePart.toLowerCase()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+        
+        if (restPart.length > 0) {
+          // Er is content na de titel
+          const restNormalized = restPart.charAt(0).toLowerCase() + restPart.slice(1);
+          normalized = `${title}: ${restNormalized}`;
+        } else {
+          // Alleen titel, voeg dubbele punt toe
+          normalized = `${title}:`;
+        }
+      }
+    }
   }
   
   return normalized;

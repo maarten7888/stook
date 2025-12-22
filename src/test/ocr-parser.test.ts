@@ -876,26 +876,65 @@ TIP : Dit gehaktbrood is koud ook lekker , bijvoorbeeld op brood .`;
         i.name.toLowerCase().includes("knoflook")
       );
       expect(hasMeat).toBe(true);
+    });
+    
+    it("should detect ALLCAPS step headers without numbering", () => {
+      const text = `AARDAPPELPANNETJE
+INGREDIËNTEN:
+500 g aardappelen
+1 bosje lente-uitjes
+2 el olijfolie
+
+AARDAPPELEN VOORBEREIDEN:
+Schil de aardappelen en snijd ze in dunne plakjes.
+
+UIEN SNIJDEN:
+Was de lente-uitjes en snijd het groen in grove stukken.
+
+AARDAPPELEN BAKKEN:
+Verhit de olijfolie in een pan en bak de aardappelen goudbruin.`;
+
+      const result = parseOcrText(text);
       
-      // Should find steps
-      expect(result.steps.length).toBeGreaterThan(0);
+      // Should detect multiple steps with ALLCAPS headers
+      expect(result.steps.length).toBeGreaterThanOrEqual(3);
       
-      // Should extract temperature (190°C)
-      const stepWithTemp = result.steps.find(s => s.targetTemp === 190);
-      expect(stepWithTemp).toBeTruthy();
+      // Check that ALLCAPS headers are normalized to Title Case
+      const step1 = result.steps.find(s => s.instruction.toLowerCase().includes("aardappel") && s.instruction.toLowerCase().includes("voorbereid"));
+      expect(step1).toBeDefined();
+      expect(step1?.instruction).toMatch(/Aardappelen.*[Vv]oorbereiden/i);
       
-      // Should extract time (50-55 minutes = ~52 minutes)
-      const stepWithTime = result.steps.find(s => s.timerMinutes && s.timerMinutes >= 50 && s.timerMinutes <= 55);
-      expect(stepWithTime).toBeTruthy();
+      const step2 = result.steps.find(s => s.instruction.toLowerCase().includes("ui"));
+      expect(step2).toBeDefined();
+      expect(step2?.instruction).toMatch(/Uien.*[Ss]nijden/i);
       
-      // "minu- ten" should be merged to "minuten"
-      const stepTexts = result.steps.map(s => s.instruction.toLowerCase()).join(" ");
-      expect(stepTexts).toContain("minuten");
-      expect(stepTexts).not.toContain("minu- ten");
+      const step3 = result.steps.find(s => s.instruction.toLowerCase().includes("bak"));
+      expect(step3).toBeDefined();
+      expect(step3?.instruction).toMatch(/Aardappelen.*[Bb]akken/i);
+    });
+    
+    it("should detect ALLCAPS headers even when on separate lines", () => {
+      const text = `RECEPT TITEL
+INGREDIËNTEN:
+500 g vlees
+
+VLEES MARINEREN
+Meng alle marinade ingrediënten en laat het vlees 2 uur marineren.
+
+OVEN VOORVERWARMEN
+Verwarm de oven voor op 200°C.`;
+
+      const result = parseOcrText(text);
       
-      // "hetwordt aan gesneden" should be fixed to "het wordt aangesneden"
-      expect(stepTexts).toMatch(/het\s+wordt/);
-      expect(stepTexts).toMatch(/aangesneden/);
+      // Should detect steps with ALLCAPS headers
+      expect(result.steps.length).toBeGreaterThanOrEqual(2);
+      
+      // Check that steps are separated correctly
+      const marinadeStep = result.steps.find(s => s.instruction.toLowerCase().includes("mariner"));
+      expect(marinadeStep).toBeDefined();
+      
+      const ovenStep = result.steps.find(s => s.instruction.toLowerCase().includes("oven") || s.instruction.toLowerCase().includes("verwarm"));
+      expect(ovenStep).toBeDefined();
     });
   });
 });

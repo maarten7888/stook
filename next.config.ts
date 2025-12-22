@@ -14,28 +14,6 @@ const nextConfig: NextConfig = {
         destination: "https://stookboek.nl/:path*",
         permanent: true, // 301 redirect
       },
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "stook-boek.nl",
-          },
-        ],
-        destination: "https://stookboek.nl/:path*",
-        permanent: true, // 301 redirect
-      },
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "www.stook-boek.nl",
-          },
-        ],
-        destination: "https://stookboek.nl/:path*",
-        permanent: true, // 301 redirect
-      },
     ];
   },
 };
