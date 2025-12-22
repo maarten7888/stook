@@ -298,14 +298,15 @@ CURRENT STATUS (December 2024)
 
 1. Branch protection rules op main (GitHub settings)
 2. OCR parser verder verbeteren (statistische cues, ALLCAPS kopjes, agressievere splitting)
-3. Meer golden test cases toevoegen (10-20 test cases voor betere coverage)
-4. CI metrics setup voor golden tests
-5. PWA manifest en service worker
-6. Real-time updates (Supabase Realtime)
-7. Zoeken functionaliteit (pg_trgm/Meilisearch)
-8. Error boundaries + toasts
-9. Signed image URL expiratie + cache headers
-10. Monitoring integratie (Sentry/Logflare)
+3. Meer golden test cases toevoegen (uitbreiden van 4 naar 10-20 test cases voor betere coverage)
+4. PWA manifest en service worker
+5. Real-time updates (Supabase Realtime)
+6. Zoeken functionaliteit (pg_trgm/Meilisearch)
+7. Error boundaries + toasts
+8. Signed image URL expiratie + cache headers
+9. Monitoring integratie (Sentry/Logflare)
+
+**Opmerking:** Golden testset (4 test cases + CI metrics) en kolomdetectie zijn al geïmplementeerd ✅.
 
 SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
 

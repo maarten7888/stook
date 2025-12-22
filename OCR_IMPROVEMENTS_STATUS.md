@@ -8,11 +8,11 @@
 - ✅ Parseert `pages → blocks → paragraphs → words`
 - ✅ Heeft `boundingBox` data (x, y, width, height)
 - ✅ Sorteert blocks op Y/X coordinaten (`buildStructuredText`)
-- ❌ **MIST:** Gebruikt bounding boxes alleen voor sortering, niet voor kolomdetectie
+- ✅ **GEDAAN:** Gebruikt bounding boxes voor kolomdetectie (x-coordinate clustering)
 - ❌ **MIST:** Geen clustering op Y-positie voor regel-reconstructie
 - ❌ **MIST:** Geen gebruik van font-size/bbox-height voor titel-detectie
 
-**Code locatie:** `src/server/import/ocr/GoogleVisionOcr.ts:204-243`
+**Code locatie:** `src/server/import/ocr/GoogleVisionOcr.ts:202-344`
 
 ### 2. ✅ Hyphenation Merging
 **Status:** ✅ **VOLLEDIG**
@@ -78,19 +78,29 @@
 
 **Code locatie:** `src/server/import/ocr/OcrNormalizer.ts:431-520`
 
+### 9. ✅ Kolomdetectie en Kolom-voor-Kolom Lezen
+**Status:** ✅ **VOLLEDIG**
+- ✅ 1 vs 2 kolom detectie via x-coordinate clustering (`detectColumnCount`)
+- ✅ "Parse eerst linkerkolom volledig, dan rechterkolom" (`buildStructuredText`)
+- ✅ Minimum 30% blocks per kolom + 400px pagina breedte threshold
+- ✅ Voorkomt ingredient/stap mix bij 2-koloms kookboeken
+
+**Code locatie:** `src/server/import/ocr/GoogleVisionOcr.ts:202-344`
+
+### 10. ✅ Golden Testset + Regressie Metrics
+**Status:** ✅ **VOLLEDIG**
+- ✅ `fixtures/ocr/` map met 4 test cases (uitbreidbaar naar 30-100)
+- ✅ Expected JSON per test met flexibele matching (exact/contains, ranges)
+- ✅ CI metrics logging (title exact/contains, ingredient/step counts, confidence)
+- ✅ Metrics output na alle tests met per-test breakdown
+
+**Code locatie:** `src/test/ocr-golden.test.ts`, `fixtures/ocr/*.json`
+
 ---
 
 ## ❌ Nog Niet Geïmplementeerd
 
-### 1. ❌ Kolomdetectie en Kolom-voor-Kolom Lezen
-**Status:** ❌ **NIET**
-- ❌ Geen 1 vs 2 kolom detectie (x-clustering)
-- ❌ Geen "parse eerst linkerkolom, dan rechterkolom"
-- **Impact:** Hoog - voorkomt ingredient/stap mix bij 2-koloms kookboeken
-
-**Huidige situatie:** Sorteert alleen op Y/X, maar geen kolom-detectie
-
-### 2. ❌ Title Extraction: "Largest-Font-in-Top-Zone" Fallback
+### 1. ❌ Title Extraction: "Largest-Font-in-Top-Zone" Fallback
 **Status:** ❌ **NIET**
 - ❌ Geen gebruik van bbox-height voor font-size
 - ❌ Geen "top 25-30% zone" detectie
@@ -99,7 +109,7 @@
 
 **Huidige situatie:** Alleen text-based scoring, geen layout info
 
-### 3. ❌ Sectie-Identificatie met Statistische Cues
+### 2. ❌ Sectie-Identificatie met Statistische Cues
 **Status:** ❌ **NIET**
 - ❌ Geen ingredient-score per line (getal/unit/"naar smaak"/komma-lijst)
 - ❌ Geen step-score per line (werkwoord/tijd/temp/imperatief)
@@ -109,14 +119,14 @@
 
 **Huidige situatie:** Alleen header-detectie en werkwoord-detectie
 
-### 4. ❌ Systematische Running Headers/Footers Detectie
+### 3. ❌ Systematische Running Headers/Footers Detectie
 **Status:** ❌ **NIET**
 - ❌ Geen regel: `(digits AND all-caps AND <= 3 woorden) in top 10 regels`
 - **Impact:** Medium - verwijdert paginakoppen beter
 
 **Huidige situatie:** Alleen algemene noise removal
 
-### 5. ❌ Agressievere Ingrediënt Splitting
+### 4. ❌ Agressievere Ingrediënt Splitting
 **Status:** ❌ **NIET**
 - ❌ Geen split op `;` en `,` voor standalone items
 - ❌ Geen detectie van "lijstregel zonder hoeveelheid"
@@ -124,7 +134,7 @@
 
 **Huidige situatie:** Alleen bullet splitting en standalone ingredient splitting
 
-### 6. ❌ Grammatica-Based Line Continuation
+### 5. ❌ Grammatica-Based Line Continuation
 **Status:** ❌ **NIET**
 - ❌ Geen merge op basis van: vorige eindigt op unit/bijvoeglijk woord
 - ❌ Geen merge op basis van: volgende begint met lowercase/ingredient-woord
@@ -132,7 +142,7 @@
 
 **Huidige situatie:** Alleen specifieke patronen (getal + unit + ingrediënt)
 
-### 7. ❌ Fuzzy Unit-Normalisatie + Spell-Correction
+### 6. ❌ Fuzzy Unit-Normalisatie + Spell-Correction
 **Status:** ❌ **NIET**
 - ❌ Geen edit-distance matching voor units
 - ❌ Geen `mi` → `ml` correctie
@@ -141,7 +151,7 @@
 
 **Huidige situatie:** Alleen exacte string matching
 
-### 8. ❌ ALLCAPS Kopjes Zonder Nummering
+### 7. ❌ ALLCAPS Kopjes Zonder Nummering
 **Status:** ❌ **NIET**
 - ❌ Geen detectie van `AARDAPPELEN VOORBEREIDEN:` als stap boundary
 - ❌ Geen "meerdere regels ALLCAPS na ingredients" detectie
@@ -149,7 +159,7 @@
 
 **Huidige situatie:** Alleen genummerde stappen en werkwoord-detectie
 
-### 9. ❌ Belonging Score voor Orphan Lines
+### 8. ❌ Belonging Score voor Orphan Lines
 **Status:** ❌ **NIET**
 - ❌ Geen check: orphan line is 1 woord → append als vorige eindigt op "het ... van de"
 - ❌ Geen check: orphan line begint met hoeveelheid/unit → hoort bij ingredients
@@ -157,7 +167,7 @@
 
 **Huidige situatie:** Orphan lines worden altijd toegevoegd aan vorige stap
 
-### 10. ❌ Ingrediënten Aliasing naar Canonical Tabel
+### 9. ❌ Ingrediënten Aliasing naar Canonical Tabel
 **Status:** ❌ **NIET**
 - ❌ Geen singular/plural normalisatie (`uien` → `ui`)
 - ❌ Geen synonyms (`lente-ui` → `bosui`)
@@ -165,7 +175,7 @@
 
 **Huidige situatie:** Geen normalisatie, alleen cleanup
 
-### 11. ❌ Per-Sectie Confidence + Repair Passes
+### 10. ❌ Per-Sectie Confidence + Repair Passes
 **Status:** ❌ **NIET**
 - ❌ Geen rerun ingredient splitting bij `ingredientsCount < 3` maar hoge ingredient-score
 - ❌ Geen rerun step segmentation bij `stepsCount < 2` maar hoge step-score
@@ -173,7 +183,7 @@
 
 **Huidige situatie:** Alleen overall confidence, geen repair passes
 
-### 12. ❌ Multi-Crop OCR als Fallback
+### 11. ❌ Multi-Crop OCR als Fallback
 **Status:** ❌ **NIET**
 - ❌ Geen OCR op crops (top/mid/bottom) bij lage confidence
 - ❌ Geen combinatie van crop resultaten
@@ -181,16 +191,7 @@
 
 **Huidige situatie:** Alleen één OCR call
 
-### 13. ❌ Golden Testset + Regressie Metrics
-**Status:** ❌ **NIET**
-- ❌ Geen `fixtures/ocr/` map met 30-100 rawTexts
-- ❌ Geen expected JSON per test
-- ❌ Geen CI metrics (title exact match, ingredient count, step count)
-- **Impact:** Zeer Hoog - voorkomt regressies, maakt parser sterker
-
-**Huidige situatie:** Alleen unit tests, geen golden testset
-
-### 14. ❌ LLM Fallback bij Lage Confidence
+### 12. ❌ LLM Fallback bij Lage Confidence
 **Status:** ❌ **NIET**
 - ❌ Geen LLM call bij `overall < 0.85`
 - ❌ Geen strict JSON schema
@@ -204,63 +205,54 @@
 ## 📊 Prioritering (Gebaseerd op Impact)
 
 ### 🔴 Zeer Hoog Impact (Implementeer Eerst)
-1. **Golden Testset + Regressie Metrics** (#13)
-   - Voorkomt regressies
-   - Maakt iteratieve verbetering mogelijk
-   - **Effort:** Medium
-
-2. **Kolomdetectie** (#1)
-   - Lost grootste probleem op (ingredient/stap mix)
-   - **Effort:** Hoog
-
-3. **Statistische Cues voor Sectie-Identificatie** (#3)
+1. **Statistische Cues voor Sectie-Identificatie** (#2)
    - Werkt ook zonder headers
    - **Effort:** Hoog
 
 ### 🟡 Hoog Impact
-4. **Per-Sectie Confidence + Repair Passes** (#11)
+1. **Per-Sectie Confidence + Repair Passes** (#10)
    - Repareert automatisch parsing fouten
    - **Effort:** Medium
 
-5. **ALLCAPS Kopjes Zonder Nummering** (#8)
+2. **ALLCAPS Kopjes Zonder Nummering** (#7)
    - Veel kookboeken gebruiken dit
    - **Effort:** Laag
 
-6. **Belonging Score voor Orphan Lines** (#9)
+3. **Belonging Score voor Orphan Lines** (#8)
    - Slimmere handling
    - **Effort:** Medium
 
 ### 🟢 Medium Impact
-7. **Title Extraction met Font-Size** (#2)
+1. **Title Extraction met Font-Size** (#1)
    - Helpt bij recepten zonder headers
    - **Effort:** Medium (vereist bounding box data)
 
-8. **Agressievere Ingrediënt Splitting** (#5)
+2. **Agressievere Ingrediënt Splitting** (#4)
    - Betere ingredient parsing
    - **Effort:** Laag
 
-9. **Grammatica-Based Line Continuation** (#6)
+3. **Grammatica-Based Line Continuation** (#5)
    - Vangt meer linewraps
    - **Effort:** Medium
 
-10. **Systematische Running Headers** (#4)
+4. **Systematische Running Headers** (#3)
     - Betere noise removal
     - **Effort:** Laag
 
-11. **Multi-Crop OCR** (#12)
+5. **Multi-Crop OCR** (#11)
     - Helpt bij moeilijke pagina's
     - **Effort:** Hoog
 
 ### 🔵 Laag Impact
-12. **Fuzzy Unit-Normalisatie** (#7)
+1. **Fuzzy Unit-Normalisatie** (#6)
     - OCR maakt dit zelden fout
     - **Effort:** Medium
 
-13. **Ingrediënten Aliasing** (#10)
+2. **Ingrediënten Aliasing** (#9)
     - Meer voor consistentie dan parsing
     - **Effort:** Hoog (vereist database/lexicon)
 
-14. **LLM Fallback** (#14)
+3. **LLM Fallback** (#12)
     - Laatste redmiddel
     - **Effort:** Hoog (vereist API key, kosten)
 
@@ -268,9 +260,9 @@
 
 ## 🎯 Aanbevolen Volgorde (Top 3)
 
-1. **Golden Testset** - Basis voor alle verbeteringen
-2. **Kolomdetectie** - Lost grootste probleem op
-3. **Statistische Cues** - Werkt ook zonder headers
+1. **Statistische Cues voor Sectie-Identificatie** - Werkt ook zonder headers, maakt parser robuuster
+2. **Per-Sectie Confidence + Repair Passes** - Repareert automatisch parsing fouten
+3. **ALLCAPS Kopjes Zonder Nummering** - Veel kookboeken gebruiken dit patroon
 
-Deze 3 maken de parser echt "kookboek-onafhankelijk".
+**Opmerking:** Golden testset en kolomdetectie zijn al geïmplementeerd ✅. Deze vormen de basis voor verdere verbeteringen.
 
