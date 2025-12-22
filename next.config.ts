@@ -1,21 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [
-          {
-            type: "host",
-            value: "www.stookboek.nl",
-          },
-        ],
-        destination: "https://stookboek.nl/:path*",
-        permanent: true, // 301 redirect
-      },
-    ];
-  },
+  // Redirects zijn verwijderd - Vercel handelt dit af via domain settings
+  // Dit voorkomt redirect loops tussen Vercel en Next.js configuratie
 };
 
 export default nextConfig;
