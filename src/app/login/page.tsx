@@ -41,15 +41,16 @@ export default function LoginPage() {
 
       if (error) {
         toast.error(error.message);
+        setIsLoading(false);
         return;
       }
 
       toast.success("Succesvol ingelogd!");
-      router.push("/");
-      router.refresh();
+      // Gebruik window.location voor een volledige page reload om ervoor te zorgen
+      // dat alle componenten correct worden gereset
+      window.location.href = "/";
     } catch {
       toast.error("Er is iets misgegaan bij het inloggen");
-    } finally {
       setIsLoading(false);
     }
   };
