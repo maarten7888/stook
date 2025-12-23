@@ -377,7 +377,120 @@ export async function DELETE(_request: NextRequest, ctx: { params: Promise<{ id:
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Delete the recipe (cascade will handle related records)
+    // Delete related records first (foreign keys have ON DELETE no action)
+    // 1. Get cook_session IDs for this recipe
+    const { data: cookSessions } = await supabase
+      .from('cook_sessions')
+      .select('id')
+      .eq('recipe_id', id);
+
+    const cookSessionIds = cookSessions?.map(s => s.id) || [];
+
+    // 2. Delete session_temps (via cook_sessions)
+    if (cookSessionIds.length > 0) {
+      const { error: sessionTempsError } = await supabase
+        .from('session_temps')
+        .delete()
+        .in('cook_session_id', cookSessionIds);
+
+      if (sessionTempsError) {
+        console.error("Error deleting session_temps:", sessionTempsError);
+        return NextResponse.json({ error: "Delete failed: session_temps" }, { status: 500 });
+      }
+    }
+
+    // 3. Delete photos (recipe_id or cook_session_id)
+    const { error: photosRecipeError } = await supabase
+      .from('photos')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (photosRecipeError) {
+      console.error("Error deleting photos (recipe):", photosRecipeError);
+      return NextResponse.json({ error: "Delete failed: photos" }, { status: 500 });
+    }
+
+    if (cookSessionIds.length > 0) {
+      const { error: photosSessionError } = await supabase
+        .from('photos')
+        .delete()
+        .in('cook_session_id', cookSessionIds);
+
+      if (photosSessionError) {
+        console.error("Error deleting photos (session):", photosSessionError);
+        return NextResponse.json({ error: "Delete failed: photos" }, { status: 500 });
+      }
+    }
+
+    // 4. Delete cook_sessions
+    if (cookSessionIds.length > 0) {
+      const { error: cookSessionsError } = await supabase
+        .from('cook_sessions')
+        .delete()
+        .in('id', cookSessionIds);
+
+      if (cookSessionsError) {
+        console.error("Error deleting cook_sessions:", cookSessionsError);
+        return NextResponse.json({ error: "Delete failed: cook_sessions" }, { status: 500 });
+      }
+    }
+
+    // 5. Delete recipe_favorites
+    const { error: favoritesError } = await supabase
+      .from('recipe_favorites')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (favoritesError) {
+      console.error("Error deleting recipe_favorites:", favoritesError);
+      return NextResponse.json({ error: "Delete failed: recipe_favorites" }, { status: 500 });
+    }
+
+    // 6. Delete reviews
+    const { error: reviewsError } = await supabase
+      .from('reviews')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (reviewsError) {
+      console.error("Error deleting reviews:", reviewsError);
+      return NextResponse.json({ error: "Delete failed: reviews" }, { status: 500 });
+    }
+
+    // 7. Delete recipe_tags
+    const { error: recipeTagsError } = await supabase
+      .from('recipe_tags')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (recipeTagsError) {
+      console.error("Error deleting recipe_tags:", recipeTagsError);
+      return NextResponse.json({ error: "Delete failed: recipe_tags" }, { status: 500 });
+    }
+
+    // 8. Delete recipe_ingredients
+    const { error: recipeIngredientsError } = await supabase
+      .from('recipe_ingredients')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (recipeIngredientsError) {
+      console.error("Error deleting recipe_ingredients:", recipeIngredientsError);
+      return NextResponse.json({ error: "Delete failed: recipe_ingredients" }, { status: 500 });
+    }
+
+    // 9. Delete steps
+    const { error: stepsError } = await supabase
+      .from('steps')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (stepsError) {
+      console.error("Error deleting steps:", stepsError);
+      return NextResponse.json({ error: "Delete failed: steps" }, { status: 500 });
+    }
+
+    // 10. Finally, delete the recipe itself
     const { error: deleteError } = await supabase
       .from('recipes')
       .delete()

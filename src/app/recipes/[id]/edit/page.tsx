@@ -210,12 +210,16 @@ export default function EditRecipePage() {
   async function onDelete() {
     if (!confirm("Weet je zeker dat je dit recept wilt verwijderen?")) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(`/api/recipes/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Verwijderen mislukt");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Verwijderen mislukt");
+      }
       router.push("/recipes");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Fout");
+      setError(e instanceof Error ? e.message : "Fout bij verwijderen");
     } finally {
       setSaving(false);
     }
