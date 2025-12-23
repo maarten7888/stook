@@ -116,9 +116,31 @@ export function PhotoUploader({ recipeId, onPhotosChange, existingPhotos = [], p
   };
 
   const handleRemovePhoto = async (photoId: string) => {
+    // Optimistically update UI
     const updatedPhotos = photos.filter(p => p.id !== photoId);
     setPhotos(updatedPhotos);
     onPhotosChange(updatedPhotos);
+
+    // Delete from server
+    try {
+      const res = await fetch(`/api/photos/${photoId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        // Revert on error
+        setPhotos(photos);
+        onPhotosChange(photos);
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Fout bij verwijderen: ${errorData.error || 'Onbekende fout'}`);
+      }
+    } catch (error) {
+      // Revert on error
+      setPhotos(photos);
+      onPhotosChange(photos);
+      console.error('Error deleting photo:', error);
+      alert('Fout bij verwijderen van foto');
+    }
   };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
