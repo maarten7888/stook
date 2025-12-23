@@ -151,9 +151,9 @@ export default async function RootPage() {
   const totalPublicRecipes = publicRecipesCountResult.count || 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-16 sm:space-y-20">
-      {/* Hero Section */}
-      <section className="py-12 sm:py-20 px-4 text-center relative overflow-hidden rounded-2xl">
+    <>
+      {/* Hero Section - Full Screen */}
+      <section className="min-h-screen relative overflow-hidden flex items-center justify-center">
         {/* Video Background */}
         <video
           autoPlay
@@ -169,8 +169,8 @@ export default async function RootPage() {
         {/* Dark Overlay for readability */}
         <div className="absolute inset-0 bg-charcoal/70 z-10"></div>
         
-        {/* Content */}
-        <div className="max-w-4xl mx-auto relative z-20">
+        {/* Content - Centered */}
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-20">
           <div className="inline-block mb-6">
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-ash mb-4 font-heading drop-shadow-lg">
               Stook
@@ -197,20 +197,22 @@ export default async function RootPage() {
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      {totalPublicRecipes > 0 && (
-        <section className="py-8 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <p className="text-lg text-smoke">
-              <span className="text-2xl font-bold text-ember font-heading">{totalPublicRecipes}+</span> publieke recepten beschikbaar
-            </p>
-            <p className="text-sm text-smoke mt-2">Word onderdeel van de community</p>
-          </div>
-        </section>
-      )}
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-16 sm:space-y-20">
+        {/* Social Proof Section */}
+        {totalPublicRecipes > 0 && (
+          <section className="py-8 px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              <p className="text-lg text-smoke">
+                <span className="text-2xl font-bold text-ember font-heading">{totalPublicRecipes}+</span> publieke recepten beschikbaar
+              </p>
+              <p className="text-sm text-smoke mt-2">Word onderdeel van de community</p>
+            </div>
+          </section>
+        )}
 
-      {/* Features Section */}
-      <section id="features" className="py-12 px-4">
+        {/* Features Section */}
+        <section id="features" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
@@ -309,8 +311,8 @@ export default async function RootPage() {
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-12 px-4 bg-coals/30 rounded-2xl">
+        {/* How It Works Section */}
+        <section id="how-it-works" className="py-12 px-4 bg-coals/30 rounded-2xl">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
@@ -355,8 +357,8 @@ export default async function RootPage() {
         </div>
       </section>
 
-      {/* Public Recipes Section */}
-      <section id="recipes" className="py-12 px-4">
+        {/* Public Recipes Section */}
+        <section id="recipes" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
@@ -412,8 +414,8 @@ export default async function RootPage() {
         </div>
       </section>
 
-      {/* Final CTA Section */}
-      <section className="py-16 px-4 bg-coals/50 rounded-2xl">
+        {/* Final CTA Section */}
+        <section className="py-16 px-4 bg-coals/50 rounded-2xl">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
             Klaar om te beginnen?
@@ -434,7 +436,8 @@ export default async function RootPage() {
           </div>
         </div>
       </section>
-    </div>
+      </main>
+    </>
   );
 }
 
