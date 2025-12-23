@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, ChefHat, Award } from "lucide-react";
+import { MapPin, ChefHat, Award, BookOpen, Clock, Heart, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface UserStats {
+  recipes?: number;
+  sessions?: number;
+  favorites?: number;
+  followers?: number;
+}
 
 interface UserCardProps {
   userId: string;
@@ -12,8 +19,10 @@ interface UserCardProps {
   location?: string | null;
   bbqStyle?: string | null;
   experienceLevel?: string | null;
+  stats?: UserStats;
   className?: string;
   showLink?: boolean;
+  showStats?: boolean;
 }
 
 export function UserCard({
@@ -24,8 +33,10 @@ export function UserCard({
   location,
   bbqStyle,
   experienceLevel,
+  stats,
   className,
   showLink = true,
+  showStats = false,
 }: UserCardProps) {
   const content = (
     <Card className={cn("bg-coals border-ash hover:border-ember/50 transition-colors", className)}>
@@ -66,6 +77,39 @@ export function UserCard({
                 </div>
               )}
             </div>
+            
+            {showStats && stats && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-ash">
+                {typeof stats.recipes === 'number' && (
+                  <div className="flex flex-col items-center">
+                    <BookOpen className="h-4 w-4 text-ember mb-1" />
+                    <span className="text-sm font-bold text-ash">{stats.recipes}</span>
+                    <span className="text-xs text-smoke">Recepten</span>
+                  </div>
+                )}
+                {typeof stats.sessions === 'number' && (
+                  <div className="flex flex-col items-center">
+                    <Clock className="h-4 w-4 text-ember mb-1" />
+                    <span className="text-sm font-bold text-ash">{stats.sessions}</span>
+                    <span className="text-xs text-smoke">Sessies</span>
+                  </div>
+                )}
+                {typeof stats.favorites === 'number' && (
+                  <div className="flex flex-col items-center">
+                    <Heart className="h-4 w-4 text-ember mb-1" />
+                    <span className="text-sm font-bold text-ash">{stats.favorites}</span>
+                    <span className="text-xs text-smoke">Favorieten</span>
+                  </div>
+                )}
+                {typeof stats.followers === 'number' && (
+                  <div className="flex flex-col items-center">
+                    <Users className="h-4 w-4 text-ember mb-1" />
+                    <span className="text-sm font-bold text-ash">{stats.followers}</span>
+                    <span className="text-xs text-smoke">Volgers</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
