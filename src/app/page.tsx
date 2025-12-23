@@ -1,7 +1,7 @@
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Camera, Thermometer, Clock, ArrowRight } from "lucide-react";
+import { BookOpen, Camera, Thermometer, Clock, ArrowRight, Scan, Link as LinkIcon, Users } from "lucide-react";
 import Link from "next/link";
 import { HomeFeed } from "@/components/home-feed";
 import { UserSuggestions } from "@/components/user-suggestions";
@@ -132,83 +132,209 @@ export default async function RootPage() {
 
   // Marketing page content for non-authenticated users
   const adminSupabase = createAdminClient();
-  const { data: publicRecipes } = await adminSupabase
-    .from('recipes')
-    .select('id, title, description, visibility, user_id')
-    .eq('visibility', 'public')
-    .order('created_at', { ascending: false })
-    .limit(6);
+  
+  // Fetch public recipes and stats
+  const [publicRecipesResult, publicRecipesCountResult] = await Promise.all([
+    adminSupabase
+      .from('recipes')
+      .select('id, title, description, visibility, user_id')
+      .eq('visibility', 'public')
+      .order('created_at', { ascending: false })
+      .limit(6),
+    adminSupabase
+      .from('recipes')
+      .select('*', { count: 'exact', head: true })
+      .eq('visibility', 'public')
+  ]);
 
-  const recipes = publicRecipes || [];
+  const recipes = publicRecipesResult.data || [];
+  const totalPublicRecipes = publicRecipesCountResult.count || 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-12">
+    <div className="max-w-7xl mx-auto space-y-16 sm:space-y-20">
       {/* Hero Section */}
-      <section className="py-16 px-4 text-center">
+      <section className="py-12 sm:py-20 px-4 text-center relative">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold text-ash mb-4 font-heading">
-            Stook
-          </h1>
-          <p className="text-xl text-smoke mb-6 max-w-2xl mx-auto">
+          <div className="inline-block mb-6">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-ash mb-4 font-heading">
+              Stook
+            </h1>
+            <div className="h-1 w-24 bg-ember mx-auto rounded-full"></div>
+          </div>
+          <p className="text-2xl sm:text-3xl text-ash mb-4 font-heading font-semibold">
             Elke sessie beter
           </p>
-          <p className="text-lg text-smoke mb-8 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-smoke mb-8 max-w-2xl mx-auto">
             Je ultieme BBQ companion. Deel recepten, track je kooksessies en word een betere pitmaster.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white">
-              <Link href="/recipes">Bekijk Recepten</Link>
+            <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white text-base px-8 py-6">
+              <Link href="/register">
+                Gratis starten
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-ash text-ash hover:bg-coals text-base px-8 py-6">
+              <Link href="/login">Inloggen</Link>
             </Button>
           </div>
         </div>
       </section>
 
+      {/* Social Proof Section */}
+      {totalPublicRecipes > 0 && (
+        <section className="py-8 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <p className="text-lg text-smoke">
+              <span className="text-2xl font-bold text-ember font-heading">{totalPublicRecipes}+</span> publieke recepten beschikbaar
+            </p>
+            <p className="text-sm text-smoke mt-2">Word onderdeel van de community</p>
+          </div>
+        </section>
+      )}
+
       {/* Features Section */}
       <section id="features" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-heading">
-            Alles wat je nodig hebt voor perfecte BBQ
-          </h2>
-          <p className="text-lg text-smoke text-center mb-12 max-w-2xl mx-auto">
-            Van recepten tot temperatuur tracking
-          </p>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
+              Alles wat je nodig hebt voor perfecte BBQ
+            </h2>
+            <p className="text-lg text-smoke max-w-2xl mx-auto">
+              Van recepten tot temperatuur tracking — alles op één plek
+            </p>
+          </div>
           
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
               <CardHeader className="text-center pb-4">
-                <BookOpen className="h-10 w-10 text-ember mx-auto mb-3" />
-                <CardTitle className="text-lg text-ash">Recepten</CardTitle>
+                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="h-8 w-8 text-ember" />
+                </div>
+                <CardTitle className="text-xl text-ash font-heading">Recepten</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-smoke text-sm">
-                  Bewaar en deel je favoriete BBQ recepten. Van klassiekers tot experimenten.
+                <p className="text-smoke text-sm leading-relaxed">
+                  Bewaar en deel je favoriete BBQ recepten. Van klassiekers tot experimenten — alles op één plek.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
               <CardHeader className="text-center pb-4">
-                <Clock className="h-10 w-10 text-ember mx-auto mb-3" />
-                <CardTitle className="text-lg text-ash">Kooksessies</CardTitle>
+                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Thermometer className="h-8 w-8 text-ember" />
+                </div>
+                <CardTitle className="text-xl text-ash font-heading">Kooksessies</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-smoke text-sm">
-                  Track je kooksessies met temperatuur logs, foto&apos;s en notities.
+                <p className="text-smoke text-sm leading-relaxed">
+                  Track elke kooksessie met real-time temperatuur logs, foto&apos;s en notities. Leer van elke sessie.
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-colors">
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
               <CardHeader className="text-center pb-4">
-                <Camera className="h-10 w-10 text-ember mx-auto mb-3" />
-                <CardTitle className="text-lg text-ash">Importeren</CardTitle>
+                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Scan className="h-8 w-8 text-ember" />
+                </div>
+                <CardTitle className="text-xl text-ash font-heading">OCR Import</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-smoke text-sm">
-                  Importeer recepten van je favoriete BBQ websites met één klik.
+                <p className="text-smoke text-sm leading-relaxed">
+                  Scan recepten van foto&apos;s met AI. Upload een foto en laat Google Vision de tekst voor je uitlezen.
                 </p>
               </CardContent>
             </Card>
+
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <LinkIcon className="h-8 w-8 text-ember" />
+                </div>
+                <CardTitle className="text-xl text-ash font-heading">URL Import</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-smoke text-sm leading-relaxed">
+                  Importeer recepten van je favoriete BBQ websites met één klik. Ondersteunt BBQNerds, BBQJunkie en meer.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-ember" />
+                </div>
+                <CardTitle className="text-xl text-ash font-heading">Social</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-smoke text-sm leading-relaxed">
+                  Volg vrienden, deel recepten, geef reviews en bewaar favorieten. Bouw je BBQ community.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+              <CardHeader className="text-center pb-4">
+                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="h-8 w-8 text-ember" />
+                </div>
+                <CardTitle className="text-xl text-ash font-heading">Temperatuur Tracking</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <p className="text-smoke text-sm leading-relaxed">
+                  Real-time monitoring van rooster- en vleestemperaturen. Log elke meting en analyseer je sessies.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-12 px-4 bg-coals/30 rounded-2xl">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
+              Hoe het werkt
+            </h2>
+            <p className="text-lg text-smoke max-w-2xl mx-auto">
+              Start binnen 2 minuten met je eerste recept
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-ember rounded-full flex items-center justify-center mx-auto mb-4 text-charcoal font-bold text-2xl font-heading">
+                1
+              </div>
+              <h3 className="text-xl font-bold text-ash mb-3 font-heading">Registreer gratis</h3>
+              <p className="text-smoke text-sm leading-relaxed">
+                Maak een account aan en begin direct. Geen creditcard nodig.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-ember rounded-full flex items-center justify-center mx-auto mb-4 text-charcoal font-bold text-2xl font-heading">
+                2
+              </div>
+              <h3 className="text-xl font-bold text-ash mb-3 font-heading">Importeer of maak</h3>
+              <p className="text-smoke text-sm leading-relaxed">
+                Importeer een recept van een website of foto, of maak je eigen recept aan.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-ember rounded-full flex items-center justify-center mx-auto mb-4 text-charcoal font-bold text-2xl font-heading">
+                3
+              </div>
+              <h3 className="text-xl font-bold text-ash mb-3 font-heading">Start je sessie</h3>
+              <p className="text-smoke text-sm leading-relaxed">
+                Begin je eerste kooksessie en track de temperatuur in real-time.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -216,45 +342,80 @@ export default async function RootPage() {
       {/* Public Recipes Section */}
       <section id="recipes" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold text-ash text-center mb-8 font-heading">
-            Publieke Recepten
-          </h2>
-          <p className="text-lg text-smoke text-center mb-12 max-w-2xl mx-auto">
-            Ontdek recepten van de community
-          </p>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
+              Publieke Recepten
+            </h2>
+            <p className="text-lg text-smoke max-w-2xl mx-auto">
+              Ontdek recepten van de community en laat je inspireren
+            </p>
+          </div>
           
           {recipes.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recipes.map((recipe: { id: string; title: string; description?: string; user_id?: string }) => (
-                <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-colors group">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors">
-                      {recipe.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-smoke text-sm mb-4 line-clamp-3">
-                      {recipe.description || "Geen beschrijving beschikbaar."}
-                    </p>
-                    <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full">
-                      <Link href={`/recipes/${recipe.id}`}>
-                        Bekijk Recept
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {recipes.map((recipe: { id: string; title: string; description?: string; user_id?: string }) => (
+                  <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors">
+                        {recipe.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-smoke text-sm mb-4 line-clamp-3">
+                        {recipe.description || "Geen beschrijving beschikbaar."}
+                      </p>
+                      <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full">
+                        <Link href={`/recipes/${recipe.id}`}>
+                          Bekijk Recept
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="text-center">
+                <Button asChild variant="outline" size="lg" className="border-ash text-ash hover:bg-coals">
+                  <Link href="/recipes">Bekijk alle recepten</Link>
+                </Button>
+              </div>
+            </>
           ) : (
             <div className="text-center py-12">
               <BookOpen className="h-16 w-16 mx-auto mb-6 text-ember/50" />
               <p className="text-smoke text-lg mb-4">Geen publieke recepten beschikbaar.</p>
-              <p className="text-smoke text-sm">
+              <p className="text-smoke text-sm mb-6">
                 Registreer je om je eigen recepten te maken en te delen met de community.
               </p>
+              <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white">
+                <Link href="/register">Gratis account aanmaken</Link>
+              </Button>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="py-16 px-4 bg-coals/50 rounded-2xl">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-ash mb-4 font-heading">
+            Klaar om te beginnen?
+          </h2>
+          <p className="text-lg text-smoke mb-8 max-w-2xl mx-auto">
+            Sluit je aan bij de community en word een betere pitmaster. Elke sessie beter.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white text-base px-8 py-6">
+              <Link href="/register">
+                Gratis account aanmaken
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-ash text-ash hover:bg-coals text-base px-8 py-6">
+              <Link href="/recipes">Eerst recepten bekijken</Link>
+            </Button>
+          </div>
         </div>
       </section>
     </div>
