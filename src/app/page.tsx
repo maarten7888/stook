@@ -7,74 +7,6 @@ import { HomeFeed } from "@/components/home-feed";
 import { UserSuggestions } from "@/components/user-suggestions";
 import { RecentActivity } from "@/components/recent-activity";
 
-async function fetchUserStats(userId: string) {
-  try {
-    const adminSupabase = createAdminClient();
-
-    // Get counts
-    const [recipeCountResult, sessionCountResult, avgRatingResult] = await Promise.all([
-      adminSupabase
-        .from('recipes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      adminSupabase
-        .from('cook_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      adminSupabase
-        .from('cook_sessions')
-        .select('rating')
-        .eq('user_id', userId)
-        .not('rating', 'is', null),
-    ]);
-
-    const recipeCount = recipeCountResult.count || 0;
-    const sessionCount = sessionCountResult.count || 0;
-
-    // Calculate average rating
-    const ratings = avgRatingResult.data || [];
-    const avgRating = ratings.length > 0
-      ? (ratings.reduce((sum, s) => sum + (s.rating || 0), 0) / ratings.length).toFixed(1)
-      : null;
-
-    // Get counts for this month/week
-    const now = new Date();
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisWeek = new Date(now);
-    thisWeek.setDate(thisWeek.getDate() - 7);
-
-    const [thisMonthRecipes, thisWeekSessions] = await Promise.all([
-      adminSupabase
-        .from('recipes')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('created_at', thisMonth.toISOString()),
-      adminSupabase
-        .from('cook_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('started_at', thisWeek.toISOString()),
-    ]);
-
-    return {
-      recipes: recipeCount,
-      sessions: sessionCount,
-      avgRating,
-      recipesThisMonth: thisMonthRecipes.count || 0,
-      sessionsThisWeek: thisWeekSessions.count || 0,
-    };
-  } catch (error) {
-    console.error("Error fetching user stats:", error);
-    return {
-      recipes: 0,
-      sessions: 0,
-      avgRating: null,
-      recipesThisMonth: 0,
-      sessionsThisWeek: 0,
-    };
-  }
-}
-
 async function fetchRecentActivity(userId: string) {
   try {
     const adminSupabase = createAdminClient();
@@ -149,8 +81,7 @@ export default async function RootPage() {
     // User is logged in, show the app content with layout
     const userId = session.user.id;
 
-    const [stats, recentActivity] = await Promise.all([
-      fetchUserStats(userId),
+    const [recentActivity] = await Promise.all([
       fetchRecentActivity(userId),
     ]);
 
