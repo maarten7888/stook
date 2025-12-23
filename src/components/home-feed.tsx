@@ -36,7 +36,7 @@ export function HomeFeed() {
   const fetchFeed = async (currentFilter: FeedFilter, currentOffset: number, append: boolean = false) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/feed?filter=${currentFilter}&limit=12&offset=${currentOffset}`);
+      const response = await fetch(`/api/feed?filter=${currentFilter}&limit=6&offset=${currentOffset}`);
       
       if (!response.ok) {
         throw new Error("Failed to fetch feed");

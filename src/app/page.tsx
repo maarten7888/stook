@@ -1,10 +1,12 @@
 import { getSession, createAdminClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Camera, Clock, ArrowRight, Star, Thermometer } from "lucide-react";
+import { BookOpen, Camera, Thermometer } from "lucide-react";
 import Link from "next/link";
 import { HomeFeed } from "@/components/home-feed";
 import { UserSuggestions } from "@/components/user-suggestions";
+import { UserStatsIcons } from "@/components/user-stats-icons";
+import { RecentActivity } from "@/components/recent-activity";
 
 async function fetchUserStats(userId: string) {
   try {
@@ -155,14 +157,31 @@ export default async function RootPage() {
 
     return (
       <div className="space-y-6 sm:space-y-8">
-        {/* Hero Section */}
+        {/* Hero Section with Stats */}
         <div className="text-center">
           <h1 className="text-3xl sm:text-4xl font-heading font-bold text-ash mb-4">
             Welkom bij Stook
           </h1>
-          <p className="text-lg sm:text-xl text-smoke mb-6 sm:mb-8">
+          <p className="text-lg sm:text-xl text-smoke mb-4 sm:mb-6">
             Elke sessie beter — je ultieme BBQ companion
           </p>
+          
+          {/* Stats Icons */}
+          <div className="flex justify-center mb-6 sm:mb-8">
+            <Card className="bg-coals border-ash">
+              <CardContent className="p-4">
+                <UserStatsIcons
+                  recipes={stats.recipes}
+                  sessions={stats.sessions}
+                  avgRating={stats.avgRating}
+                  recipesThisMonth={stats.recipesThisMonth}
+                  sessionsThisWeek={stats.sessionsThisWeek}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
             <Button asChild size="sm" className="bg-ember hover:bg-ember/90 w-full sm:w-auto">
               <Link href="/recipes/new">
@@ -179,56 +198,6 @@ export default async function RootPage() {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-coals border-ash">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-smoke">
-                Mijn Recepten
-              </CardTitle>
-              <BookOpen className="h-4 w-4 text-ember" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-ash">{stats.recipes}</div>
-              <p className="text-xs text-smoke">
-                +{stats.recipesThisMonth} deze maand
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-coals border-ash">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-smoke">
-                Kooksessies
-              </CardTitle>
-              <Clock className="h-4 w-4 text-ember" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-ash">{stats.sessions}</div>
-              <p className="text-xs text-smoke">
-                +{stats.sessionsThisWeek} deze week
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-coals border-ash">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-smoke">
-                Gemiddelde Rating
-              </CardTitle>
-              <Star className="h-4 w-4 text-ember" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-ash">
-                {stats.avgRating || '—'}
-              </div>
-              <p className="text-xs text-smoke">
-                {stats.avgRating ? `${stats.avgRating} van 5 sterren` : 'Nog geen beoordelingen'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Feed */}
@@ -238,62 +207,9 @@ export default async function RootPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            <RecentActivity activities={recentActivity} />
             <UserSuggestions />
           </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-heading font-bold text-ash">
-            Recente Activiteit
-          </h2>
-          {recentActivity.length === 0 ? (
-            <Card className="bg-coals border-ash">
-              <CardContent className="p-6">
-                <div className="text-center text-smoke">
-                  <BookOpen className="h-12 w-12 mx-auto mb-4 text-ember/50" />
-                  <p className="text-lg mb-2">Nog geen activiteit</p>
-                  <p className="text-sm">
-                    Begin met het maken van je eerste recept of start een kooksessie!
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {recentActivity.map((activity) => {
-                const Icon = activity.icon;
-                const date = new Date(activity.date);
-                const timeAgo = getTimeAgo(date);
-
-                return (
-                  <Card key={`${activity.type}-${activity.id}`} className="bg-coals border-ash hover:border-ember/50 transition-colors">
-                    <CardContent className="p-4">
-                      <Link href={activity.link} className="flex items-center gap-4 group">
-                        <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                          activity.type === 'recipe' ? 'bg-ember/20' : 'bg-blue-500/20'
-                        }`}>
-                          <Icon className={`h-5 w-5 ${
-                            activity.type === 'recipe' ? 'text-ember' : 'text-blue-400'
-                          }`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-ash font-medium group-hover:text-ember transition-colors truncate">
-                            {activity.type === 'recipe' ? 'Recept aangemaakt' : 'Sessie gestart'}
-                          </p>
-                          <p className="text-smoke text-sm truncate">{activity.title}</p>
-                        </div>
-                        <div className="flex-shrink-0 text-xs text-smoke">
-                          {timeAgo}
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-smoke group-hover:text-ember transition-colors flex-shrink-0" />
-                      </Link>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
     );
@@ -430,17 +346,3 @@ export default async function RootPage() {
   );
 }
 
-function getTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return 'Zojuist';
-  if (diffMins < 60) return `${diffMins} min geleden`;
-  if (diffHours < 24) return `${diffHours} uur geleden`;
-  if (diffDays < 7) return `${diffDays} dag${diffDays > 1 ? 'en' : ''} geleden`;
-  
-  return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
-}
