@@ -37,6 +37,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const loadUsers = async (reset = false) => {

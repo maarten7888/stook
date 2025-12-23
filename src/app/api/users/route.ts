@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 
 // GET /api/users?limit=20&offset=0&search=...
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
     // Optioneel: alleen voor ingelogde gebruikers
+    // const supabase = await createClient();
+    // const { data: { user }, error: authError } = await supabase.auth.getUser();
     // if (authError || !user) {
     //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // }

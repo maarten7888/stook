@@ -1,7 +1,7 @@
 import { getSession, createAdminClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Camera, Thermometer } from "lucide-react";
+import { BookOpen, Camera, Thermometer, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { HomeFeed } from "@/components/home-feed";
 import { UserSuggestions } from "@/components/user-suggestions";
