@@ -108,7 +108,9 @@ STORAGE BUCKETS
 
 ROUTES / PAGINA'S (Next.js App Router)
 
-* `/` → homepage (feed + Quick Stats + Recente Activiteit) [Gereed]
+* `/` → homepage (feed max 6 recepten + Recente Activiteit in sidebar) [Gereed]
+  * Stats iconen staan in navbar dropdown (niet op homepage)
+  * Recente activiteit in rechterkolom boven "Ontdek nieuwe gebruikers"
 * `/recipes` [Gereed]
 * `/recipes/new` [Gereed]
 * `/recipes/[id]` [Gereed]
@@ -122,6 +124,7 @@ ROUTES / PAGINA'S (Next.js App Router)
   * Preview is één gedeelde UI: titel/omschrijving, ingrediënten (editable), stappen (editable) + confidence per sectie.
   * Microcopy NL: kort, vriendelijk, to-the-point.
 * `/profile` [Gereed]
+* `/users` → gebruikersoverzicht met statistieken en zoekfunctie [Gereed]
 * `/users/[id]` [Gereed]
 * `/users/[id]/followers` [Gereed]
 * `/users/[id]/following` [Gereed]
@@ -168,7 +171,17 @@ UI & STYLING
 * shadcn/ui voor formulieren, modals, tabs; lucide-icons.
 * Consistente navigatie: logo + hoofdnavigatie + CTA's (Nieuw Recept, Importeren, Mijn Sessies).
 * Responsive: mobile-first grids; accessibility: focus states.
-* Stats weergave: compacte layout met iconen en getallen in één card (niet meerdere aparte cards).
+* **Stats weergave**: 
+  * In navbar dropdown: compacte iconen met getallen (subtiel, niet te groot)
+  * Client-side fetching via `/api/users/[id]/stats` in navbar component
+  * Stats tonen: recepten (alle), sessies, gemiddelde rating
+* **Homepage layout**:
+  * Hero sectie met welkomsttekst en actieknoppen
+  * Feed links (2/3 breedte) met max 6 recepten
+  * Sidebar rechts (1/3 breedte): Recente Activiteit boven, UserSuggestions onder
+* **User cards gelijke hoogte**: 
+  * Grid met `items-stretch`, cards met `h-full flex flex-col`
+  * Bio sectie: `min-h-[2.5rem]` voor 2 regels, stats met `mt-auto` onderaan
 * Responsive buttons: op mobiel `w-full sm:w-auto`, `size="sm"`, verberg tekst op mobiel met `hidden sm:inline`.
 * Button styling: Primary `bg-ember hover:bg-ember/90 text-white`. Outline `border-ash text-ash hover:bg-coals`. Disabled `border-ash text-ash`.
 * Import UI:
@@ -232,6 +245,9 @@ CODING NOTES
 * Auto-save: `useEffect` + `setTimeout` debounce (2s); cleanup clear.
 * Data fetching in server components: altijd direct Supabase Admin Client i.p.v. `fetch()` naar interne API routes.
 * Error handling: uitgebreide `console.error` logging met codes/messages/details/hints (geen secrets).
+* **Navigation na auth**: Gebruik `window.location.href` voor volledige page reload na login/logout (i.p.v. `router.push()`) om ervoor te zorgen dat alle componenten correct worden gereset en geen overlays/modals open blijven staan.
+* **Grid layouts met gelijke hoogte**: Gebruik `items-stretch` op grid container en `h-full flex flex-col` op cards voor gelijke hoogte. Voor bio/omschrijving secties: gebruik `min-h-[2.5rem]` (2 regels) en `mt-auto` op stats/footer secties om onderaan uit te lijnen.
+* **HomeFeed limit**: Maximaal 6 recepten op homepage feed voor overzichtelijkheid.
 
 MILESTONES
 
