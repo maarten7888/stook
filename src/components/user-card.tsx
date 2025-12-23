@@ -39,24 +39,30 @@ export function UserCard({
   showStats = false,
 }: UserCardProps) {
   const content = (
-    <Card className={cn("bg-coals border-ash hover:border-ember/50 transition-colors", className)}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
+    <Card className={cn("bg-coals border-ash hover:border-ember/50 transition-colors h-full flex flex-col", className)}>
+      <CardContent className="p-4 flex-1 flex flex-col">
+        <div className="flex items-start gap-4 flex-1">
           <Avatar className="h-12 w-12 shrink-0">
             <AvatarImage src={avatarUrl || ""} />
             <AvatarFallback className="bg-ember text-white">
               {displayName?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex flex-col">
             <h3 className="text-lg font-heading text-ash truncate">
               {displayName || "Gebruiker"}
             </h3>
-            {bio && (
-              <p className="text-smoke text-sm line-clamp-2 mt-1">
-                {bio}
-              </p>
-            )}
+            <div className="min-h-[2.5rem] mt-1">
+              {bio ? (
+                <p className="text-smoke text-sm line-clamp-2">
+                  {bio}
+                </p>
+              ) : (
+                <p className="text-smoke text-sm line-clamp-2 opacity-0 pointer-events-none">
+                  &nbsp;
+                </p>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-smoke">
               {location && (
                 <div className="flex items-center gap-1">
@@ -79,7 +85,7 @@ export function UserCard({
             </div>
             
             {showStats && stats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-ash">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-auto pt-4 border-t border-ash">
                 {typeof stats.recipes === 'number' && (
                   <div className="flex flex-col items-center">
                     <BookOpen className="h-4 w-4 text-ember mb-1" />
