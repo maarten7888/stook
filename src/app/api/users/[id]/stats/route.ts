@@ -9,12 +9,12 @@ export async function GET(
     const { id } = await params;
     const adminSupabase = createAdminClient();
 
-    // Get recipe count (only public recipes)
+    // Get recipe count (all recipes for own stats, public only for others)
+    // For now, we'll get all recipes - can be filtered client-side if needed
     const { count: recipeCount, error: recipeError } = await adminSupabase
       .from('recipes')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', id)
-      .eq('visibility', 'public');
+      .eq('user_id', id);
 
     if (recipeError) {
       console.error("Error fetching recipe count:", recipeError);

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, Plus, Download, ChefHat, User, LogOut, ChevronDown, Home, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { FriendRequestsBadge } from "@/components/friend-requests-badge";
+import { NavbarStats } from "@/components/navbar-stats";
 
 interface NavbarProps {
   user?: {
@@ -21,6 +22,27 @@ interface NavbarProps {
 
 export function Navbar({ user, className }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState<{
+    recipes: number;
+    sessions: number;
+    avgRating: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      // Fetch stats for current user
+      fetch(`/api/users/${user.id}/stats`)
+        .then(res => res.json())
+        .then(data => {
+          setStats({
+            recipes: data.recipes || 0,
+            sessions: data.sessions || 0,
+            avgRating: data.avgRating ? data.avgRating.toFixed(1) : null,
+          });
+        })
+        .catch(err => console.error("Error fetching stats:", err));
+    }
+  }, [user?.id]);
 
   const navigation = [
     { name: "Home", href: "/", icon: Home },
@@ -98,6 +120,16 @@ export function Navbar({ user, className }: NavbarProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56 bg-coals border-ash" align="end">
+                    {stats && (
+                      <div className="px-2 py-2">
+                        <NavbarStats
+                          recipes={stats.recipes}
+                          sessions={stats.sessions}
+                          avgRating={stats.avgRating}
+                        />
+                      </div>
+                    )}
+                    {stats && <div className="border-t border-ash/50 my-1" />}
                     <DropdownMenuItem asChild>
                       <Link href="/profile" className="flex items-center text-smoke hover:text-white">
                         <User className="mr-2 h-4 w-4" />

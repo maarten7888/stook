@@ -5,7 +5,6 @@ import { BookOpen, Camera, Thermometer, Clock, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { HomeFeed } from "@/components/home-feed";
 import { UserSuggestions } from "@/components/user-suggestions";
-import { UserStatsIcons } from "@/components/user-stats-icons";
 import { RecentActivity } from "@/components/recent-activity";
 
 async function fetchUserStats(userId: string) {
@@ -157,29 +156,14 @@ export default async function RootPage() {
 
     return (
       <div className="space-y-6 sm:space-y-8">
-        {/* Hero Section with Stats */}
+        {/* Hero Section */}
         <div className="text-center">
           <h1 className="text-3xl sm:text-4xl font-heading font-bold text-ash mb-4">
             Welkom bij Stook
           </h1>
-          <p className="text-lg sm:text-xl text-smoke mb-4 sm:mb-6">
+          <p className="text-lg sm:text-xl text-smoke mb-6 sm:mb-8">
             Elke sessie beter — je ultieme BBQ companion
           </p>
-          
-          {/* Stats Icons */}
-          <div className="flex justify-center mb-6 sm:mb-8">
-            <Card className="bg-coals border-ash">
-              <CardContent className="p-4">
-                <UserStatsIcons
-                  recipes={stats.recipes}
-                  sessions={stats.sessions}
-                  avgRating={stats.avgRating}
-                  recipesThisMonth={stats.recipesThisMonth}
-                  sessionsThisWeek={stats.sessionsThisWeek}
-                />
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
