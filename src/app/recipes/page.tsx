@@ -257,34 +257,6 @@ export default async function RecipesPage({
                   {recipe.description || "Geen beschrijving beschikbaar."}
                 </p>
                 
-                {/* Recipe Info */}
-                <div className="flex flex-wrap gap-2 text-xs text-smoke">
-                  {recipe.serves && (
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <span>{recipe.serves} porties</span>
-                    </div>
-                  )}
-                  {recipe.prepMinutes && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{recipe.prepMinutes} min prep</span>
-                    </div>
-                  )}
-                  {recipe.cookMinutes && (
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{recipe.cookMinutes} min koken</span>
-                    </div>
-                  )}
-                  {recipe.targetInternalTemp && (
-                    <div className="flex items-center gap-1">
-                      <Thermometer className="h-3 w-3" />
-                      <span>{recipe.targetInternalTemp}°C</span>
-                    </div>
-                  )}
-                </div>
-
                 {/* Tags */}
                 {recipe.tags && recipe.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
@@ -305,13 +277,44 @@ export default async function RecipesPage({
                   </div>
                 )}
 
-                {/* Action Button */}
-                <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full group-hover:border-ember transition-colors mt-auto">
-                  <Link href={`/recipes/${recipe.id}`}>
-                    Bekijk Recept
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
+                {/* Recipe Info + Button Container (always at bottom) */}
+                <div className="mt-auto flex flex-col gap-4">
+                  {/* Recipe Info */}
+                  <div className="flex flex-wrap gap-2 text-xs text-smoke">
+                    {recipe.serves && (
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>{recipe.serves} porties</span>
+                      </div>
+                    )}
+                    {recipe.prepMinutes && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{recipe.prepMinutes} min prep</span>
+                      </div>
+                    )}
+                    {recipe.cookMinutes && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{recipe.cookMinutes} min koken</span>
+                      </div>
+                    )}
+                    {recipe.targetInternalTemp && (
+                      <div className="flex items-center gap-1">
+                        <Thermometer className="h-3 w-3" />
+                        <span>{recipe.targetInternalTemp}°C</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Button */}
+                  <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full group-hover:border-ember transition-colors">
+                    <Link href={`/recipes/${recipe.id}`}>
+                      Bekijk Recept
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
