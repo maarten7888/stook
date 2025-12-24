@@ -6,10 +6,8 @@ interface PublicLayoutProps {
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
-    <div className="min-h-screen bg-charcoal relative">
-      <div className="absolute top-0 left-0 right-0 z-50">
-        <Navbar />
-      </div>
+    <div className="min-h-screen bg-charcoal">
+      <Navbar />
       {children}
     </div>
   );
