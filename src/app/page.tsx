@@ -153,7 +153,7 @@ export default async function RootPage() {
   return (
     <>
       {/* Hero Section - Full Screen */}
-      <section className="min-h-screen relative overflow-hidden flex items-center justify-center">
+      <section className="h-screen relative overflow-hidden flex items-center justify-center -mt-16">
         {/* Video Background */}
         <video
           autoPlay
@@ -170,7 +170,7 @@ export default async function RootPage() {
         <div className="absolute inset-0 bg-charcoal/70 z-10"></div>
         
         {/* Content - Centered */}
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-20">
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-20 pt-16">
           <div className="inline-block mb-6">
             <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-ash mb-4 font-heading drop-shadow-lg">
               Stook
