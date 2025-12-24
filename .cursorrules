@@ -190,8 +190,8 @@ UI & STYLING
   * Feed links (2/3 breedte) met max 6 recepten
   * Sidebar rechts (1/3 breedte): Recente Activiteit boven, UserSuggestions onder
 * **Homepage layout (niet-ingelogd)**:
-  * Schermvullende hero sectie (`h-screen`) met video achtergrond
-  * Video begint direct onder navbar (geen ruimte): navbar absolute gepositioneerd met `z-50`, hero met `-mt-16` en content `pt-16`
+  * Schermvullende hero sectie (`h-[calc(100vh-4rem)]`) met video achtergrond
+  * Video begint direct onder navbar (aansluitend, geen overlap): navbar normale positionering, hero vult resterende viewport height
   * Video: `public/videos/hero-background.webm` (geoptimaliseerd) + `Hero stook.MP4` (fallback)
   * Video styling: `object-cover`, `absolute inset-0`, donkere overlay (`bg-charcoal/70`) voor leesbaarheid
   * Content gecentreerd in video met flexbox (`flex items-center justify-center`)
