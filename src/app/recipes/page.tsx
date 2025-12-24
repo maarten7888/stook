@@ -212,9 +212,9 @@ export default async function RecipesPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
           {(data.items as RecipeListItem[]).map((recipe) => (
-            <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all duration-300 group hover:shadow-lg hover:shadow-ember/10">
+            <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all duration-300 group hover:shadow-lg hover:shadow-ember/10 h-full flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors line-clamp-2">
@@ -241,7 +241,7 @@ export default async function RecipesPage({
                   </p>
                 )}
               </CardHeader>
-              <CardContent className="pt-0 space-y-4">
+              <CardContent className="pt-0 space-y-4 flex-1 flex flex-col">
                 {/* Recipe Thumbnail Image */}
                 {recipe.imageUrl && (
                   <div className="relative w-full h-48 rounded-lg overflow-hidden bg-charcoal">
@@ -306,7 +306,7 @@ export default async function RecipesPage({
                 )}
 
                 {/* Action Button */}
-                <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full group-hover:border-ember transition-colors">
+                <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full group-hover:border-ember transition-colors mt-auto">
                   <Link href={`/recipes/${recipe.id}`}>
                     Bekijk Recept
                     <ArrowRight className="ml-2 h-4 w-4" />
