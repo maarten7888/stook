@@ -42,6 +42,7 @@ REPO CONVENTIES
 * **ENV**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only), `NEXTAUTH_URL` (indien NextAuth alternatief), `NEXTAUTH_SECRET`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL`. In SSR fetches: bouw absolute URL via request headers (`host`, `x-forwarded-proto`).
 * **OCR ENV (nieuw)**: `GOOGLE_APPLICATION_CREDENTIALS_JSON` (server-only), `GOOGLE_PROJECT_ID` (optioneel), `OCR_MAX_BYTES` (default 8000000), `OCR_ALLOWED_MIME` (default `image/jpeg,image/png,image/webp`).
 * **Brand assets**: `public/images/logo.svg`, favicons (`public/favicon.ico`, apple-touch-icon 180x180).
+* **Video assets**: `public/videos/` voor hero achtergrond video's. Gebruik geoptimaliseerde WebM versie (via ffmpeg) voor betere performance. Multi-format support: WebM eerst, MP4 als fallback.
 
 AUTH & SECURITY
 
@@ -54,7 +55,7 @@ AUTH & SECURITY
 DATABASE BEST PRACTICES
 
 * **Gebruik ALTIJD Supabase Admin Client** voor database operaties in server actions en API routes.
-* **Drizzle ORM alleen voor**: schema definitie (`drizzle/schema.ts`) en migraties (`drizzle-kit generate/push`).
+* **Drizzle ORM alleen voor**: schema definitie (`drizzle/schema.ts`) en migraties (`drizzle-kitgenerate/push`).
 * **NIET gebruiken**: Drizzle ORM voor runtime database queries in server actions of API routes.
 * **Consistente aanpak**: Alle database operaties via `createAdminClient()` met service role key.
 * **Performance**: Server-side data fetching voor initial page loads, client-side updates voor real-time updates.
@@ -108,9 +109,18 @@ STORAGE BUCKETS
 
 ROUTES / PAGINA'S (Next.js App Router)
 
-* `/` → homepage (feed max 6 recepten + Recente Activiteit in sidebar) [Gereed]
-  * Stats iconen staan in navbar dropdown (niet op homepage)
-  * Recente activiteit in rechterkolom boven "Ontdek nieuwe gebruikers"
+* `/` → homepage [Gereed]
+  * **Voor ingelogde gebruikers**: feed max 6 recepten + Recente Activiteit in sidebar
+    * Stats iconen staan in navbar dropdown (niet op homepage)
+    * Recente activiteit in rechterkolom boven "Ontdek nieuwe gebruikers"
+  * **Voor niet-ingelogde gebruikers**: marketing homepage met:
+    * Schermvullende hero sectie met video achtergrond (direct onder navbar, geen ruimte)
+    * Video: geoptimaliseerde WebM versie + MP4 fallback in `public/videos/`
+    * Uitgebreide features sectie (6 features: Recepten, Kooksessies, OCR Import, URL Import, Social, Temperatuur Tracking)
+    * "Hoe het werkt" sectie (3 stappen)
+    * Social proof sectie (aantal publieke recepten)
+    * Publieke recepten sectie met gelijke hoogte cards en uitgelijnde buttons
+    * Final CTA sectie
 * `/recipes` [Gereed]
 * `/recipes/new` [Gereed]
 * `/recipes/[id]` [Gereed]
@@ -175,13 +185,26 @@ UI & STYLING
   * In navbar dropdown: compacte iconen met getallen (subtiel, niet te groot)
   * Client-side fetching via `/api/users/[id]/stats` in navbar component
   * Stats tonen: recepten (alle), sessies, gemiddelde rating
-* **Homepage layout**:
+* **Homepage layout (ingelogd)**:
   * Hero sectie met welkomsttekst en actieknoppen
   * Feed links (2/3 breedte) met max 6 recepten
   * Sidebar rechts (1/3 breedte): Recente Activiteit boven, UserSuggestions onder
+* **Homepage layout (niet-ingelogd)**:
+  * Schermvullende hero sectie (`h-screen`) met video achtergrond
+  * Video begint direct onder navbar (geen ruimte): navbar absolute gepositioneerd met `z-50`, hero met `-mt-16` en content `pt-16`
+  * Video: `public/videos/hero-background.webm` (geoptimaliseerd) + `Hero stook.MP4` (fallback)
+  * Video styling: `object-cover`, `absolute inset-0`, donkere overlay (`bg-charcoal/70`) voor leesbaarheid
+  * Content gecentreerd in video met flexbox (`flex items-center justify-center`)
+  * Features sectie: 6 features in grid (md:grid-cols-2 lg:grid-cols-3) met iconen in ember-kleurige cirkels
+  * "Hoe het werkt": 3-stappen flow met genummerde cirkels
+  * Publieke recepten: cards met gelijke hoogte (`items-stretch`, `h-full flex flex-col`) en buttons onderaan (`mt-auto`)
 * **User cards gelijke hoogte**: 
   * Grid met `items-stretch`, cards met `h-full flex flex-col`
   * Bio sectie: `min-h-[2.5rem]` voor 2 regels, stats met `mt-auto` onderaan
+* **Recept cards gelijke hoogte**:
+  * Grid met `items-stretch`, cards met `h-full flex flex-col`
+  * CardContent met `flex-1 flex flex-col` om ruimte op te vullen
+  * Button met `mt-auto` om onderaan uit te lijnen
 * Responsive buttons: op mobiel `w-full sm:w-auto`, `size="sm"`, verberg tekst op mobiel met `hidden sm:inline`.
 * Button styling: Primary `bg-ember hover:bg-ember/90 text-white`. Outline `border-ash text-ash hover:bg-coals`. Disabled `border-ash text-ash`.
 * Import UI:
