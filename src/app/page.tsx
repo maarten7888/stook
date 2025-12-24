@@ -371,19 +371,19 @@ export default async function RootPage() {
           
           {recipes.length > 0 ? (
             <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 items-stretch">
                 {recipes.map((recipe: { id: string; title: string; description?: string; user_id?: string }) => (
-                  <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group">
+                  <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group h-full flex flex-col">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors">
                         {recipe.title}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
+                    <CardContent className="pt-0 flex-1 flex flex-col">
                       <p className="text-smoke text-sm mb-4 line-clamp-3">
                         {recipe.description || "Geen beschrijving beschikbaar."}
                       </p>
-                      <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full">
+                      <Button asChild variant="outline" size="sm" className="border-ember text-ember hover:bg-ember hover:text-white w-full mt-auto">
                         <Link href={`/recipes/${recipe.id}`}>
                           Bekijk Recept
                           <ArrowRight className="ml-2 h-4 w-4" />
