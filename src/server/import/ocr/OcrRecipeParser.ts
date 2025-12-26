@@ -1720,26 +1720,30 @@ function calculateConfidence(
   // Gebruik per-sectie score als beschikbaar, anders fallback naar count-based
   let ingredientsConfidence = 0;
   if (ingredientSectionScore !== undefined) {
-    // Gebruik per-sectie score (0-1) en schaal naar 0-0.30
-    ingredientsConfidence = ingredientSectionScore * 0.20;
-    // Bonus voor ingrediënten met hoeveelheden
+    // Gebruik per-sectie score (0-1) en schaal naar 0-0.25 (verhoogd van 0.20)
+    ingredientsConfidence = ingredientSectionScore * 0.25;
+    // Bonus voor ingrediënten met hoeveelheden (verhoogd van 0.10 naar 0.15)
     if (ingredientsCount > 0) {
       const amountRatio = ingredientsWithAmount / ingredientsCount;
-      ingredientsConfidence += amountRatio * 0.10;
+      ingredientsConfidence += amountRatio * 0.15;
+    }
+    // Extra bonus voor veel ingrediënten (5+)
+    if (ingredientsCount >= 5) {
+      ingredientsConfidence += 0.05;
     }
   } else {
     // Fallback naar oude logica
     if (ingredientsCount >= 5) {
-      ingredientsConfidence = 0.20;
+      ingredientsConfidence = 0.25;
     } else if (ingredientsCount >= 3) {
-      ingredientsConfidence = 0.15;
+      ingredientsConfidence = 0.18;
     } else if (ingredientsCount >= 1) {
-      ingredientsConfidence = 0.08;
+      ingredientsConfidence = 0.10;
     }
     // Bonus voor ingrediënten met hoeveelheden
     if (ingredientsCount > 0) {
       const amountRatio = ingredientsWithAmount / ingredientsCount;
-      ingredientsConfidence += amountRatio * 0.10;
+      ingredientsConfidence += amountRatio * 0.15;
     }
   }
 
@@ -1747,22 +1751,26 @@ function calculateConfidence(
   // Gebruik per-sectie score als beschikbaar, anders fallback naar count-based
   let stepsConfidence = 0;
   if (stepSectionScore !== undefined) {
-    // Gebruik per-sectie score (0-1) en schaal naar 0-0.30
-    stepsConfidence = stepSectionScore * 0.20;
+    // Gebruik per-sectie score (0-1) en schaal naar 0-0.25 (verhoogd van 0.20)
+    stepsConfidence = stepSectionScore * 0.25;
     // Bonus voor goede stap-lengte (>30 karakters gemiddeld)
     if (avgStepLength > 50) {
       stepsConfidence += 0.10;
     } else if (avgStepLength > 30) {
       stepsConfidence += 0.05;
     }
+    // Extra bonus voor veel stappen (4+)
+    if (stepsCount >= 4) {
+      stepsConfidence += 0.05;
+    }
   } else {
     // Fallback naar oude logica
     if (stepsCount >= 4) {
-      stepsConfidence = 0.20;
+      stepsConfidence = 0.25;
     } else if (stepsCount >= 2) {
-      stepsConfidence = 0.15;
+      stepsConfidence = 0.18;
     } else if (stepsCount >= 1) {
-      stepsConfidence = 0.08;
+      stepsConfidence = 0.10;
     }
     // Bonus voor goede stap-lengte (>30 karakters gemiddeld)
     if (avgStepLength > 50) {
@@ -1783,6 +1791,21 @@ function calculateConfidence(
   if (titlePresent && !/\d/.test(title) && !/^(Der|MEDITERRAAN)/i.test(title)) {
     noNoiseBonus = 0.10;
   }
+  
+  // Extra bonus voor goede recepten: als we zowel ingrediënten als stappen hebben
+  // en de scores redelijk zijn, geef extra bonus
+  let qualityBonus = 0;
+  if (ingredientsCount >= 3 && stepsCount >= 2) {
+    // Basis bonus voor complete recepten
+    qualityBonus = 0.05;
+    // Extra bonus als beide secties goede scores hebben
+    if (ingredientSectionScore !== undefined && ingredientSectionScore > 0.6) {
+      qualityBonus += 0.03;
+    }
+    if (stepSectionScore !== undefined && stepSectionScore > 0.6) {
+      qualityBonus += 0.03;
+    }
+  }
 
   // Overall confidence
   const overall = Math.min(1, 
@@ -1790,7 +1813,8 @@ function calculateConfidence(
     ingredientsConfidence + 
     stepsConfidence + 
     metadataConfidence + 
-    noNoiseBonus
+    noNoiseBonus +
+    qualityBonus
   );
 
   return {
