@@ -1,7 +1,7 @@
 import { getSession, createAdminClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Camera, Thermometer, Clock, ArrowRight, Scan, Link as LinkIcon, Users } from "lucide-react";
+import { BookOpen, Camera, Thermometer, Clock, ArrowRight, Scan, Link as LinkIcon, Users, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { HomeFeed } from "@/components/home-feed";
 import { UserSuggestions } from "@/components/user-suggestions";
@@ -133,8 +133,8 @@ export default async function RootPage() {
   // Marketing page content for non-authenticated users
   const adminSupabase = createAdminClient();
   
-  // Fetch public recipes and stats
-  const [publicRecipesResult, publicRecipesCountResult] = await Promise.all([
+  // Fetch public recipes, stats, and additional metrics
+  const [publicRecipesResult, publicRecipesCountResult, totalUsersResult, totalSessionsResult, totalReviewsResult] = await Promise.all([
     adminSupabase
       .from('recipes')
       .select('id, title, description, visibility, user_id')
@@ -144,11 +144,56 @@ export default async function RootPage() {
     adminSupabase
       .from('recipes')
       .select('*', { count: 'exact', head: true })
-      .eq('visibility', 'public')
+      .eq('visibility', 'public'),
+    adminSupabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true }),
+    adminSupabase
+      .from('cook_sessions')
+      .select('*', { count: 'exact', head: true }),
+    adminSupabase
+      .from('reviews')
+      .select('*', { count: 'exact', head: true })
   ]);
 
   const recipes = publicRecipesResult.data || [];
   const totalPublicRecipes = publicRecipesCountResult.count || 0;
+  const totalUsers = totalUsersResult.count || 0;
+  const totalSessions = totalSessionsResult.count || 0;
+  const totalReviews = totalReviewsResult.count || 0;
+
+  // Fetch first photo for each recipe
+  const recipesWithPhotos = await Promise.all(
+    recipes.map(async (recipe) => {
+      let imageUrl: string | null = null;
+      
+      try {
+        const { data: photos } = await adminSupabase
+          .from('photos')
+          .select('path')
+          .eq('recipe_id', recipe.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (photos?.path) {
+          const { data: signedUrlData } = await adminSupabase.storage
+            .from('photos')
+            .createSignedUrl(photos.path, 3600);
+          
+          imageUrl = signedUrlData?.signedUrl || null;
+        }
+      } catch (error) {
+        // Silently fail if no photo
+        console.debug(`No photo for recipe ${recipe.id}`);
+      }
+
+      return {
+        ...recipe,
+        imageUrl,
+      };
+    })
+  );
 
   return (
     <>
@@ -195,21 +240,51 @@ export default async function RootPage() {
             </Button>
           </div>
         </div>
+        
+        {/* Smooth Scroll Indicator */}
+        <a 
+          href="#features" 
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-30 animate-bounce"
+          aria-label="Scroll naar features"
+        >
+          <ChevronDown className="h-8 w-8 text-ash/80 hover:text-ember transition-colors" />
+        </a>
       </section>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-16 sm:space-y-20">
         {/* Social Proof Section */}
-        {totalPublicRecipes > 0 && (
-          <section className="py-8 px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <p className="text-lg text-smoke">
-                <span className="text-2xl font-bold text-ember font-heading">{totalPublicRecipes}+</span> publieke recepten beschikbaar
-              </p>
-              <p className="text-sm text-smoke mt-2">Word onderdeel van de community</p>
+        <section className="py-12 px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
+                  {totalPublicRecipes}+
+                </div>
+                <p className="text-sm text-smoke">Publieke Recepten</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
+                  {totalUsers}+
+                </div>
+                <p className="text-sm text-smoke">Gebruikers</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
+                  {totalSessions}+
+                </div>
+                <p className="text-sm text-smoke">Kooksessies</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
+                  {totalReviews}+
+                </div>
+                <p className="text-sm text-smoke">Reviews</p>
+              </div>
             </div>
-          </section>
-        )}
+            <p className="text-center text-smoke mt-6 text-sm">Word onderdeel van de community</p>
+          </div>
+        </section>
 
         {/* Features Section */}
         <section id="features" className="py-12 px-4">
@@ -372,8 +447,23 @@ export default async function RootPage() {
           {recipes.length > 0 ? (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 items-stretch">
-                {recipes.map((recipe: { id: string; title: string; description?: string; user_id?: string }) => (
-                  <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group h-full flex flex-col">
+                {recipesWithPhotos.map((recipe: { id: string; title: string; description?: string; user_id?: string; imageUrl?: string | null }) => (
+                  <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group h-full flex flex-col overflow-hidden">
+                    {/* Recipe Thumbnail */}
+                    {recipe.imageUrl ? (
+                      <div className="relative w-full h-48 overflow-hidden">
+                        <img 
+                          src={recipe.imageUrl} 
+                          alt={recipe.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 to-transparent" />
+                      </div>
+                    ) : (
+                      <div className="relative w-full h-48 bg-gradient-to-br from-ember/20 via-ember/10 to-coals flex items-center justify-center">
+                        <BookOpen className="h-16 w-16 text-ember/40" />
+                      </div>
+                    )}
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg text-ash font-heading group-hover:text-ember transition-colors">
                         {recipe.title}
