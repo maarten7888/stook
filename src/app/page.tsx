@@ -224,9 +224,9 @@ export default async function RootPage() {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+            <Card className="bg-coals/50 border-ash/50 transition-colors cursor-default">
               <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <BookOpen className="h-8 w-8 text-ember" />
                 </div>
                 <CardTitle className="text-xl text-ash font-heading">Recepten</CardTitle>
@@ -238,9 +238,9 @@ export default async function RootPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+            <Card className="bg-coals/50 border-ash/50 transition-colors cursor-default">
               <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Thermometer className="h-8 w-8 text-ember" />
                 </div>
                 <CardTitle className="text-xl text-ash font-heading">Kooksessies</CardTitle>
@@ -252,9 +252,9 @@ export default async function RootPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+            <Card className="bg-coals/50 border-ash/50 transition-colors cursor-default">
               <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Scan className="h-8 w-8 text-ember" />
                 </div>
                 <CardTitle className="text-xl text-ash font-heading">OCR Import</CardTitle>
@@ -266,9 +266,9 @@ export default async function RootPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+            <Card className="bg-coals/50 border-ash/50 transition-colors cursor-default">
               <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <LinkIcon className="h-8 w-8 text-ember" />
                 </div>
                 <CardTitle className="text-xl text-ash font-heading">URL Import</CardTitle>
@@ -280,9 +280,9 @@ export default async function RootPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+            <Card className="bg-coals/50 border-ash/50 transition-colors cursor-default">
               <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="h-8 w-8 text-ember" />
                 </div>
                 <CardTitle className="text-xl text-ash font-heading">Social</CardTitle>
@@ -294,9 +294,9 @@ export default async function RootPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10">
+            <Card className="bg-coals/50 border-ash/50 transition-colors cursor-default">
               <CardHeader className="text-center pb-4">
-                <div className="w-16 h-16 bg-ember/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-ember/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Clock className="h-8 w-8 text-ember" />
                 </div>
                 <CardTitle className="text-xl text-ash font-heading">Temperatuur Tracking</CardTitle>
