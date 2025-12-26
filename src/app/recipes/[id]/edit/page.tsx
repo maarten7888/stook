@@ -177,14 +177,21 @@ export default function EditRecipePage() {
       // Prepare recipe data
       const recipeData = {
         title,
-        description: description || undefined,
-        serves: serves ? parseInt(serves) : undefined,
-        prepMinutes: prepMinutes ? parseInt(prepMinutes) : undefined,
-        cookMinutes: cookMinutes ? parseInt(cookMinutes) : undefined,
-        targetInternalTemp: targetInternalTemp ? parseInt(targetInternalTemp) : undefined,
+        description: description.trim() || null,
+        serves: serves ? parseInt(serves) : null,
+        prepMinutes: prepMinutes ? parseInt(prepMinutes) : null,
+        cookMinutes: cookMinutes ? parseInt(cookMinutes) : null,
+        targetInternalTemp: targetInternalTemp ? parseInt(targetInternalTemp) : null,
         visibility,
-        ingredients: ingredients.filter(ing => ing.name.trim()),
-        steps: steps.filter(step => step.instruction.trim()),
+        ingredients: ingredients.filter(ing => ing.name.trim()).map(ing => ({
+          name: ing.name,
+          amount: ing.amount || undefined,
+          unit: ing.unit || undefined,
+        })),
+        steps: steps.filter(step => step.instruction.trim()).map(step => ({
+          instruction: step.instruction,
+          timerMinutes: step.timerMinutes || undefined,
+        })),
         tags: tags
       };
 

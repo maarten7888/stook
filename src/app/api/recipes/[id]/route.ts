@@ -146,13 +146,13 @@ const UpdateSchema = z.object({
     name: z.string().min(1),
     amount: z.string().optional(),
     unit: z.string().optional(),
-  })).optional(),
+  }).passthrough()).optional(),
   steps: z.array(z.object({
     instruction: z.string().min(1),
     timerMinutes: z.string().optional(),
-  })).optional(),
+  }).passthrough()).optional(),
   tags: z.array(z.string()).optional(),
-});
+}).passthrough();
 
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
@@ -161,7 +161,14 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
 
   const payload = await request.json().catch(() => null);
   const parsed = UpdateSchema.safeParse(payload ?? {});
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  if (!parsed.success) {
+    console.error("Validation error:", JSON.stringify(parsed.error.errors, null, 2));
+    console.error("Payload received:", JSON.stringify(payload, null, 2));
+    return NextResponse.json({ 
+      error: "Invalid payload", 
+      details: parsed.error.errors 
+    }, { status: 400 });
+  }
 
   try {
     const supabase = createAdminClient();
