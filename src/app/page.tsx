@@ -132,87 +132,39 @@ export default async function RootPage() {
 
   // Marketing page content for non-authenticated users
   const adminSupabase = createAdminClient();
-  
-  // Fetch public recipes and stats
-  const [publicRecipesResult, publicRecipesCountResult] = await Promise.all([
-    adminSupabase
-      .from('recipes')
-      .select('id, title, description, visibility, user_id')
-      .eq('visibility', 'public')
-      .order('created_at', { ascending: false })
-      .limit(6),
-    adminSupabase
-      .from('recipes')
-      .select('*', { count: 'exact', head: true })
-      .eq('visibility', 'public')
-  ]);
+  const { data: publicRecipes } = await adminSupabase
+    .from('recipes')
+    .select('id, title, description, visibility, user_id')
+    .eq('visibility', 'public')
+    .order('created_at', { ascending: false })
+    .limit(6);
 
-  const recipes = publicRecipesResult.data || [];
-  const totalPublicRecipes = publicRecipesCountResult.count || 0;
+  const recipes = publicRecipes || [];
 
   return (
-    <>
-      {/* Hero Section - Full Screen */}
-      <section className="min-h-screen relative overflow-hidden flex items-center justify-center">
-        {/* Video Background */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0"
-        >
-          <source src="/videos/hero-background.webm" type="video/webm" />
-          <source src="/videos/Hero stook.MP4" type="video/mp4" />
-        </video>
-        
-        {/* Dark Overlay for readability */}
-        <div className="absolute inset-0 bg-charcoal/70 z-10"></div>
-        
-        {/* Content - Centered */}
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-20">
-          <div className="inline-block mb-6">
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-ash mb-4 font-heading drop-shadow-lg">
-              Stook
-            </h1>
-            <div className="h-1 w-24 bg-ember mx-auto rounded-full"></div>
-          </div>
-          <p className="text-2xl sm:text-3xl text-ash mb-4 font-heading font-semibold drop-shadow-lg">
+    <div className="max-w-7xl mx-auto space-y-12">
+      {/* Hero Section */}
+      <section className="py-16 px-4 text-center">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold text-ash mb-4 font-heading">
+            Stook
+          </h1>
+          <p className="text-xl text-smoke mb-6 max-w-2xl mx-auto">
             Elke sessie beter
           </p>
-          <p className="text-lg sm:text-xl text-smoke mb-8 max-w-2xl mx-auto drop-shadow-md">
+          <p className="text-lg text-smoke mb-8 max-w-3xl mx-auto">
             Je ultieme BBQ companion. Deel recepten, track je kooksessies en word een betere pitmaster.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white text-base px-8 py-6 shadow-lg">
-              <Link href="/register">
-                Gratis starten
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-ash text-ash hover:bg-coals text-base px-8 py-6 bg-charcoal/50 backdrop-blur-sm shadow-lg">
-              <Link href="/login">Inloggen</Link>
+            <Button asChild size="lg" className="bg-ember hover:bg-ember/90 text-white">
+              <Link href="/recipes">Bekijk Recepten</Link>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-16 sm:space-y-20">
-        {/* Social Proof Section */}
-        {totalPublicRecipes > 0 && (
-          <section className="py-8 px-4">
-            <div className="max-w-4xl mx-auto text-center">
-              <p className="text-lg text-smoke">
-                <span className="text-2xl font-bold text-ember font-heading">{totalPublicRecipes}+</span> publieke recepten beschikbaar
-              </p>
-              <p className="text-sm text-smoke mt-2">Word onderdeel van de community</p>
-            </div>
-          </section>
-        )}
-
-        {/* Features Section */}
-        <section id="features" className="py-12 px-4">
+      {/* Features Section */}
+      <section id="features" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-ash text-center mb-8 font-heading">
             Alles wat je nodig hebt voor perfecte BBQ
@@ -261,8 +213,8 @@ export default async function RootPage() {
         </div>
       </section>
 
-        {/* Public Recipes Section */}
-        <section id="recipes" className="py-12 px-4">
+      {/* Public Recipes Section */}
+      <section id="recipes" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-ash text-center mb-8 font-heading">
             Publieke Recepten
@@ -305,8 +257,7 @@ export default async function RootPage() {
           )}
         </div>
       </section>
-      </main>
-    </>
+    </div>
   );
 }
 
