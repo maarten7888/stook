@@ -380,3 +380,38 @@ SUPABASE/DRIZZLE/VERCEL RICHTLIJNEN
   * `photos` bucket private; serveer via signed URLs.
   * OCR gebruikt dezelfde bucket; importpad ownership check verplicht.
   * Na mutaties: `revalidatePath`/`revalidateTag`.
+
+OCR GOLDEN TESTSET WORKFLOW
+
+* **Doel**: Test cases toevoegen en parser verbeteren zonder regressie op bestaande test cases.
+* **Locatie**: `fixtures/ocr/*.json` (test cases) + `src/test/ocr-golden.test.ts` (test runner).
+* **Workflow voor nieuwe test case**:
+  1. **Test case toevoegen**: Maak nieuwe JSON in `fixtures/ocr/` met `rawText` (OCR output) en `expected` (verwachte resultaten).
+  2. **Test runnen**: `pnpm test ocr-golden` → nieuwe test faalt, bestaande slagen.
+  3. **Parser verbeteren** (indien nodig):
+     * **Incrementele verbeteringen**: Voeg nieuwe logica toe, vervang niet bestaande.
+     * **Specifieke patterns**: Gebruik guards/checks voor specifieke patronen, niet te breed.
+     * **Fallbacks**: Nieuwe logica moet fallback hebben naar bestaande logica.
+     * **Voorbeeld**: `if (newPattern.test(line)) { return newResult; } if (existingPattern.test(line)) { return existingResult; } return fallback; }`
+  4. **Backward compatibility checken**:
+     * Run alle golden tests: `pnpm test ocr-golden`
+     * Check: bestaande test cases (zoals aardappelpannetje) moeten nog steeds slagen.
+     * Check: nieuwe test case moet slagen.
+     * Check: thresholds moeten nog gehaald worden.
+  5. **Aanpassen expected values** (indien nodig):
+     * Als parser andere (maar correcte) resultaten geeft, pas `expected` aan in JSON.
+     * Gebruik ranges (`min`/`max`) i.p.v. exacte getallen waar mogelijk.
+     * Gebruik `contains` i.p.v. `exact` waar mogelijk.
+* **Best practices**:
+  * **Voeg toe, vervang niet**: Nieuwe logica komt bovenop bestaande, niet in plaats van.
+  * **Test beide**: Test altijd het nieuwe én bestaande recept na elke aanpassing.
+  * **Incrementeel**: Kleine stappen, test na elke stap.
+  * **Specifieke patterns**: Match op specifieke patronen (bijv. "INGREDIËNTEN\n500\ng\nvastkokende"), niet te breed.
+  * **Fallbacks**: Altijd een fallback naar bestaande logica.
+* **Expected values structuur**:
+  * `title`: `{ exact?: string, contains?: string[] }`
+  * `description`: `{ contains?: string[] }`
+  * `ingredients`: `{ count: { min: number, max: number }, items: Array<{ name: { contains?: string }, amount?: number, unit?: string }> }`
+  * `steps`: `{ count: { min: number, max: number }, items: Array<{ instruction: { contains?: string }, orderNo?: { min: number, max: number }, timerMinutes?: number }> }`
+  * `confidence`: `{ overall: { min?: number } }`
+* **Waarschuwing**: Golden tests gebruiken soft asserts (waarschuwingen, geen hard failures) voor ingredient/step items. Hard failures alleen voor thresholds.
