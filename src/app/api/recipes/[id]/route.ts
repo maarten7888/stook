@@ -162,11 +162,11 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
   const payload = await request.json().catch(() => null);
   const parsed = UpdateSchema.safeParse(payload ?? {});
   if (!parsed.success) {
-    console.error("Validation error:", JSON.stringify(parsed.error.errors, null, 2));
+    console.error("Validation error:", JSON.stringify(parsed.error.issues, null, 2));
     console.error("Payload received:", JSON.stringify(payload, null, 2));
     return NextResponse.json({ 
       error: "Invalid payload", 
-      details: parsed.error.errors 
+      details: parsed.error.issues 
     }, { status: 400 });
   }
 
