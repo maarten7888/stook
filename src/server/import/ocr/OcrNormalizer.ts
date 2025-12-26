@@ -169,10 +169,20 @@ export function preprocessOcrText(text: string): string {
       }
     }
     
-    // Patroon: "2 eetlepels\nplantaardige olie" -> getal + lange unit, ingrediënt op volgende regel
-    const amountWithLongUnitMatch = line.match(/^(\d+)\s+(eetlepels?|theelepels?|teentjes?|kopjes?|glazen|blik(?:je)?|pot(?:je)?|takjes?|snufjes?|handjes?)$/i);
+    // Patroon: "2 eetlepels\nplantaardige olie" of "1 bosje\nlente-uitjes" -> getal + lange unit, ingrediënt op volgende regel
+    const amountWithLongUnitMatch = line.match(/^(\d+)\s+(eetlepels?|theelepels?|teentjes?|kopjes?|glazen|blik(?:je)?|pot(?:je)?|takjes?|snufjes?|handjes?|bosje|bosjes)$/i);
     if (amountWithLongUnitMatch && nextLine && /^[a-zA-ZÀ-ž]/.test(nextLine) && !isHeaderLine(nextLine)) {
       // "2 eetlepels" + "plantaardige olie" -> "2 eetlepels plantaardige olie"
+      // "1 bosje" + "lente-uitjes" -> "1 bosje lente-uitjes"
+      mergedLines.push(`${line} ${nextLine}`);
+      i++;
+      continue;
+    }
+    
+    // Patroon: "2 el\nolijfolie" -> korte unit (el, tl) gevolgd door ingrediënt
+    const amountWithShortUnitMatch = line.match(/^(\d+)\s+(el|tl|eetl|theel)$/i);
+    if (amountWithShortUnitMatch && nextLine && /^[a-zA-ZÀ-ž]/.test(nextLine) && !isHeaderLine(nextLine)) {
+      // "2 el" + "olijfolie" -> "2 el olijfolie"
       mergedLines.push(`${line} ${nextLine}`);
       i++;
       continue;

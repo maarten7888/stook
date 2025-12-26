@@ -183,6 +183,13 @@ function runGoldenTest(testCase: GoldenTestCase): TestMetrics {
     
     // Check specifieke ingrediënten (soft assert)
     if (testCase.expected.ingredients.items) {
+      // Debug: toon alle ingrediënten voor aardappelpannetje
+      if (testCase.name.includes("Aardappelpannetje")) {
+        console.log(`\n  📋 Parsed ingredients for ${testCase.name}:`);
+        result.ingredients.forEach((ing, idx) => {
+          console.log(`    ${idx + 1}. name: "${ing.name}", amount: ${ing.amount}, unit: ${ing.unit === null ? 'null' : `"${ing.unit}"`}`);
+        });
+      }
       for (const expectedIngredient of testCase.expected.ingredients.items) {
         const found = result.ingredients.find(ing => matchesIngredient(ing, expectedIngredient));
         if (!found) {

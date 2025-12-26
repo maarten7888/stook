@@ -1053,7 +1053,27 @@ function parseIngredients(ingredientLines: string[]): ParsedIngredient[] {
       continue;
     }
 
-    // Remove bullet points
+    // EERST: split op bullets (ook als ze direct aan woorden vastzitten zoals "uitjes⚫")
+    // Dit moet gebeuren VOORDAT we parseIngredientLine aanroepen
+    const bulletParts = splitIngredientLine(line);
+    
+    // Als er meerdere delen zijn, parse elk deel apart
+    if (bulletParts.length > 1) {
+      for (const part of bulletParts) {
+        const parsed = parseIngredientLine(part);
+        if (parsed.name && parsed.name.length > 1) {
+          ingredients.push({
+            name: parsed.name,
+            amount: parsed.amount,
+            unit: parsed.unit,
+            notes: parsed.notes,
+          });
+        }
+      }
+      continue;
+    }
+
+    // Geen splits nodig, parse de hele regel
     const cleanLine = line.replace(/^[-•*]\s*/, "").trim();
     
     if (cleanLine.length < 2) {
