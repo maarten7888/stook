@@ -8,48 +8,61 @@
       "contains": ["aardappel", "pannetje"]
     },
     "description": {
-      "contains": ["aardappelen", "lente-ui", "tomaat"]
+      "contains": ["Gebakken aardappelen maken van rauwe aardappelen gaat snel en ze kunnen met allerhande ingrediënten worden opgepept. In dit geval zorgen lente-ui en tomaat voor een zomers en fruitig accent. Wie wil kan daarbij ook nog karakteristieke mediterrane kruiden toevoegen, zoals verse tijm of marjolein."]
     },
     "ingredients": {
       "count": {
-        "min": 4,
+        "min": 5,
         "max": 7
       },
       "items": [
         {
-          "name": { "contains": "aardappelen" },
+          "name": { "contains": "vastkokende aardappelen" },
           "amount": 500,
           "unit": "g"
         },
         {
-          "name": { "contains": "lente-uitjes" }
+          "name": { "contains": "lente-uitjes" },
+          "amount": 1,
+          "unit": "bosje"
         },
         {
-          "name": { "contains": "olijfolie" }
+          "name": { "contains": "kerstomaatjes" }
+        },
+        {
+          "name": { "contains": "peper" }
+        },
+        {
+          "name": { "contains": "zout" }
+        },
+        {
+          "name": { "contains": "olijfolie" },
+          "amount": 2,
+          "unit": "el"
         }
       ]
     },
     "steps": {
       "count": {
         "min": 4,
-        "max": 6
+        "max": 5
       },
       "items": [
         {
-          "instruction": { "contains": "aardappel" },
+          "instruction": { "contains": "AARDAPPELEN VOORBEREIDEN: schil de aardappelen, was ze en snijd ze in dunne plakjes." },
           "orderNo": { "min": 1, "max": 2 }
         },
         {
-          "instruction": { "contains": "ui" },
+          "instruction": { "contains": "UIEN SNIJDEN: was de lente-uitjes, snijd het groen in grove stukken en het witte deel in dunnere ringen." },
           "orderNo": { "min": 2, "max": 3 }
         },
         {
-          "instruction": { "contains": "bak" },
+          "instruction": { "contains": "AARDAPPELEN BAKKEN: verhit de olijfolie in een pan en laat de aardappelen in de hete olie goudbruin worden. Voeg na 5 minuten eerst het wit en later het groen van de lente-uitjes toe en laat het geheel gaar worden." },
           "orderNo": { "min": 3, "max": 5 },
           "timerMinutes": 5
         },
         {
-          "instruction": { "contains": "tomat" },
+          "instruction": { "contains": "TOMATEN TOEVOEGEN: leg kort voor het einde van de baktijd de gewassen en gehalveerde kerstomaatjes op de aardappelen. Ze hoeven niet gaar te worden, alleen een beetje warm." },
           "orderNo": { "min": 4, "max": 6 }
         }
       ]

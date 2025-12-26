@@ -780,9 +780,13 @@ function extractTitle(lines: string[], sections: Sections): string {
   // Strategie 2: Zoek een titel-achtige regel vlak voor "Ingrediënten" header
   const titleBeforeIngredients = findTitleBeforeSection(lines, SECTION_PATTERNS.ingredients);
   if (titleBeforeIngredients && isTitleCandidate(titleBeforeIngredients)) {
+    const baseScore = scoreTitleCandidate(titleBeforeIngredients);
+    // Extra bonus voor ALLCAPS titels vlak voor ingrediënten (zeer betrouwbaar patroon)
+    const uppercaseRatio = getUppercaseRatio(titleBeforeIngredients);
+    const allCapsBonus = uppercaseRatio > 0.8 ? 3 : 0;
     scoredCandidates.push({
       text: titleBeforeIngredients,
-      score: scoreTitleCandidate(titleBeforeIngredients) + 2, // Bonus voor positie voor ingrediënten
+      score: baseScore + 2 + allCapsBonus, // Bonus voor positie + ALLCAPS bonus
       source: "before_ingredients"
     });
   }
@@ -936,7 +940,10 @@ function scoreTitleCandidate(line: string): number {
   
   // Hoge uppercase ratio (>0.5) suggereert een titel
   const uppercaseRatio = getUppercaseRatio(trimmed);
-  if (uppercaseRatio > 0.5) {
+  if (uppercaseRatio > 0.8) {
+    // ALLCAPS titels (zoals "AARDAPPELPANNETJE") krijgen extra bonus
+    score += 4;
+  } else if (uppercaseRatio > 0.5) {
     score += 2;
   } else if (uppercaseRatio > 0.2) {
     score += 1;
@@ -958,9 +965,14 @@ function scoreTitleCandidate(line: string): number {
     score -= 2;
   }
   
-  // Penalty voor alleen hoofdletters (vaak categorie)
+  // Penalty voor alleen hoofdletters (vaak categorie), MAAR niet als het een samengesteld woord is (zoals "AARDAPPELPANNETJE")
+  // Categorie headers zijn meestal korte enkelvoudige woorden
   if (uppercaseRatio === 1 && trimmed.length < 15) {
-    score -= 2;
+    const wordCount = trimmed.split(/\s+/).length;
+    // Alleen penalty als het een enkel woord is (categorie), niet bij samengestelde woorden (titel)
+    if (wordCount === 1) {
+      score -= 2;
+    }
   }
   
   // Penalty voor tekst met veel leestekens
@@ -1002,10 +1014,28 @@ function findTitleBeforeSection(lines: string[], patterns: RegExp[]): string | n
  */
 function extractDescription(lines: string[], sections: Sections): string | null {
   if (sections.header.length > 1) {
-    // Beschrijving zijn de regels na de titel
-    const descLines = sections.header.slice(1).filter((l) => l.length > 20);
+    // Beschrijving zijn de regels na de titel, maar vóór "INGREDIËNTEN"
+    // Filter korte regels (zoals "MEDITERRAAN") en lege regels
+    const descLines = sections.header.slice(1).filter((l) => {
+      const trimmed = l.trim();
+      // Skip korte regels (< 20 karakters), categorie headers, en lege regels
+      if (trimmed.length < 20) return false;
+      if (isCategoryHeader(trimmed)) return false;
+      if (isIngredientHeader(trimmed) || isStepsHeader(trimmed)) return false;
+      return true;
+    });
     if (descLines.length > 0) {
-      return descLines.join(" ").substring(0, 500);
+      // Join alle beschrijving regels, maar stop bij "INGREDIËNTEN" of "BEREIDING"
+      const fullDesc = descLines.join(" ");
+      // Stop alleen bij ALLCAPS sectie headers met dubbele punt (niet bij "ingrediënten" in een zin)
+      // Match alleen op ALLCAPS headers zoals "INGREDIËNTEN:" of "BEREIDING:"
+      const stopPattern = /\b(INGREDIËNTEN|BEREIDING|BENODIGDHEDEN|BOODSCHAPPEN)\s*[:]/;
+      const stopMatch = fullDesc.match(stopPattern);
+      if (stopMatch && stopMatch.index !== undefined && stopMatch.index > 0) {
+        return fullDesc.substring(0, stopMatch.index).trim();
+      }
+      // Verhoog limiet naar 1000 karakters voor volledige beschrijvingen
+      return fullDesc.substring(0, 1000).trim();
     }
   }
   return null;
