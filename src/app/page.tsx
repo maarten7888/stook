@@ -133,8 +133,8 @@ export default async function RootPage() {
   // Marketing page content for non-authenticated users
   const adminSupabase = createAdminClient();
   
-  // Fetch public recipes, stats, and additional metrics
-  const [publicRecipesResult, publicRecipesCountResult, totalUsersResult, totalSessionsResult, totalReviewsResult] = await Promise.all([
+  // Fetch public recipes
+  const [publicRecipesResult, publicRecipesCountResult] = await Promise.all([
     adminSupabase
       .from('recipes')
       .select('id, title, description, visibility, user_id')
@@ -144,23 +144,11 @@ export default async function RootPage() {
     adminSupabase
       .from('recipes')
       .select('*', { count: 'exact', head: true })
-      .eq('visibility', 'public'),
-    adminSupabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true }),
-    adminSupabase
-      .from('cook_sessions')
-      .select('*', { count: 'exact', head: true }),
-    adminSupabase
-      .from('reviews')
-      .select('*', { count: 'exact', head: true })
+      .eq('visibility', 'public')
   ]);
 
   const recipes = publicRecipesResult.data || [];
   const totalPublicRecipes = publicRecipesCountResult.count || 0;
-  const totalUsers = totalUsersResult.count || 0;
-  const totalSessions = totalSessionsResult.count || 0;
-  const totalReviews = totalReviewsResult.count || 0;
 
   // Fetch first photo for each recipe
   const recipesWithPhotos = await Promise.all(
@@ -253,39 +241,6 @@ export default async function RootPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-16 sm:space-y-20">
-        {/* Social Proof Section */}
-        <section className="py-12 px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
-                  {totalPublicRecipes}+
-                </div>
-                <p className="text-sm text-smoke">Publieke Recepten</p>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
-                  {totalUsers}+
-                </div>
-                <p className="text-sm text-smoke">Gebruikers</p>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
-                  {totalSessions}+
-                </div>
-                <p className="text-sm text-smoke">Kooksessies</p>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl sm:text-4xl font-bold text-ember font-heading mb-2">
-                  {totalReviews}+
-                </div>
-                <p className="text-sm text-smoke">Reviews</p>
-              </div>
-            </div>
-            <p className="text-center text-smoke mt-6 text-sm">Word onderdeel van de community</p>
-          </div>
-        </section>
-
         {/* Features Section */}
         <section id="features" className="py-12 px-4">
         <div className="max-w-6xl mx-auto">
@@ -448,7 +403,7 @@ export default async function RootPage() {
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 items-stretch">
                 {recipesWithPhotos.map((recipe: { id: string; title: string; description?: string; user_id?: string; imageUrl?: string | null }) => (
-                  <Card key={recipe.id} className="bg-coals border-ash hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group h-full flex flex-col overflow-hidden">
+                  <Card key={recipe.id} className="bg-coals border-ash/50 hover:border-ember/50 transition-all hover:shadow-lg hover:shadow-ember/10 group h-full flex flex-col overflow-hidden">
                     {/* Recipe Thumbnail */}
                     {recipe.imageUrl ? (
                       <div className="relative w-full h-48 overflow-hidden">
