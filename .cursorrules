@@ -114,12 +114,18 @@ ROUTES / PAGINA'S (Next.js App Router)
     * Stats iconen staan in navbar dropdown (niet op homepage)
     * Recente activiteit in rechterkolom boven "Ontdek nieuwe gebruikers"
   * **Voor niet-ingelogde gebruikers**: marketing homepage met:
-    * Schermvullende hero sectie met video achtergrond (direct onder navbar, geen ruimte)
-    * Video: geoptimaliseerde WebM versie + MP4 fallback in `public/videos/`
+    * Schermvullende hero sectie (`h-[calc(100vh-4rem)]`) met video achtergrond
+    * Video begint direct onder navbar (aansluitend, geen overlap): navbar normale positionering, hero vult resterende viewport height
+    * Video: `public/videos/hero-background.webm` (geoptimaliseerd) + `Hero stook.MP4` (fallback)
+    * Video styling: `object-cover`, `absolute inset-0`, donkere overlay (`bg-charcoal/70`) voor leesbaarheid
+    * Content gecentreerd in video met flexbox (`flex items-center justify-center`)
+    * Smooth scroll indicator: ChevronDown icon onderaan hero met `animate-bounce`, link naar `#features`
     * Uitgebreide features sectie (6 features: Recepten, Kooksessies, OCR Import, URL Import, Social, Temperatuur Tracking)
-    * "Hoe het werkt" sectie (3 stappen)
-    * Social proof sectie (aantal publieke recepten)
-    * Publieke recepten sectie met gelijke hoogte cards en uitgelijnde buttons
+    * Feature cards: `bg-coals/50 border-ash/50 cursor-default` (niet klikbaar, subtiele styling)
+    * "Hoe het werkt" sectie (3 stappen) met genummerde cirkels
+    * Publieke recepten sectie met thumbnails, gelijke hoogte cards en uitgelijnde buttons
+    * Recepten thumbnails: eerste foto per recept met signed URLs, fallback gradient met BookOpen icon
+    * Recepten cards: `border-ash/50` (zelfde als feature cards), thumbnails met hover scale effect
     * Final CTA sectie
 * `/recipes` [Gereed]
 * `/recipes/new` [Gereed]
@@ -195,9 +201,13 @@ UI & STYLING
   * Video: `public/videos/hero-background.webm` (geoptimaliseerd) + `Hero stook.MP4` (fallback)
   * Video styling: `object-cover`, `absolute inset-0`, donkere overlay (`bg-charcoal/70`) voor leesbaarheid
   * Content gecentreerd in video met flexbox (`flex items-center justify-center`)
-  * Features sectie: 6 features in grid (md:grid-cols-2 lg:grid-cols-3) met iconen in ember-kleurige cirkels
+  * Smooth scroll indicator: ChevronDown icon onderaan hero met `animate-bounce`, link naar `#features`, hover effect (ember-kleur)
+  * Features sectie: 6 features in grid (md:grid-cols-2 lg:grid-cols-3) met iconen in ember-kleurige cirkels (`bg-ember/20`)
+  * Feature cards styling: `bg-coals/50 border-ash/50 cursor-default` (niet klikbaar, subtiele styling zonder hover effects)
   * "Hoe het werkt": 3-stappen flow met genummerde cirkels
-  * Publieke recepten: cards met gelijke hoogte (`items-stretch`, `h-full flex flex-col`) en buttons onderaan (`mt-auto`)
+  * Publieke recepten: cards met thumbnails, gelijke hoogte (`items-stretch`, `h-full flex flex-col`) en buttons onderaan (`mt-auto`)
+  * Recepten thumbnails: eerste foto per recept opgehaald met signed URLs, fallback gradient (`from-ember/20 via-ember/10 to-coals`) met BookOpen icon
+  * Recepten cards: `border-ash/50` (zelfde als feature cards), thumbnails met `group-hover:scale-105` effect, gradient overlay voor leesbaarheid
 * **User cards gelijke hoogte**: 
   * Grid met `items-stretch`, cards met `h-full flex flex-col`
   * Bio sectie: `min-h-[2.5rem]` voor 2 regels, stats met `mt-auto` onderaan
