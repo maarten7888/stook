@@ -33,15 +33,21 @@ export function preprocessOcrText(text: string): string {
   // "I" (hoofdletter) gevolgd door unit/ingredient → "1" (niet "ik")
   // Patroon: "I kg", "I ui", "I eetl", "I\nvers" etc.
   // Case-sensitive: alleen hoofdletter "I" (niet "i" want dat kan "ik" zijn)
-  processed = processed.replace(/\bI\s+(kg|g|gram|ml|l|el|tl|eetl|theel|ui|eieren?|appel|teentje|tenen)/gi, "1 $1");
-  // "I" op aparte regel gevolgd door ingredient
+  
+  // EERST: "I" op aparte regel gevolgd door ingredient (meest specifiek)
   processed = processed.replace(/\nI\n([a-z])/gi, "\n1 $1");
-  // "I" gevolgd door spatie en dan ingredient (niet midden in woord)
-  processed = processed.replace(/\bI\s+(vers|kleine|grote|verse|mager|dikke|dunne|geraspt|gehakt|zure)/gi, "1 $1");
-  // "I" gevolgd door getal (bijv. "I kg" midden in regel)
-  processed = processed.replace(/\bI\s+(kg|g|gram|ml|l|el|tl|eetl|theel)\b/gi, "1 $1");
+  // "I" gevolgd door unit (kg, g, el, tl, etc.) - behoud rest van regel
+  // Match: "I kg mager" → "1 kg mager"
+  processed = processed.replace(/\bI\s+(kg|g|gram|ml|l|el|tl|eetl|theel|theel\.|eetl\.)\s+/gi, "1 $1 ");
+  // "I" gevolgd door spatie en dan ingredient (niet midden in woord) - behoud rest van regel
+  // Match: "I ui en" → "1 ui en"
+  processed = processed.replace(/\bI\s+(vers|kleine|grote|verse|mager|dikke|dunne|geraspt|gehakt|zure|ui|appel|eieren?)\s+/gi, "1 $1 ");
+  // "I" gevolgd door unit/ingredient combinatie (meest algemeen, laatst) - behoud rest van regel
+  processed = processed.replace(/\bI\s+(kg|g|gram|ml|l|el|tl|eetl|theel|ui|eieren?|appel|teentje|tenen)\s+/gi, "1 $1 ");
   
   // 0b. Fix "|" als bullet character (vaak OCR fout voor • of -)
+  // MAAR: "2 eieren | theel . zout" moet worden: "2 eieren • 1 theel zout"
+  processed = processed.replace(/\|\s*theel\s*\.\s*/gi, " • 1 theel ");
   processed = processed.replace(/\|\s*/g, " • ");
   
   // 0c. Fix samengevoegde woorden die gesplitst moeten worden
@@ -179,12 +185,22 @@ export function preprocessOcrText(text: string): string {
       continue;
     }
     
-    // Patroon: "2 el\nolijfolie" -> korte unit (el, tl) gevolgd door ingrediënt
-    const amountWithShortUnitMatch = line.match(/^(\d+)\s+(el|tl|eetl|theel)$/i);
+    // Patroon: "2 el\nolijfolie" of "1 eetl .\nmangochutney" -> korte unit (el, tl) gevolgd door ingrediënt
+    const amountWithShortUnitMatch = line.match(/^(\d+)\s+(el|tl|eetl|theel)(\s*\.)?$/i);
     if (amountWithShortUnitMatch && nextLine && /^[a-zA-ZÀ-ž]/.test(nextLine) && !isHeaderLine(nextLine)) {
       // "2 el" + "olijfolie" -> "2 el olijfolie"
-      mergedLines.push(`${line} ${nextLine}`);
-      i++;
+      // "1 eetl ." + "mangochutney" -> "1 eetl mangochutney"
+      const unit = amountWithShortUnitMatch[2];
+      // Check of er nog een volgende regel is (bijv. "mangochutney of\nabrikozenjam")
+      const lineAfterNext = lines[i + 2]?.trim();
+      if (lineAfterNext && /^(of|en)\s+[a-z]/i.test(lineAfterNext)) {
+        // Merge ook de volgende regel (bijv. "mangochutney of abrikozenjam")
+        mergedLines.push(`${amountWithShortUnitMatch[1]} ${unit} ${nextLine} ${lineAfterNext}`);
+        i += 2;
+      } else {
+        mergedLines.push(`${amountWithShortUnitMatch[1]} ${unit} ${nextLine}`);
+        i++;
+      }
       continue;
     }
     
@@ -628,8 +644,8 @@ export function normalizeStep(step: string): string {
  */
 export function extractTimerMinutes(text: string): number | null {
   const patterns = [
-    // X-Y minuten/min (neem gemiddelde)
-    /(\d+)\s*[-–]\s*(\d+)\s*(?:minuten|min\.?|minuut)/i,
+    // X-Y minuten/min (neem gemiddelde) - ook met spatie: "50-55 minu- ten"
+    /(\d+)\s*[-–]\s*(\d+)\s*(?:minuten|min\.?|minuut)(?:\s*-\s*ten)?/i,
     // X minuten/min
     /(\d+)\s*(?:minuten|min\.?|minuut)/i,
     // X-Y uur (neem gemiddelde, converteer naar minuten)
@@ -672,10 +688,14 @@ export function extractTimerMinutes(text: string): number | null {
  */
 export function extractTemperature(text: string): number | null {
   const patterns = [
-    // X°C of X °C
+    // X°C of X °C (ook met spatie: "190 ° C")
     /(\d+)\s*°\s*C/i,
     // X graden (Celsius)
     /(\d+)\s*graden(?:\s*celsius)?/i,
+    // "op X" (bijv. "op 190°C")
+    /op\s+(\d+)\s*°\s*C/i,
+    // "voor op X" (bijv. "voor op 190°C")
+    /voor\s+op\s+(\d+)\s*°\s*C/i,
     // kerntemperatuur X
     /kerntemperatuur[:\s]+(\d+)/i,
     // interne temperatuur X

@@ -283,6 +283,7 @@ export function parseOcrText(rawText: string): ParsedRecipe {
 
   // Identificeer secties
   const sections = identifySections(lines);
+  
 
   // Parse elke sectie
   const title = extractTitle(lines, sections);
@@ -425,6 +426,11 @@ function identifySections(lines: string[]): Sections {
     // Check: getal gevolgd door PUNT of HAAKJE, niet alleen een spatie
     const looksLikeIngredientLine = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien)/i.test(line);
     
+    // Check of dit een ingredient line is (ook als we nog in header mode zijn)
+    // Dit moet gebeuren VOORDAT we naar de huidige sectie toevoegen
+    const looksLikeIngredientLineInHeader = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien|mager|vers|zure)/i.test(line) ||
+                                            /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl)/i.test(line); // getal + unit
+    
     // Als het een ingredient line is, skip de stap-detectie
     if (looksLikeIngredientLine) {
       // Dit is zeker een ingredient, niet een stap
@@ -437,7 +443,12 @@ function identifySections(lines: string[]): Sections {
     
     // Check voor genummerde stap: getal + punt/haakje + hoofdletter
     // NIET: "1 bosje" (dat is ingredient)
-    if (/^\d+[.)]\s*[A-Z]/.test(line) && !looksLikeIngredientLine) {
+    // NIET: "1 kg" (dat is ingredient)
+    // Check eerst of het een ingredient is voordat we het als stap zien
+    const isIngredientBeforeStep = /^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien|mager|vers|zure)/i.test(line) ||
+                                   /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl)/i.test(line);
+    
+    if (/^\d+[.)]\s*[A-Z]/.test(line) && !looksLikeIngredientLine && !isIngredientBeforeStep) {
       // Dit lijkt een genummerde stap - switch naar steps sectie
       currentSection = "steps";
       stepsStartIndex = i;
@@ -447,8 +458,12 @@ function identifySections(lines: string[]): Sections {
     
     // Check voor ALLCAPS stap header (bijv. "AARDAPPELEN VOORBEREIDEN:")
     // Dit kan helpen om de stappen sectie te identificeren, vooral na ingrediënten
+    // MAAR: als de regel een ingredient pattern heeft, is het GEEN stap header
+    // EN: als de volgende regel een ingredient pattern heeft, is dit waarschijnlijk de titel
     const nextLine = i + 1 < lines.length ? lines[i + 1] : undefined;
-    if (isAllCapsStepHeader(line, nextLine)) {
+    const nextLineIsIngredient = nextLine ? (/^\d+\s+(bosje|el|tl|gram|g|kg|ml|l|dl|cl|stuks?|st|kleine|grote|theelepel|eetlepel|teentje|takje|tenen|teentjes|eieren?|appel|ui|uien|mager|vers|zure)/i.test(nextLine) || /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl)/i.test(nextLine)) : false;
+    
+    if (isAllCapsStepHeader(line, nextLine) && !looksLikeIngredientLine && !looksLikeIngredientLineInHeader && !nextLineIsIngredient) {
       // Als we in ingredients sectie zijn of nog geen sectie hebben geïdentificeerd,
       // en dit is een ALLCAPS header, dan zijn we waarschijnlijk in de stappen sectie
       if (currentSection === "ingredients" || currentSection === "header") {
@@ -493,6 +508,12 @@ function identifySections(lines: string[]): Sections {
         const parts = splitIngredientLine(line);
         sections.ingredients.push(...parts);
       }
+    } else if (currentSection === "header" && looksLikeIngredientLineInHeader && i > 0) {
+      // Als we nog in header mode zijn maar dit is een ingredient, switch naar ingredients
+      currentSection = "ingredients";
+      ingredientsStartIndex = i;
+      const parts = splitIngredientLine(line);
+      sections.ingredients.push(...parts);
     } else {
       sections[currentSection].push(line);
     }
@@ -597,6 +618,37 @@ function splitIngredientLine(line: string): string[] {
   const finalParts: string[] = [];
   
   for (const part of parts) {
+    // EERST: split op "en" als het een hoeveelheid + ingredient patroon is
+    // "1 ui en 2 tenen knoflook" -> ["1 ui", "2 tenen knoflook"]
+    // "lamsgehakt ( of half lams half runder ) 1 ui" -> ["lamsgehakt ( of half lams half runder )", "1 ui"]
+    const enParts = part.split(/\s+en\s+/);
+    if (enParts.length > 1) {
+      // Check of elk deel een hoeveelheid heeft
+      const hasAmounts = enParts.every(p => /^\d+|^een|^twee|^drie|^half/i.test(p.trim()));
+      if (hasAmounts) {
+        // Split op "en" omdat elk deel een hoeveelheid heeft
+        for (const enPart of enParts) {
+          const subParts = splitStandaloneIngredients(enPart.trim());
+          finalParts.push(...subParts);
+        }
+        continue;
+      }
+    }
+    
+    // Check of er een hoeveelheid midden in de regel staat (bijv. "lamsgehakt ... 1 ui")
+    // Dit moet worden gesplitst
+    const midAmountMatch = part.match(/^(.+?)\s+(\d+)\s+(ui|appel|eieren?|tenen?|teentje)/i);
+    if (midAmountMatch) {
+      // Split: eerste deel + tweede deel met hoeveelheid
+      const firstPart = midAmountMatch[1].trim();
+      const secondPart = `${midAmountMatch[2]} ${midAmountMatch[3]}`;
+      if (firstPart.length > 5) {
+        finalParts.push(firstPart);
+      }
+      finalParts.push(secondPart);
+      continue;
+    }
+    
     const subParts = splitStandaloneIngredients(part);
     finalParts.push(...subParts);
   }
@@ -671,7 +723,8 @@ function inferSections(lines: string[]): Sections {
 
   // Zoek naar patronen die ingrediënten aanduiden
   // (regels met hoeveelheden aan het begin)
-  const ingredientPattern = /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl|stuks?|st)/i;
+  // Verbeterd: ook "1 kg", "1 ui", "2 eieren" etc. (zonder unit maar met getal + ingredient)
+  const ingredientPattern = /^\d+(?:[.,]\d+)?\s*(?:gram|gr|g|kg|ml|l|dl|el|tl|stuks?|st|ui|appel|eieren?|kleine|grote|mager|vers|zure|tenen?|teentje)/i;
   const stepPattern = /^\d+[.):\s]/;
   const bulletPattern = /^[-•*]\s/;
 
@@ -684,17 +737,26 @@ function inferSections(lines: string[]): Sections {
     const isIngredientLike = ingredientPattern.test(line) || (bulletPattern.test(line) && line.length < 100);
     const isStepLike = stepPattern.test(line) || (bulletPattern.test(line) && line.length > 50);
 
-    // Eerste paar regels zijn vaak titel/beschrijving
-    if (i < 3 && !foundFirstIngredient && !isIngredientLike) {
+    // Eerste regel is vaak titel (ALLCAPS of korte regel)
+    if (i === 0 && (line === line.toUpperCase() || line.length < 50)) {
+      sections.header.push(line);
+      continue;
+    }
+    
+    // Tweede regel kan nog titel zijn (korte regel zonder ingredient patroon)
+    if (i === 1 && !isIngredientLike && line.length < 50) {
       sections.header.push(line);
       continue;
     }
 
+    // BELANGRIJK: Ingredient patterns hebben prioriteit over step patterns
+    // Als een regel zowel ingredient als step pattern matcht, is het een ingredient
     if (isIngredientLike && !inSteps) {
       inIngredients = true;
       foundFirstIngredient = true;
       sections.ingredients.push(line);
-    } else if (isStepLike || (inSteps && line.length > 30)) {
+    } else if (isStepLike && !isIngredientLike && (!inIngredients || line.length > 80)) {
+      // Alleen als stap als het GEEN ingredient is EN (we zijn niet in ingredients OF regel is lang)
       inIngredients = false;
       inSteps = true;
       sections.steps.push(line);
@@ -1158,6 +1220,38 @@ function parseSteps(stepLines: string[]): ParsedStep[] {
     }
   }
 
+  // Als er maar 1 stap is maar de tekst meerdere zinnen bevat, splits op zinnen
+  if (steps.length === 1 && stepLines.length > 0) {
+    const fullText = stepLines.join(" ");
+    // Split op punten, maar behoud "TIP:" en andere speciale gevallen
+    const sentences = fullText
+      .split(/\.\s+(?![A-Z]{2,})/) // Split op punt + spatie, maar niet als volgende woord ALLCAPS is
+      .map(s => s.trim())
+      .filter((s) => s.length > 10 && !s.match(/^TIP\s*:/i)); // Filter korte zinnen en TIP regels
+    
+    // Als we meerdere zinnen hebben, gebruik die in plaats van de ene stap
+    if (sentences.length > 1) {
+      const newSteps: ParsedStep[] = [];
+      sentences.forEach((sentence, index) => {
+        const instruction = sentence.trim();
+        // Filter korte zinnen en TIP regels
+        if (instruction.length > 15 && !instruction.match(/^TIP\s*:/i)) {
+          newSteps.push({
+            instruction,
+            timerMinutes: extractTimerMinutes(instruction),
+            targetTemp: extractTemperature(instruction),
+            orderNo: index + 1,
+          });
+        }
+      });
+      // Als we nog steeds te veel stappen hebben, neem alleen de eerste 5
+      if (newSteps.length > 5) {
+        return newSteps.slice(0, 5);
+      }
+      return newSteps;
+    }
+  }
+  
   // Als geen stappen met nummering gevonden, splits op zinnen
   if (steps.length === 0 && stepLines.length > 0) {
     const fullText = stepLines.join(" ");

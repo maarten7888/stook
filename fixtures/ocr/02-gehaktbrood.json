@@ -9,33 +9,69 @@
     },
     "ingredients": {
       "count": {
-        "min": 1,
-        "max": 3
+        "min": 7,
+        "max": 9
       },
       "items": [
         {
           "name": { "contains": "lamsgehakt" },
           "amount": 1,
           "unit": "kg"
+        },
+        {
+          "name": { "contains": "ui" },
+          "amount": 1
+        },
+        {
+          "name": { "contains": "knoflook" },
+          "amount": 2,
+          "unit": "tenen"
+        },
+        {
+          "name": { "contains": "appel" },
+          "amount": 1
+        },
+        {
+          "name": { "contains": "eieren" },
+          "amount": 2
+        },
+        {
+          "name": { "contains": "zout" },
+          "amount": 1,
+          "unit": "tl"
+        },
+        {
+          "name": { "contains": "peper" }
+        },
+        {
+          "name": { "contains": "mangochutney" },
+          "amount": 1,
+          "unit": "el"
+        },
+        {
+          "name": { "contains": "pecannoten" }
         }
       ]
     },
     "steps": {
       "count": {
-        "min": 1,
-        "max": 3
+        "min": 3,
+        "max": 5
       },
       "items": [
         {
-          "instruction": { "contains": "verwarm" },
+          "instruction": { "contains": "Verwarm de oven." },
           "targetTemp": 190
         },
         {
-          "instruction": { "contains": "bak" },
+          "instruction": { "contains": "Vermeng alle ingrediënten" }
+        },
+        {
+          "instruction": { "contains": "Bak het gehaktbrood" },
           "timerMinutes": { "min": 50, "max": 55 }
         },
         {
-          "instruction": { "contains": "aangesneden" }
+          "instruction": { "contains": "Giet het vrijgekomen vocht" }
         }
       ]
     },
