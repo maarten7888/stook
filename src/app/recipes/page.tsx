@@ -1,4 +1,4 @@
-import { getSession, createClient } from "@/lib/supabase/server";
+import { getSession, createClient, createAdminClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,12 +58,14 @@ async function fetchRecipes(visibility?: string, query?: string, userId?: string
     }
 
     // Fetch first photo for each recipe
+    // Use admin client for signed URLs to ensure anonymous users can also see photos
+    const adminSupabase = createAdminClient();
     const itemsWithPhotos = await Promise.all(
       (data || []).map(async (row) => {
         let imageUrl: string | undefined;
         
         try {
-          // Fetch first photo for this recipe
+          // Fetch first photo for this recipe (using regular client for RLS)
           const { data: photos } = await supabase
             .from('photos')
             .select('path')
@@ -73,8 +75,8 @@ async function fetchRecipes(visibility?: string, query?: string, userId?: string
             .single();
 
           if (photos?.path) {
-            // Generate signed URL
-            const { data: signedUrlData } = await supabase.storage
+            // Generate signed URL using admin client (bypasses storage policies)
+            const { data: signedUrlData } = await adminSupabase.storage
               .from('photos')
               .createSignedUrl(photos.path, 3600); // 1 hour expiry
 

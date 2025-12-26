@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createClient, getSession } from "@/lib/supabase/server";
+import { createClient, getSession, createAdminClient } from "@/lib/supabase/server";
 import { Edit, ArrowLeft, Eye, EyeOff, Clock } from "lucide-react";
 import Link from "next/link";
 import { PhotoCarousel } from "@/components/photo-carousel";
@@ -92,8 +92,10 @@ async function fetchRecipe(id: string) {
 async function fetchPhotos(recipeId: string) {
   try {
     const supabase = await createClient();
+    // Use admin client for signed URLs to ensure anonymous users can also see photos
+    const adminSupabase = createAdminClient();
     
-    // Fetch photos for this recipe
+    // Fetch photos for this recipe (using regular client for RLS)
     const { data: photos, error: photosError } = await supabase
       .from('photos')
       .select('*')
@@ -109,10 +111,10 @@ async function fetchPhotos(recipeId: string) {
       return [];
     }
 
-    // Generate signed URLs for each photo
+    // Generate signed URLs for each photo using admin client (bypasses storage policies)
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
-        const { data: signedUrlData } = await supabase.storage
+        const { data: signedUrlData } = await adminSupabase.storage
           .from('photos')
           .createSignedUrl(photo.path, 3600); // 1 hour expiry
 
