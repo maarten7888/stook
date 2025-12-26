@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Camera, Upload, Loader2, AlertCircle, CheckCircle, X } from "lucide-react";
 
 interface OcrPhotoUploaderProps {
-  onOcrComplete: (result: { rawText: string; path: string; confidence: number }) => void;
+  onOcrComplete: (result: { rawText: string; path: string; confidence: number; jobId: string }) => void;
   onError: (error: string) => void;
 }
 
@@ -99,19 +99,26 @@ export function OcrPhotoUploader({ onOcrComplete, onError }: OcrPhotoUploaderPro
       });
 
       if (!ocrResponse.ok) {
-        const error = await ocrResponse.json();
-        throw new Error(error.error || "OCR mislukt");
+        const errorData = await ocrResponse.json();
+        const errorMessage = errorData?.error?.message || errorData?.error || "OCR mislukt";
+        throw new Error(errorMessage);
       }
 
       const ocrResult = await ocrResponse.json();
+
+      // Check nieuwe response structuur
+      if (!ocrResult.ok || !ocrResult.data) {
+        throw new Error(ocrResult.error?.message || "OCR mislukt");
+      }
 
       // Succes!
       setState({ status: "complete", message: "Tekst herkend!", progress: 100 });
 
       onOcrComplete({
-        rawText: ocrResult.rawText,
+        rawText: ocrResult.data.rawText,
         path,
-        confidence: ocrResult.confidence,
+        confidence: ocrResult.data.confidence,
+        jobId: ocrResult.data.jobId,
       });
     } catch (error) {
       console.error("OCR error:", error);

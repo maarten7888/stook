@@ -27,6 +27,7 @@ import {
 interface ImportPreview {
   url?: string;
   path?: string;
+  jobId?: string; // Voor OCR imports
   title: string;
   description?: string | null;
   serves?: number | null;
@@ -99,7 +100,7 @@ export default function ImportPage() {
   };
 
   // OCR handlers
-  const handleOcrComplete = async (result: { rawText: string; path: string; confidence: number }) => {
+  const handleOcrComplete = async (result: { rawText: string; path: string; confidence: number; jobId: string }) => {
     setOcrLoading(true);
     setError("");
 
@@ -109,17 +110,21 @@ export default function ImportPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           rawText: result.rawText, 
-          path: result.path 
+          path: result.path,
+          jobId: result.jobId,
         }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Kon tekst niet verwerken");
+        throw new Error(data.error?.message || data.error || "Kon tekst niet verwerken");
       }
 
-      const data = await response.json();
-      setPreview(data);
+      const responseData = await response.json();
+      const data = responseData.ok ? responseData.data : responseData;
+      
+      // Sla jobId op in preview voor later gebruik bij import
+      setPreview({ ...data, jobId: result.jobId });
       // Auto-enable edit mode for OCR imports (vaak correcties nodig)
       setEditMode(true);
     } catch (err) {
@@ -144,12 +149,17 @@ export default function ImportPage() {
       let response;
 
       if (preview.path) {
-        // OCR import
+        // OCR import - vereist jobId
+        if (!preview.jobId) {
+          throw new Error("Job ID ontbreekt. Probeer de import opnieuw.");
+        }
+
         response = await fetch("/api/import/photo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             path: preview.path,
+            jobId: preview.jobId,
             title: preview.title,
             description: preview.description,
             serves: preview.serves,
@@ -171,10 +181,18 @@ export default function ImportPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Import mislukt");
+        throw new Error(data.error?.message || data.error || "Import mislukt");
       }
 
-      const data = await response.json();
+      const responseData = await response.json();
+      const data = responseData.ok ? responseData.data : responseData;
+      
+      // Check voor already imported
+      if (data.alreadyImported) {
+        router.push(`/recipes/${data.id}`);
+        return;
+      }
+      
       router.push(`/recipes/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import mislukt");

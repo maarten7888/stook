@@ -311,3 +311,29 @@ export const friendshipsRelations = relations(friendships, ({ one }) => ({
     relationName: "friend",
   }),
 }));
+
+// OCR Jobs table
+export const ocrJobs = pgTable("ocr_jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => profiles.id).notNull(),
+  photoPath: text("photo_path").notNull(),
+  status: text("status", { enum: ["started", "done", "failed"] }).default("started").notNull(),
+  errorCode: text("error_code"),
+  errorMessage: text("error_message"),
+  recipeId: uuid("recipe_id").references(() => recipes.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  checkStatus: check('status_check', sql`"status" IN ('started', 'done', 'failed')`),
+}));
+
+export const ocrJobsRelations = relations(ocrJobs, ({ one }) => ({
+  user: one(profiles, {
+    fields: [ocrJobs.userId],
+    references: [profiles.id],
+  }),
+  recipe: one(recipes, {
+    fields: [ocrJobs.recipeId],
+    references: [recipes.id],
+  }),
+}));

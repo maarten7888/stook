@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 const importSchema = z.object({
   path: z.string().min(1),
+  jobId: z.string().uuid("Job ID moet een geldige UUID zijn"),
   title: z.string().min(1, "Titel is vereist"),
   description: z.string().nullable().optional(),
   serves: z.number().nullable().optional(),
@@ -37,7 +38,13 @@ export async function POST(request: NextRequest) {
     
     if (authError || !user) {
       return NextResponse.json(
-        { error: "Je moet ingelogd zijn om recepten te importeren" },
+        { 
+          ok: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Je moet ingelogd zijn om recepten te importeren",
+          },
+        },
         { status: 401 }
       );
     }
@@ -48,7 +55,13 @@ export async function POST(request: NextRequest) {
     
     if (!result.success) {
       return NextResponse.json(
-        { error: result.error.issues[0].message },
+        { 
+          ok: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: result.error.issues[0].message,
+          },
+        },
         { status: 400 }
       );
     }
@@ -58,12 +71,74 @@ export async function POST(request: NextRequest) {
     // Security check: pad moet onder imports/{user_id}/ vallen
     if (!data.path.includes(`/imports/${user.id}/`)) {
       return NextResponse.json(
-        { error: "Geen toegang tot dit bestand" },
+        { 
+          ok: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "Geen toegang tot dit bestand",
+          },
+        },
         { status: 403 }
       );
     }
 
     const adminClient = createAdminClient();
+
+    // Valideer job ownership en check idempotency
+    const { data: job, error: jobError } = await adminClient
+      .from('ocr_jobs')
+      .select('id, status, user_id, recipe_id')
+      .eq('id', data.jobId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (jobError || !job) {
+      return NextResponse.json(
+        { 
+          ok: false,
+          error: {
+            code: "JOB_NOT_FOUND",
+            message: "Job niet gevonden of geen toegang",
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    // Idempotency: als job al een recipe_id heeft, return bestaande recipe
+    if (job.recipe_id) {
+      const { data: existingRecipe } = await adminClient
+        .from('recipes')
+        .select('id, title')
+        .eq('id', job.recipe_id)
+        .single();
+
+      if (existingRecipe) {
+        return NextResponse.json({
+          ok: true,
+          data: {
+            id: existingRecipe.id,
+            title: existingRecipe.title,
+            message: "Recept al geïmporteerd",
+            alreadyImported: true,
+          },
+        });
+      }
+    }
+
+    // Job moet done zijn voor import
+    if (job.status !== 'done') {
+      return NextResponse.json(
+        { 
+          ok: false,
+          error: {
+            code: "JOB_NOT_READY",
+            message: "Deze import is nog niet klaar. Wacht tot OCR is voltooid.",
+          },
+        },
+        { status: 400 }
+      );
+    }
 
     // Start database transactie
     // 1. Maak recept aan
@@ -85,10 +160,25 @@ export async function POST(request: NextRequest) {
     if (recipeError || !recipe) {
       console.error("Error creating recipe:", recipeError);
       return NextResponse.json(
-        { error: "Kon recept niet aanmaken" },
+        { 
+          ok: false,
+          error: {
+            code: "RECIPE_CREATE_FAILED",
+            message: "Kon recept niet aanmaken",
+          },
+        },
         { status: 500 }
       );
     }
+
+    // Update job met recipe_id voor idempotency
+    await adminClient
+      .from('ocr_jobs')
+      .update({
+        recipe_id: recipe.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', data.jobId);
 
     // 2. Maak ingrediënten aan
     for (const ing of data.ingredients) {
@@ -166,14 +256,25 @@ export async function POST(request: NextRequest) {
     revalidatePath(`/recipes/${recipe.id}`);
 
     return NextResponse.json({
-      id: recipe.id,
-      title: recipe.title,
-      message: "Recept succesvol geïmporteerd",
+      ok: true,
+      data: {
+        id: recipe.id,
+        title: recipe.title,
+        message: "Recept succesvol geïmporteerd",
+      },
     });
   } catch (error) {
     console.error("Import error:", error);
+    const requestId = crypto.randomUUID();
     return NextResponse.json(
-      { error: "Er is een fout opgetreden bij het importeren" },
+      { 
+        ok: false,
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Er is een fout opgetreden bij het importeren",
+          requestId,
+        },
+      },
       { status: 500 }
     );
   }
