@@ -877,7 +877,7 @@ Verwarm de oven voor op 200°C.`;
 
     it("should apply repair pass for ingredients when count is low but section score is high", () => {
       // Test case: ingrediënten op één regel gescheiden door komma's
-      // Normale parsing vindt 1-2 ingrediënten; repair pass splitst op komma (meer in A2 primaire flow)
+      // A2: primaire flow splitst op komma → meerdere ingrediënten
       const text = `
 Test Recept
 
@@ -889,18 +889,13 @@ Bereiding
       `.trim();
 
       const result = parseOcrText(text);
-      
-      // Minimaal 2 ingrediënten (repair of normale parse); A2 zal comma-splitting in hoofdflow verbeteren
-      expect(result.ingredients.length).toBeGreaterThanOrEqual(2);
-      
+
+      // A2: split op komma in splitIngredientLine levert minimaal 3 ingrediënten
+      expect(result.ingredients.length).toBeGreaterThanOrEqual(3);
+
       // Check per-sectie score is calculated
       expect(result.confidence.details.ingredientSectionScore).toBeDefined();
       expect(result.confidence.details.ingredientSectionScore).toBeGreaterThan(0);
-      
-      // Repair kan toegepast zijn als we van 1 naar meer gingen
-      if (result.ingredients.length >= 3) {
-        expect(result.confidence.details.ingredientRepairApplied).toBeDefined();
-      }
     });
 
     it("should apply repair pass for steps when count is low but section score is high", () => {

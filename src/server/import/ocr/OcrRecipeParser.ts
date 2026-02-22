@@ -615,11 +615,62 @@ function splitIngredientLine(line: string): string[] {
       .map(p => p.trim())
       .filter(p => p.length > 0);
   }
-  
+
+  // A2: Split op puntkomma (meerdere ingrediënten op één regel)
+  parts = parts.flatMap((p) =>
+    p.split(";").map((s) => s.trim()).filter((s) => s.length > 0)
+  );
+  if (parts.length === 0) {
+    parts = [line.trim()];
+  }
+
   // Verder splitsen van delen die meerdere losse ingrediënten kunnen bevatten
   const finalParts: string[] = [];
-  
+
   for (const part of parts) {
+    // A2: Split op komma als het een duidelijke lijst is (niet "500 g bloem, gezift" of "1 ui, gesnipperd")
+    const commaCount = (part.match(/,/g) || []).length;
+    const startsWithAmount =
+      /^\d+(?:[.,]\d+)?\s*(gram|gr|g|kg|ml|l|dl|el|tl|stuks?|st|eetlepel|theelepel|eetl|theel)/i.test(part) ||
+      /^(een|twee|drie|half)\s/i.test(part);
+    let shouldSplitComma = false;
+    if (commaCount >= 2) {
+      shouldSplitComma = true;
+    } else if (commaCount === 1 && !startsWithAmount) {
+      // "pecannoten, grof gehakt" niet splitsen; "zout, peper" wel (na komma is ingrediënt)
+      const afterComma = part.split(",")[1]?.trim() ?? "";
+      const afterWords = afterComma.split(/\s+/).filter((w) => w.length > 0);
+      const afterHasStandaloneIngredient = afterWords.some((w) =>
+        STANDALONE_INGREDIENTS.has(w.toLowerCase())
+      );
+      shouldSplitComma = afterHasStandaloneIngredient;
+    } else if (commaCount === 1 && startsWithAmount) {
+      // Eén komma na amount: alleen splitsen als deel ná komma geen note is ("1 ui, gesnipperd" → niet splitsen)
+      const afterComma = part.split(",")[1]?.trim() ?? "";
+      const afterWords = afterComma.split(/\s+/).length;
+      const afterHasAmountOrUnit =
+        /\d/.test(afterComma) ||
+        /(^|\s)(el|tl|eetl|theel|g|gram|gr|kg|ml|l|dl|stuks?|st)(\s|$)/i.test(afterComma);
+      if (afterWords <= 2 && !afterHasAmountOrUnit) {
+        // Korte stuk zonder getal/unit = waarschijnlijk note
+        shouldSplitComma = false;
+      } else {
+        shouldSplitComma = true;
+      }
+    }
+    if (shouldSplitComma) {
+      const commaParts = part
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+      if (commaParts.length > 1) {
+        for (const sub of commaParts) {
+          finalParts.push(sub);
+        }
+        continue;
+      }
+    }
+
     // EERST: split op "en" als het een hoeveelheid + ingredient patroon is
     // "1 ui en 2 tenen knoflook" -> ["1 ui", "2 tenen knoflook"]
     // "lamsgehakt ( of half lams half runder ) 1 ui" -> ["lamsgehakt ( of half lams half runder )", "1 ui"]
@@ -669,17 +720,17 @@ function splitStandaloneIngredients(part: string): string[] {
   }
   
   const words = part.split(/\s+/);
-  
-  // Als er maar 1-2 woorden zijn, niet splitsen
-  if (words.length <= 2) {
+
+  // A2: Alleen niet splitsen bij 1 woord; "peper zout" (2 woorden, beide standalone) mag wel
+  if (words.length <= 1) {
     return [part];
   }
-  
+
   // Check hoeveel woorden bekende losse ingrediënten zijn
-  const standaloneCount = words.filter(w => 
+  const standaloneCount = words.filter((w) =>
     STANDALONE_INGREDIENTS.has(w.toLowerCase())
   ).length;
-  
+
   // Als minstens 2 bekende losse ingrediënten, probeer te splitsen
   if (standaloneCount >= 2) {
     const result: string[] = [];
