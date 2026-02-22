@@ -1049,3 +1049,4 @@ recipes.forEach((recipe, idx) => {
 writeFileSync('generate-50-recipes.sql', sql, 'utf8');
 console.log(`✅ Generated generate-50-recipes.sql with ${recipes.length} recipes`);
 
+
