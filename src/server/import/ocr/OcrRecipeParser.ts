@@ -56,6 +56,7 @@ export interface RecipeConfidence {
     stepsCount: number;
     avgStepLength: number;
     hasServings: boolean;
+    hasPrepTime: boolean;
     hasCookTime: boolean;
     // Per-sectie scores (0-1) voor repair passes
     ingredientSectionScore?: number;
@@ -327,10 +328,11 @@ export function parseOcrText(rawText: string): ParsedRecipe {
 
   // Bereken confidence scores (met per-sectie scores)
   const confidence = calculateConfidence(
-    title, 
-    ingredients, 
-    steps, 
-    serves, 
+    title,
+    ingredients,
+    steps,
+    serves,
+    prepMinutes,
     cookMinutes,
     ingredientSectionScore,
     stepSectionScore,
@@ -1802,6 +1804,7 @@ function calculateConfidence(
   ingredients: ParsedIngredient[],
   steps: ParsedStep[],
   serves: number | null,
+  prepMinutes: number | null,
   cookMinutes: number | null,
   ingredientSectionScore?: number,
   stepSectionScore?: number,
@@ -1818,6 +1821,7 @@ function calculateConfidence(
     ? steps.reduce((sum, s) => sum + s.instruction.length, 0) / steps.length 
     : 0;
   const hasServings = serves !== null;
+  const hasPrepTime = prepMinutes !== null;
   const hasCookTime = cookMinutes !== null;
 
   // Component scores (0-1)
@@ -1894,10 +1898,11 @@ function calculateConfidence(
     }
   }
 
-  // Metadata: 0.15 max
+  // Metadata: max 0.18 (A1: prep time telt mee)
   let metadataConfidence = 0;
   if (hasServings) metadataConfidence += 0.08;
   if (hasCookTime) metadataConfidence += 0.07;
+  if (hasPrepTime) metadataConfidence += 0.03;
 
   // No noise bonus: 0.10 max
   // Als titel geen ruis bevat (geen "Der", geen cijfers)
@@ -1912,11 +1917,11 @@ function calculateConfidence(
   if (ingredientsCount >= 3 && stepsCount >= 2) {
     // Basis bonus voor complete recepten
     qualityBonus = 0.05;
-    // Extra bonus als beide secties goede scores hebben
-    if (ingredientSectionScore !== undefined && ingredientSectionScore > 0.6) {
+    // Extra bonus als beide secties goede scores hebben (A1: drempel 0.5 i.p.v. 0.6)
+    if (ingredientSectionScore !== undefined && ingredientSectionScore > 0.5) {
       qualityBonus += 0.03;
     }
-    if (stepSectionScore !== undefined && stepSectionScore > 0.6) {
+    if (stepSectionScore !== undefined && stepSectionScore > 0.5) {
       qualityBonus += 0.03;
     }
   }
@@ -1944,6 +1949,7 @@ function calculateConfidence(
       stepsCount,
       avgStepLength: Math.round(avgStepLength),
       hasServings,
+      hasPrepTime,
       hasCookTime,
       ingredientSectionScore: ingredientSectionScore !== undefined 
         ? Math.round(ingredientSectionScore * 100) / 100 
@@ -1983,6 +1989,7 @@ function createEmptyRecipe(): ParsedRecipe {
         stepsCount: 0,
         avgStepLength: 0,
         hasServings: false,
+        hasPrepTime: false,
         hasCookTime: false,
       },
     },

@@ -7,6 +7,8 @@ const previewSchema = z.object({
   rawText: z.string().min(1, "Tekst is vereist"),
   path: z.string().min(1, "Pad is vereist"),
   jobId: z.string().uuid("Job ID moet een geldige UUID zijn"),
+  /** Optioneel: Vision API confidence (0-1); bij > 0.9 kleine bonus op getoonde match (A1) */
+  ocrConfidence: z.number().min(0).max(1).optional(),
 });
 
 /**
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { rawText, path, jobId } = result.data;
+    const { rawText, path, jobId, ocrConfidence } = result.data;
 
     // Security check: pad moet onder imports/{user_id}/ vallen
     if (!path.includes(`/imports/${user.id}/`)) {
@@ -106,6 +108,12 @@ export async function POST(request: NextRequest) {
     // Parse de OCR tekst
     const parsed = parseOcrText(rawText);
 
+    // A1: Combineer parser-confidence met optionele Vision-bonus (tot +2% bij hoge OCR-kwaliteit)
+    const parserOverall = parsed.confidence.overall;
+    const visionBonus =
+      ocrConfidence != null && ocrConfidence > 0.9 ? 0.02 : 0;
+    const confidence = Math.min(1, Math.round((parserOverall + visionBonus) * 100) / 100);
+
     // Converteer naar preview formaat (zelfde als URL import)
     const preview = {
       path,
@@ -125,7 +133,7 @@ export async function POST(request: NextRequest) {
         timerMinutes: step.timerMinutes,
         targetTemp: step.targetTemp,
       })),
-      confidence: parsed.confidence.overall,
+      confidence,
       confidenceDetails: parsed.confidence,
       source: "OCR Import",
     };

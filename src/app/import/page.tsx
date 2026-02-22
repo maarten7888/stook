@@ -112,6 +112,7 @@ export default function ImportPage() {
           rawText: result.rawText, 
           path: result.path,
           jobId: result.jobId,
+          ocrConfidence: result.confidence,
         }),
       });
 
