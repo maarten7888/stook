@@ -131,7 +131,28 @@ export function preprocessOcrText(text: string): string {
     }
     return match; // Behoud
   });
-  
+
+  // A3: Systematische running headers/footers (all-caps + ≤3 woorden + bevat cijfer)
+  const linesForA3 = processed.split("\n");
+  const isRunningHeaderOrFooter = (line: string): boolean => {
+    const t = line.trim();
+    if (!t) return true;
+    if (!/[A-Za-zÀ-ž]/.test(t)) return false; // geen letters = geen header (bijv. "10-20")
+    if (t.includes(":")) return false; // sectie-headers zoals "INGREDIËNTEN : 500"
+    const words = t.split(/\s+/).filter((w) => w.length > 0);
+    if (words.length > 3) return false;
+    if (!/\d/.test(t)) return false;
+    if (/[a-zà-ž]/.test(t)) return false; // alleen hoofdletters (en cijfers)
+    return true;
+  };
+  const n = linesForA3.length;
+  const filteredLines = linesForA3.filter((line, i) => {
+    if (i < 10 && isRunningHeaderOrFooter(line)) return false;
+    if (n > 5 && i >= n - 5 && isRunningHeaderOrFooter(line)) return false;
+    return true;
+  });
+  processed = filteredLines.join("\n");
+
   // 4. Merge losse unit lines en multi-line ingrediënten
   // Dit gebeurt vaak bij OCR waar hoeveelheid, unit en ingrediënt op aparte regels staan
   const shortUnitPattern = /^(g|gr|gram|kg|kilogram|ml|l|liter|dl|cl|el|tl|stuks?|st)\.?$/i;
